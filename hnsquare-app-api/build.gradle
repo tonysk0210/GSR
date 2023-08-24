@@ -1,0 +1,63 @@
+import org.springframework.boot.gradle.tasks.bundling.BootWar
+
+plugins {
+    id 'war'
+}
+
+group 'com.hn2'
+version '0.0.1-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    maven { url "https://jaspersoft.jfrog.io/jaspersoft/third-party-ce-artifacts/" }
+}
+
+dependencies {
+    implementation project(':hnsquare-utility')
+    implementation project(':hnsquare-config')
+    implementation project(':hnsquare-base')
+
+    providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+tasks.register('dev', BootWar) {
+    group = "build war"
+    description = "Sets the environment"
+    doFirst {
+        ant.propertyfile(file: "./build/resources/main/application.properties") {
+            entry(key: "spring.profiles.active", value: "dev")
+        }
+    }
+    mainClass = "com.hn2.ApiApplication"
+    archiveFileName = 'api.war'
+}
+
+tasks.register('uat', BootWar) {
+    group = "build war"
+    description = "Sets the environment"
+    doFirst {
+        ant.propertyfile(file: "./build/resources/main/application.properties") {
+            entry(key: "spring.profiles.active", value: "uat")
+        }
+    }
+    mainClass = "com.hn2.ApiApplication"
+    archiveFileName = 'api.war'
+}
+
+tasks.register('prod', BootWar) {
+    group = "build war"
+    description = "Sets the environment"
+    doFirst {
+        ant.propertyfile(file: "./build/resources/main/application.properties") {
+            entry(key: "spring.profiles.active", value: "prod")
+        }
+    }
+    mainClass = "com.hn2.ApiApplication"
+    archiveFileName = 'api.war'
+}

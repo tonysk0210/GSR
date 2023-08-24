@@ -1,0 +1,8 @@
+dependencies {
+    // oshi
+    implementation 'com.github.oshi:oshi-core:5.7.4'
+}
+
+jar {
+    enabled = true
+}

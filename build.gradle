@@ -1,0 +1,93 @@
+plugins {
+    id 'java'
+	id 'org.springframework.boot' version '2.7.14'
+	id 'io.spring.dependency-management' version '1.0.15.RELEASE'
+}
+
+allprojects {
+    group 'com.hn2'
+    version '0.0.1-SNAPSHOT'
+    sourceCompatibility = JavaVersion.VERSION_11
+    javadoc.options.encoding = 'UTF-8'
+
+    repositories {
+        mavenCentral()
+    }
+}
+
+subprojects {
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
+    apply plugin: 'java'
+
+    dependencies {
+        implementation 'org.springframework.boot:spring-boot-starter-validation'
+        implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+        implementation 'org.springframework.boot:spring-boot-starter-security'
+        implementation 'org.springframework.boot:spring-boot-starter-web'
+        implementation 'org.springframework.boot:spring-boot-starter-mail'
+        implementation 'org.springframework.boot:spring-boot-starter-cache'
+        implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+        // modelmapper
+        implementation 'org.modelmapper:modelmapper:2.4.4'
+        // lombok
+        compileOnly 'org.projectlombok:lombok:1.18.28'
+        annotationProcessor 'org.projectlombok:lombok:1.18.28'
+        // mssql
+        runtimeOnly 'com.microsoft.sqlserver:mssql-jdbc:9.4.1.jre11'
+        // sql2o
+        implementation 'org.sql2o:sql2o:1.6.0'
+        implementation 'org.simpleflatmapper:sfm-sql2o:8.2.3'
+        // mybatis
+        // implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:2.2.2'
+        // ehcache
+        implementation 'org.ehcache:ehcache'
+        implementation 'javax.cache:cache-api'
+        // swagger
+        implementation 'io.springfox:springfox-boot-starter:3.0.0'
+        implementation 'io.springfox:springfox-swagger2:3.0.0'
+        implementation 'io.springfox:springfox-swagger-ui:3.0.0'
+        implementation 'io.springfox:springfox-data-rest:3.0.0'
+        // log4jdbc
+        implementation 'com.googlecode.log4jdbc:log4jdbc:1.2'
+        // jcraft (ssh)
+        implementation 'com.jcraft:jsch:0.1.55'
+        // jwt
+        implementation 'io.jsonwebtoken:jjwt-api:0.11.2'
+        implementation 'io.jsonwebtoken:jjwt-impl:0.11.2'
+        implementation 'io.jsonwebtoken:jjwt-jackson:0.11.2'
+        // jasypt-spring-boot-starter
+        implementation 'com.github.ulisesbocchio:jasypt-spring-boot-starter:3.0.3'
+        // commons-lang3
+        implementation 'org.apache.commons:commons-lang3:3.12.0'
+        // commons-collections4
+        implementation 'org.apache.commons:commons-collections4:4.4'
+        // commons-beanutils
+        implementation ('commons-beanutils:commons-beanutils:1.9.4') {
+            exclude group: 'commons-collections', module: 'commons-collections'
+            exclude group: 'commons-logging', module: 'commons-logging'
+        }
+        // webservice
+        implementation 'com.sun.xml.ws:jaxws-rt:2.3.5'
+        implementation 'com.sun.xml.ws:rt:2.3.5'
+        // apache httpclient
+        implementation ('org.apache.httpcomponents.client5:httpclient5:5.2.1'){
+            exclude group: 'org.slf4j', module: 'slf4j-api'
+            exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
+            exclude group: 'org.apache.logging.log4j', module: 'log4j-core'
+        }
+        implementation ('org.apache.httpcomponents.core5:httpcore5-h2:5.2.1')
+        implementation ('org.apache.httpcomponents.core5:httpcore5:5.2.1'){
+            exclude group: 'org.slf4j', module: 'slf4j-api'
+            exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
+            exclude group: 'org.apache.logging.log4j', module: 'log4j-core'
+        }
+
+        developmentOnly 'org.springframework.boot:spring-boot-devtools'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+}

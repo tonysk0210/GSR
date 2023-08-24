@@ -1,0 +1,6 @@
+rootProject.name = 'api'
+include 'hnsquare-app-api'
+include 'hnsquare-utility'
+include 'hnsquare-config'
+include 'hnsquare-base'
+include 'hnsquare-cms'

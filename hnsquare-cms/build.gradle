@@ -1,0 +1,7 @@
+dependencies {
+    implementation project(':hnsquare-utility')
+    implementation project(':hnsquare-base')
+}
+jar {
+    enabled = true
+}
