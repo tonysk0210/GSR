@@ -1,11 +1,11 @@
 package com.hn2.cms.model;
 
-import com.hn2.core.model.BaseEntity;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.GenericGenerator;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
@@ -20,7 +20,14 @@ import java.time.LocalDateTime;
 @Table
 @Entity(name = "SUP_AfterCare")
 @EntityListeners(AuditingEntityListener.class)
-public class SupAfterCareEntity extends BaseEntity {
+public class SupAfterCareEntity {
+
+    /** uuid */
+    @Id
+    @GenericGenerator(name = "jpa-uuid", strategy = "uuid2")
+    @GeneratedValue(generator = "jpa-uuid")
+    @Column(name = "Id", columnDefinition = "uniqueidentifier")
+    private String id;
 
     /** 機關代碼 */
     @Column(name = "ORG_CODE")

@@ -1,5 +1,6 @@
 package com.hn2.cms.payload;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import javax.validation.constraints.NotEmpty;
@@ -14,6 +15,7 @@ public class AcaJailSignPayload {
     private List<String> itemIdList;
     /** 簽收日期 */
     @NotNull(message = "簽收日期為必填欄位")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime singDate;
     /** 簽收人員 */
     @NotNull(message = "簽收人員為必填欄位")

@@ -59,6 +59,7 @@ public class AcaJailRepositoryImpl implements AcaJailRepository {
     private StringBuilder condition(AcaJailQueryPayload payload, Map<String, Object> params) {
 
         var conditionBuilder = new StringBuilder();
+        conditionBuilder.append("WHERE 1=1 ");
 
         // 收文日期起訖
         if (!ObjectUtils.isEmpty(payload.getRecvDateS())
@@ -80,8 +81,8 @@ public class AcaJailRepositoryImpl implements AcaJailRepository {
 
         // 更生人名稱
         if (StringUtils.hasLength(payload.getNamName())) {
-            conditionBuilder.append("AND SAC.NAM_CNAME = :namName ");
-            params.put("namName", payload.getNamName());
+            conditionBuilder.append("AND SAC.NAM_CNAME like :namName ");
+            params.put("namName", "%"+payload.getNamName()+"%");
         }
 
         // 簽收分會
