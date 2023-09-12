@@ -10,7 +10,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Data
 @EqualsAndHashCode(callSuper=false)
@@ -179,7 +178,7 @@ public class SupAfterCareEntity {
 
     /** 簽收日期 */
     @Column(name = "SIGN_DATE")
-    private LocalDateTime signDate;
+    private LocalDate signDate;
 
     /** 簽收人員 */
     @Column(name = "SIGN_USER")
@@ -195,7 +194,7 @@ public class SupAfterCareEntity {
 
     /** 新增日期(收文日期) */
     @Column(name = "CR_DATE_TIME")
-    private LocalDateTime crDateTime;
+    private LocalDate crDateTime;
 
     /** 新增電腦IP */
     @Column(name = "CR_IP")
@@ -207,7 +206,7 @@ public class SupAfterCareEntity {
 
     /** 修改日期 */
     @Column(name = "UP_DATE_TIME")
-    private LocalDateTime upDateTime;
+    private LocalDate upDateTime;
 
     /** 修改電腦IP */
     @Column(name = "UP_IP")
