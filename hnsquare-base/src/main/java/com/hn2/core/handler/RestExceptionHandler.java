@@ -2,28 +2,28 @@ package com.hn2.core.handler;
 
 import com.hn2.core.dto.ResponseMessage;
 import com.hn2.util.BusinessException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.AuthenticationException;
+//import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
-import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.validation.ConstraintViolationException;
+import java.nio.file.AccessDeniedException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Rest API 的 Exception 相關設定
@@ -44,18 +44,18 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
    * @param httpServletResponse HttpServletResponse
    * @return ResponseEntity ResponseMessage
    */
-  @ExceptionHandler(AuthenticationException.class)
-  public ResponseEntity<Object> handleAuthenticationException(
-      AuthenticationException e,
-      HttpServletRequest httpServletRequest,
-      HttpServletResponse httpServletResponse) {
-    ResponseMessage data = new ResponseMessage();
-    data.setTimestamp(LocalDateTime.now().format(DateTimeFormatter.ofPattern(DATE_PATTERN)));
-    data.setStatus(HttpStatus.UNAUTHORIZED.value());
-    data.setMessage(e.getMessage());
-    data.setPath(httpServletRequest.getRequestURL().toString());
-    return new ResponseEntity<>(data, new HttpHeaders(), HttpStatus.UNAUTHORIZED);
-  }
+//  @ExceptionHandler(AuthenticationException.class)
+//  public ResponseEntity<Object> handleAuthenticationException(
+//      AuthenticationException e,
+//      HttpServletRequest httpServletRequest,
+//      HttpServletResponse httpServletResponse) {
+//    ResponseMessage data = new ResponseMessage();
+//    data.setTimestamp(LocalDateTime.now().format(DateTimeFormatter.ofPattern(DATE_PATTERN)));
+//    data.setStatus(HttpStatus.UNAUTHORIZED.value());
+//    data.setMessage(e.getMessage());
+//    data.setPath(httpServletRequest.getRequestURL().toString());
+//    return new ResponseEntity<>(data, new HttpHeaders(), HttpStatus.UNAUTHORIZED);
+//  }
 
   /**
    * 一般 Exception
