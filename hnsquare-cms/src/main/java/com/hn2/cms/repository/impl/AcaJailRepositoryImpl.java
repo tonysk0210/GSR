@@ -64,18 +64,13 @@ public class AcaJailRepositoryImpl implements AcaJailRepository {
         // 收文日期起訖
         if (!ObjectUtils.isEmpty(payload.getRecvDateS())
                 || !ObjectUtils.isEmpty(payload.getRecvDateE())) {
-            if (payload.getRecvDateS().equals(payload.getRecvDateE())) {
-                conditionBuilder.append("AND SAC.CR_DATE_TIME = :recvDateS ");
+            if (!ObjectUtils.isEmpty(payload.getRecvDateS())) {
+                conditionBuilder.append("AND SAC.CR_DATE_TIME >= :recvDateS ");
                 params.put("recvDateS", payload.getRecvDateS());
-            } else {
-                if (!ObjectUtils.isEmpty(payload.getRecvDateS())) {
-                    conditionBuilder.append("AND SAC.CR_DATE_TIME >= :recvDateS ");
-                    params.put("recvDateS", payload.getRecvDateS());
-                }
-                if (!ObjectUtils.isEmpty(payload.getRecvDateE())) {
-                    conditionBuilder.append("AND SAC.CR_DATE_TIME <= :recvDateE ");
-                    params.put("recvDateE", payload.getRecvDateE());
-                }
+            }
+            if (!ObjectUtils.isEmpty(payload.getRecvDateE())) {
+                conditionBuilder.append("AND SAC.CR_DATE_TIME < :recvDateE ");
+                params.put("recvDateE", payload.getRecvDateE().plusDays(1));
             }
         }
 

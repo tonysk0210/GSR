@@ -1,11 +1,16 @@
 package com.hn2.cms.payload;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.hn2.core.payload.BasePayload;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 
 @Data
-public class AcaJailQueryPayload {
+@EqualsAndHashCode(callSuper = true)
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class AcaJailQueryPayload extends BasePayload {
     /** 收文日期(起) */
     private LocalDate recvDateS;
     /** 收文日期(迄) */
