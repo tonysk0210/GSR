@@ -59,7 +59,7 @@ public class AcaJailServiceImpl implements AcaJailService {
         var entityList = supAfterCareRepository.findAllById(payloadData.getItemIdList());
 
         for (var v : entityList){
-            if("1".equals(v.getSignState())){
+            if("0".equals(v.getSignState())){
                 v.setSignDate(payloadData.getSingDate());
                 v.setSignUser(payloadData.getSingUser());
                 v.setSignState("1");
