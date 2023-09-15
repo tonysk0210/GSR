@@ -53,6 +53,10 @@ public class SupAfterCareEntity {
     private String trEmail;
 
     /** 更生保護分會 */
+    @Column(name = "PROT_No")
+    private String protNo;
+
+    /** 更生保護分會 */
     @Column(name = "PROT_NAME")
     private String protName;
 
@@ -171,6 +175,10 @@ public class SupAfterCareEntity {
     /** 簽收狀態(0:未簽收 1:已簽收) */
     @Column(name = "SIGN_STATE")
     private String signState;
+
+    /** 簽收分會 (預設同[更生保護分會]欄位) */
+    @Column(name = "SIGN_PROT_No")
+    private String signProtNo;
 
     /** 簽收分會 (預設同[更生保護分會]欄位) */
     @Column(name = "SIGN_PROT_NAME")

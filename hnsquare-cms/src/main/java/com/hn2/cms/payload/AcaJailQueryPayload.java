@@ -19,6 +19,8 @@ public class AcaJailQueryPayload extends BasePayload {
     private String namName;
     /** 簽收分會(會別) */
     private String signProtName;
+    /** 簽收分會代碼(會別) */
+    private String signProtNo;
     /** 簽收狀態 - 0:未簽收 1:已簽收 */
     private String signState;
 }

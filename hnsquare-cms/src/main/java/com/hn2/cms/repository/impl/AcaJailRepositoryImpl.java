@@ -86,6 +86,12 @@ public class AcaJailRepositoryImpl implements AcaJailRepository {
             params.put("signProtName", payload.getSignProtName());
         }
 
+        // 簽收分會
+        if (StringUtils.hasLength(payload.getSignProtNo())) {
+            conditionBuilder.append("AND SAC.SIGN_PROT = :signProtNo ");
+            params.put("signProtNo", payload.getSignProtNo());
+        }
+
         // 簽收狀態
         if (StringUtils.hasLength(payload.getSignState())) {
             conditionBuilder.append("AND SAC.SIGN_STATE = :signState ");
