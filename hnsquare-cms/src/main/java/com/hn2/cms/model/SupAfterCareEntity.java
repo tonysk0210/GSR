@@ -177,7 +177,7 @@ public class SupAfterCareEntity {
     private String signState;
 
     /** 簽收分會 (預設同[更生保護分會]欄位) */
-    @Column(name = "SIGN_PROT_N0")
+    @Column(name = "SIGN_PROT_NO")
     private String signProtNo;
 
     /** 簽收分會 (預設同[更生保護分會]欄位) */
