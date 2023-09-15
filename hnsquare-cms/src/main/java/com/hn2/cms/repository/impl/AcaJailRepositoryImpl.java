@@ -88,7 +88,7 @@ public class AcaJailRepositoryImpl implements AcaJailRepository {
 
         // 簽收分會
         if (StringUtils.hasLength(payload.getSignProtNo())) {
-            conditionBuilder.append("AND SAC.SIGN_PROT = :signProtNo ");
+            conditionBuilder.append("AND SAC.SIGN_PROT_NO = :signProtNo ");
             params.put("signProtNo", payload.getSignProtNo());
         }
 
