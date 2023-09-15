@@ -9,6 +9,8 @@ public class AcaJailQueryDto {
     /** 簽收狀態 */
     private String signState;
     /** 簽收分會(分會別) */
+    private String signProtNo;
+    /** 簽收分會(分會別) */
     private String signProtName;
     /** 呼號 */
     private String callNo;

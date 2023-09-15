@@ -27,6 +27,7 @@ public class AcaJailRepositoryImpl implements AcaJailRepository {
         String select = "SELECT " +
                 "SAC.ID itemId, " +
                 "SAC.SIGN_STATE, " +
+                "SAC.SIGN_PROT_NO, " +
                 "SAC.SIGN_PROT_NAME, " +
                 "SAC.CALL_NO, " +
                 "SAC.CR_DATE_TIME recvDate, " +
