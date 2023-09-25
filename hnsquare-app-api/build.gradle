@@ -10,6 +10,9 @@ version '0.0.1-SNAPSHOT'
 repositories {
     mavenCentral()
     maven { url "https://jaspersoft.jfrog.io/jaspersoft/third-party-ce-artifacts/" }
+    maven { url 'https://jasperreports.sourceforge.net/maven2/' }
+    maven { url 'https://jaspersoft.artifactoryonline.com/jaspersoft/third-party-ce-artifacts/' }
+    maven { url 'https://oss.jfrog.org/artifactory/oss-snapshot-local/' }
 }
 
 dependencies {
@@ -17,10 +20,16 @@ dependencies {
     implementation project(':hnsquare-config')
     implementation project(':hnsquare-base')
     implementation project(':hnsquare-cms')
+    implementation project(':hnsquare-report')
 
     providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+    implementation('net.sf.jasperreports:jasperreports:6.17.0') {
+        exclude group: 'com.lowagie', module: 'itext'
+        exclude group: 'org.eclipse.jdt', module: 'ecj'
+    }
+
 }
 
 test {
