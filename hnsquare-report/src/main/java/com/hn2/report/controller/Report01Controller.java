@@ -11,12 +11,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping(value = "/report01")
+@RequestMapping(value = "/aca/jail")
 @Slf4j
 public class Report01Controller {
     @Autowired
     Report01Service service;
-    @PostMapping
+
+    @PostMapping(value = "/report01")
     public ResponseEntity<Object> getListByCustom(@RequestBody Reprot01Payload payload) {
 
         //payload.setPrintUser(principalAccessor.getPrincipal().getCname());
