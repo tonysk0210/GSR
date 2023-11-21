@@ -27,13 +27,13 @@ public class GlobalCorsConfig {
         config.setAllowCredentials(true);
 
         //允許使用那些請求方式
-        config.addAllowedMethod("/*");
+        config.addAllowedMethod("*");
 
         //允許哪些Header
-        config.addAllowedHeader("/*");
+        config.addAllowedHeader("*");
 
         //可獲取哪些Header（因為跨網域預設不能取得全部Header資訊）
-        config.addExposedHeader("/*");
+        config.addExposedHeader("*");
 
         //映射路徑
         UrlBasedCorsConfigurationSource configSource = new UrlBasedCorsConfigurationSource();
