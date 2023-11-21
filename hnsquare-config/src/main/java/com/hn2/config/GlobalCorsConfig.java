@@ -1,6 +1,7 @@
 package com.hn2.config;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -17,7 +18,7 @@ public class GlobalCorsConfig {
     private String corsSite;
 
     @Bean
-    public CorsFilter corsFilter() {
+    public FilterRegistrationBean<CorsFilter> corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
 
         //允許跨網域請求的來源
@@ -39,8 +40,13 @@ public class GlobalCorsConfig {
         UrlBasedCorsConfigurationSource configSource = new UrlBasedCorsConfigurationSource();
         configSource.registerCorsConfiguration("/**", config);
 
+        FilterRegistrationBean<CorsFilter> bean = new FilterRegistrationBean<>(new CorsFilter(configSource));
+        bean.setOrder(0);
+
+        return bean;
+
         //return一個的CorsFilter.
-        return new CorsFilter(configSource);
+//        return new CorsFilter(configSource);
     }
 
 }
