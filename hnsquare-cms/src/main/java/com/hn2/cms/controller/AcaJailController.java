@@ -16,7 +16,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/aca/jail")
-@CrossOrigin
 public class AcaJailController {
 
     @Autowired
