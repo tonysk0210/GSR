@@ -44,9 +44,6 @@ public class GlobalCorsConfig {
         bean.setOrder(0);
 
         return bean;
-
-        //return一個的CorsFilter.
-//        return new CorsFilter(configSource);
     }
 
 }

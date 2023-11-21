@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping(value = "/aca/jail")
 @Slf4j
-@CrossOrigin
 public class Report01Controller {
     @Autowired
     Report01Service service;
