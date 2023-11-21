@@ -14,7 +14,7 @@ public class AcaJailQueryDto {
     private String signProtName;
     /** 呼號 */
     private String callNo;
-    /** 收文日期(新增日期) */
+    /** 發文日期 */
     private String recvDate;
     /** 更生人姓名 */
     private String namName;

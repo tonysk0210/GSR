@@ -30,7 +30,7 @@ public class AcaJailRepositoryImpl implements AcaJailRepository {
                 "SAC.SIGN_PROT_NO, " +
                 "SAC.SIGN_PROT_NAME, " +
                 "SAC.CALL_NO, " +
-                "SAC.CR_DATE_TIME recvDate, " +
+                "SAC.RS_DT recvDate, " +
                 "SAC.NAM_CNAME namName, " +
                 "SAC.NAM_SEX, " +
                 "SAC.NAM_HADDR_TEXT namAddr " +
@@ -66,11 +66,11 @@ public class AcaJailRepositoryImpl implements AcaJailRepository {
         if (!ObjectUtils.isEmpty(payload.getRecvDateS())
                 || !ObjectUtils.isEmpty(payload.getRecvDateE())) {
             if (!ObjectUtils.isEmpty(payload.getRecvDateS())) {
-                conditionBuilder.append("AND SAC.CR_DATE_TIME >= :recvDateS ");
+                conditionBuilder.append("AND SAC.RS_DT >= :recvDateS ");
                 params.put("recvDateS", payload.getRecvDateS());
             }
             if (!ObjectUtils.isEmpty(payload.getRecvDateE())) {
-                conditionBuilder.append("AND SAC.CR_DATE_TIME < :recvDateE ");
+                conditionBuilder.append("AND SAC.RS_DT < :recvDateE ");
                 params.put("recvDateE", payload.getRecvDateE().plusDays(1));
             }
         }
