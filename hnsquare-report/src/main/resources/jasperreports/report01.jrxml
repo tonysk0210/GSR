@@ -57,6 +57,7 @@
 			<staticText>
 				<reportElement x="0" y="540" width="555" height="110" uuid="33650eaa-6329-40e6-8da9-23736b3388c5">
 					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
 				</reportElement>
 				<box topPadding="1" leftPadding="1" bottomPadding="1" rightPadding="1">
 					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
@@ -66,8 +67,9 @@
 				</box>
 				<textElement>
 					<font fontName="微軟正黑體" size="12"/>
+					<paragraph leftIndent="5"/>
 				</textElement>
-				<text><![CDATA[說明:
+				<text><![CDATA[說明：
 1.本通知書資訊由矯正機關系統介接獲知。
 2.更生保護會各分會簽收後，應儘速附寄訪視表格及回郵信封，請更生輔導員於接獲通知書後十日內填
    妥寄回分會。
@@ -78,46 +80,34 @@
 			<textField>
 				<reportElement x="290" y="30" width="265" height="20" uuid="c1f5eee1-706e-4c07-ba69-fa0c67b15d59">
 					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
 				</reportElement>
 				<box topPadding="1" leftPadding="1" bottomPadding="1" rightPadding="1">
 					<rightPen lineWidth="1.0"/>
 				</box>
 				<textElement>
 					<font fontName="微軟正黑體" size="12"/>
+					<paragraph leftIndent="5"/>
 				</textElement>
-				<textFieldExpression><![CDATA["發文機關:"+($F{org_code}!=null?$F{org_code}:"")]]></textFieldExpression>
+				<textFieldExpression><![CDATA["發文機關："+($F{org_code}!=null?$F{org_code}:"")]]></textFieldExpression>
 			</textField>
 			<textField>
 				<reportElement x="290" y="70" width="265" height="20" uuid="cb296d9d-355c-4e1f-8faa-ca99c6930103">
 					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
 				</reportElement>
 				<box topPadding="1" leftPadding="1" bottomPadding="1" rightPadding="1">
 					<rightPen lineWidth="1.0"/>
 				</box>
 				<textElement>
 					<font fontName="微軟正黑體" size="12"/>
+					<paragraph leftIndent="5"/>
 				</textElement>
-				<textFieldExpression><![CDATA["通知書編號:"]]></textFieldExpression>
+				<textFieldExpression><![CDATA["通知書編號："]]></textFieldExpression>
 			</textField>
 			<textField>
-				<reportElement x="0" y="470" width="280" height="70" uuid="3abc5b4f-0920-4385-b884-59cd892a11b9"/>
-				<box topPadding="1" leftPadding="1" bottomPadding="1" rightPadding="1">
-					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
-					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
-					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
-					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
-				</box>
-				<textElement>
-					<font fontName="微軟正黑體" size="12"/>
-				</textElement>
-				<textFieldExpression><![CDATA["連絡人:"+"\n"+
-"1.姓名:"+($F{reld_name}!=null?$F{reld_name}:"")+"\n"+
-"3.電話:"+($F{reld_tel1}!=null?$F{reld_tel1}:"")+"\n"+
-"5.地址:"+($F{reld_addr}!=null?$F{reld_addr}:"")]]></textFieldExpression>
-			</textField>
-			<textField>
-				<reportElement x="0" y="120" width="555" height="350" uuid="050ad6ed-2ab7-4aa4-8c98-0e17273bdaf0">
-					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				<reportElement x="0" y="470" width="280" height="70" uuid="3abc5b4f-0920-4385-b884-59cd892a11b9">
+					<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
 				</reportElement>
 				<box topPadding="1" leftPadding="1" bottomPadding="1" rightPadding="1">
 					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
@@ -127,28 +117,49 @@
 				</box>
 				<textElement>
 					<font fontName="微軟正黑體" size="12"/>
+					<paragraph leftIndent="5"/>
 				</textElement>
-				<textFieldExpression><![CDATA["受保護者資料:"+"\n"+
-"1.姓名:"+($F{nam_cname}!=null?$F{nam_cname}:"")+"\n"+
-"2.性別:"+($F{nam_sex}!=null?$F{nam_sex}:"")+"\n"+
-"3.出生日期"+($F{nam_brdt}!=null?$F{nam_brdt}:"")+"\n"+
-"4.出生地:"+($F{nam_bonp_text}!=null?$F{nam_bonp_text}:"")+"\n"+
-"5.國民身分證統一編號:"+($F{nam_idno}!=null?$F{nam_idno}:"")+"\n"+
-"6.戶籍地址:"+($F{nam_haddr_text}!=null?$F{nam_haddr_text}:"")+"\n"+
-"7.聯絡電話:"+($F{nam_tel}!=null?$F{nam_tel}:"")+"\n"+
-"8.以前職業"+($F{docu_proc_text}!=null?$F{docu_proc_text}:"")+"\n"+
-"9.教育程度:"+($F{nam_educ_text}!=null?$F{nam_educ_text}:"")+"\n"+
-"10.罪名:"+($F{nam_cnames_text}!=null?$F{nam_cnames_text}:"")+"\n"+
-"11.刑期:"+($F{nam_pen_text}!=null?$F{nam_pen_text}:"")+"\n"+
-"12.入監所或被收容日期:"+($F{nam_mvdt}!=null?$F{nam_mvdt}:"")+"\n"+
-"13.預計獲釋日期及原因:"+($F{docu_otdt}!=null?$F{docu_otdt}:"")+"     "+($F{docu_otop_text}!=null?$F{docu_otop_text}:"")+"\n"+
-"14.專長:"+($F{skill_text}!=null?$F{skill_text}:"")+"\n"+
-"15.需要何種更生保護:"+($F{protect_text}!=null?$F{protect_text}:"")+"\n"+
-"16.取得證照職種:"+($F{docu_license_text}!=null?$F{docu_license_text}:"")+"\n"+
-"17.宗教信仰:"+($F{relig_text}!=null?$F{relig_text}:"")+"\n"+
-"18.是否有暴力傾向"+($F{docu_violent_text}!=null?$F{docu_violent_text}:"")+"\n"+
-"19.經濟狀況"+($F{economic_text}!=null?$F{economic_text}:"")+"\n"+
-"20.婚姻狀況:"+($F{marriage_text}!=null?$F{marriage_text}:"")]]></textFieldExpression>
+				<textFieldExpression><![CDATA["連絡人："+"\n"+
+"1.姓名："+($F{reld_name}!=null?$F{reld_name}:"")+"\n"+
+"3.電話："+($F{reld_tel1}!=null?$F{reld_tel1}:"")+"\n"+
+"5.地址："+($F{reld_addr}!=null?$F{reld_addr}:"")]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="0" y="120" width="555" height="350" uuid="050ad6ed-2ab7-4aa4-8c98-0e17273bdaf0">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
+				</reportElement>
+				<box topPadding="1" leftPadding="1" bottomPadding="1" rightPadding="1">
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement>
+					<font fontName="微軟正黑體" size="12"/>
+					<paragraph leftIndent="5"/>
+				</textElement>
+				<textFieldExpression><![CDATA["受保護者資料："+"\n"+
+"1.姓名："+($F{nam_cname}!=null?$F{nam_cname}:"")+"\n"+
+"2.性別："+($F{nam_sex}!=null?$F{nam_sex}:"")+"\n"+
+"3.出生日期："+($F{nam_brdt}!=null?$F{nam_brdt}:"")+"\n"+
+"4.出生地："+($F{nam_bonp_text}!=null?$F{nam_bonp_text}:"")+"\n"+
+"5.國民身分證統一編號："+($F{nam_idno}!=null?$F{nam_idno}:"")+"\n"+
+"6.戶籍地址："+($F{nam_haddr_text}!=null?$F{nam_haddr_text}:"")+"\n"+
+"7.聯絡電話："+($F{nam_tel}!=null?$F{nam_tel}:"")+"\n"+
+"8.以前職業："+($F{docu_proc_text}!=null?$F{docu_proc_text}:"")+"\n"+
+"9.教育程度："+($F{nam_educ_text}!=null?$F{nam_educ_text}:"")+"\n"+
+"10.罪名："+($F{nam_cnames_text}!=null?$F{nam_cnames_text}:"")+"\n"+
+"11.刑期："+($F{nam_pen_text}!=null?$F{nam_pen_text}:"")+"\n"+
+"12.入監所或被收容日期："+($F{nam_mvdt}!=null?$F{nam_mvdt}:"")+"\n"+
+"13.預計獲釋日期及原因："+($F{docu_otdt}!=null?$F{docu_otdt}:"")+"     "+($F{docu_otop_text}!=null?$F{docu_otop_text}:"")+"\n"+
+"14.專長："+($F{skill_text}!=null?$F{skill_text}:"")+"\n"+
+"15.需要何種更生保護："+($F{protect_text}!=null?$F{protect_text}:"")+"\n"+
+"16.取得證照職種："+($F{docu_license_text}!=null?$F{docu_license_text}:"")+"\n"+
+"17.宗教信仰："+($F{relig_text}!=null?$F{relig_text}:"")+"\n"+
+"18.是否有暴力傾向："+($F{docu_violent_text}!=null?$F{docu_violent_text}:"")+"\n"+
+"19.經濟狀況："+($F{economic_text}!=null?$F{economic_text}:"")+"\n"+
+"20.婚姻狀況："+($F{marriage_text}!=null?$F{marriage_text}:"")]]></textFieldExpression>
 			</textField>
 			<staticText>
 				<reportElement x="0" y="30" width="290" height="60" uuid="bf97dc1a-3718-4507-b8b1-bd066f3a2692"/>
@@ -161,7 +172,9 @@
 				<text><![CDATA[]]></text>
 			</staticText>
 			<textField>
-				<reportElement x="0" y="90" width="555" height="30" uuid="35097d22-8b7c-4c07-b35d-296fdb43d3d5"/>
+				<reportElement x="0" y="90" width="555" height="30" uuid="35097d22-8b7c-4c07-b35d-296fdb43d3d5">
+					<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
+				</reportElement>
 				<box topPadding="1" leftPadding="1" bottomPadding="1" rightPadding="1">
 					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
@@ -170,23 +183,28 @@
 				</box>
 				<textElement>
 					<font fontName="微軟正黑體" size="20"/>
+					<paragraph leftIndent="5"/>
 				</textElement>
-				<textFieldExpression><![CDATA["受文者:"+($F{prot_name}!=null?$F{prot_name}:"")]]></textFieldExpression>
+				<textFieldExpression><![CDATA["受文者："+($F{prot_name}!=null?$F{prot_name}:"")]]></textFieldExpression>
 			</textField>
 			<textField>
 				<reportElement x="290" y="50" width="265" height="20" uuid="9fc7fa40-2826-453e-9984-842098e74428">
 					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
 				</reportElement>
 				<box topPadding="1" leftPadding="1" bottomPadding="1" rightPadding="1">
 					<rightPen lineWidth="1.0"/>
 				</box>
 				<textElement>
 					<font fontName="微軟正黑體" size="12"/>
+					<paragraph leftIndent="5"/>
 				</textElement>
-				<textFieldExpression><![CDATA["發文日期:"+($F{rs_dt}!=null?$F{rs_dt}:"")]]></textFieldExpression>
+				<textFieldExpression><![CDATA["發文日期："+($F{rs_dt}!=null?$F{rs_dt}:"")]]></textFieldExpression>
 			</textField>
 			<textField>
-				<reportElement x="280" y="470" width="275" height="70" uuid="81683807-7a9e-413a-a3a3-c6f3e466953d"/>
+				<reportElement x="280" y="470" width="275" height="70" uuid="81683807-7a9e-413a-a3a3-c6f3e466953d">
+					<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
+				</reportElement>
 				<box topPadding="1" leftPadding="1" bottomPadding="1" rightPadding="1">
 					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
@@ -195,10 +213,11 @@
 				</box>
 				<textElement>
 					<font fontName="微軟正黑體" size="12"/>
+					<paragraph leftIndent="5"/>
 				</textElement>
-				<textFieldExpression><![CDATA[":"+"\n"+
-"2.關係:"+($F{reld_no_text}!=null?$F{reld_no_text}:"")+"\n"+
-"4.手機:"+($F{reld_tel2}!=null?$F{reld_tel2}:"")]]></textFieldExpression>
+				<textFieldExpression><![CDATA["\n"+
+"2.關係："+($F{reld_no_text}!=null?$F{reld_no_text}:"")+"\n"+
+"4.手機："+($F{reld_tel2}!=null?$F{reld_tel2}:"")]]></textFieldExpression>
 			</textField>
 		</band>
 	</detail>
