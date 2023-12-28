@@ -27,13 +27,14 @@ public class AcaJailRepositoryImpl implements AcaJailRepository {
         String select = "SELECT " +
                 "SAC.ID itemId, " +
                 "SAC.SIGN_STATE, " +
+                "SAC.SIGN_DATE, " +
                 "SAC.SIGN_PROT_NO, " +
                 "SAC.SIGN_PROT_NAME, " +
-                "SAC.CALL_NO, " +
                 "SAC.RS_DT recvDate, " +
                 "SAC.NAM_CNAME namName, " +
                 "SAC.NAM_SEX, " +
-                "SAC.NAM_HADDR_TEXT namAddr " +
+                "SAC.NAM_HADDR_TEXT namAddr, " +
+                "SAC.NAM_CNAMES_TEXT namCnames " +
                 "FROM SUP_AfterCare SAC ";
 
         HashMap<String, Object> params = new HashMap<>();
