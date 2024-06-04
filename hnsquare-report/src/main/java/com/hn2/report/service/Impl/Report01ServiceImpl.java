@@ -59,7 +59,7 @@ public class Report01ServiceImpl implements Report01Service {
                 insertDTO.setRs_dt(listDto.get(i).getRs_dt());
                 insertDTO.setPrint_prot_name("更生保護分會");
                 insertDTO.setPrint_date(dd.substring(0,10));
-                insertDTO.setPrint_user(payload.getSingUser());
+                insertDTO.setPrint_user(payload.getSignUser());
                 insertDTOList.add(insertDTO);
             }
             repository.insertToSUP_AfterCare_Print_Log(insertDTOList);

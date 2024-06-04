@@ -13,5 +13,5 @@ public class Reprot01Payload {
     private List<String> itemIdList;
     /** 簽收人員 */
     @NotNull(message = "簽收人員為必填欄位")
-    private String singUser;
+    private String signUser;
 }

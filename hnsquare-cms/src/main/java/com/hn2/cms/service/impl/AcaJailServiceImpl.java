@@ -60,8 +60,8 @@ public class AcaJailServiceImpl implements AcaJailService {
 
         for (var v : entityList){
             if("0".equals(v.getSignState())){
-                v.setSignDate(payloadData.getSingDate());
-                v.setSignUser(payloadData.getSingUser());
+                v.setSignDate(payloadData.getSignDate());
+                v.setSignUser(payloadData.getSignUser());
                 v.setSignState("1");
             }
         }
