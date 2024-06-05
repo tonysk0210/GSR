@@ -1,9 +1,7 @@
 package com.hn2.cms.service.impl;
 
 import com.hn2.cms.dto.Aca1002QueryDto;
-import com.hn2.cms.payload.aca1002.Aca1002QueryPayload;
-import com.hn2.cms.payload.aca1002.Aca1002SignPayload;
-import com.hn2.cms.payload.aca1002.Aca1002TransPortPayload;
+import com.hn2.cms.payload.aca1002.*;
 import com.hn2.cms.repository.Aca1002Repository;
 import com.hn2.cms.repository.SupAfterCareRepository;
 import com.hn2.cms.service.Aca1002Service;
@@ -60,9 +58,11 @@ public class Aca1002ServiceImpl implements Aca1002Service {
 
         for (var v : entityList){
             if("0".equals(v.getSignState())){
-                v.setSignDate(payloadData.getSignDate());
-                v.setSignUser(payloadData.getSignUser());
+                v.setAcaReceiptDate(payloadData.getAcaDate());
+                v.setAcaUser(payloadData.getAcaReceiptUser());
                 v.setSignState("1");
+
+                //todo 需要寫入正式資料
             }
         }
 
@@ -80,6 +80,43 @@ public class Aca1002ServiceImpl implements Aca1002Service {
         for (var v : entityList) {
             v.setSignProtName(payloadData.getSignProtName());
             v.setSignProtNo(payloadData.getSignProtNo());
+            v.setAcaReceiptDate(null);
+            v.setAcaUser(null);
+            v.setSignState("0");
+        };
+
+        supAfterCareRepository.saveAll(entityList);
+
+        return new DataDto<>(null, new ResponseInfo(1, "儲存成功"));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public DataDto<Void> goBack(GeneralPayload<Aca1002GoBackPayload> payload) {
+        var payloadData = payload.getData();
+        var entityList = supAfterCareRepository.findAllById(payloadData.getItemIdList());
+
+        for (var v : entityList) {
+            v.setAcaReceiptDate(null);
+            v.setAcaUser(null);
+            v.setSignState("0");
+        };
+
+        supAfterCareRepository.saveAll(entityList);
+
+        return new DataDto<>(null, new ResponseInfo(1, "儲存成功"));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public DataDto<Void> reassign(GeneralPayload<Aca1002ReassignPayload> payload) {
+        var payloadData = payload.getData();
+        var entityList = supAfterCareRepository.findAllById(payloadData.getItemIdList());
+
+        for (var v : entityList) {
+            v.setAcaReceiptDate(null);
+            v.setAcaUser(payloadData.getAcaReceiptUser());
+            v.setSignState("0");
         };
 
         supAfterCareRepository.saveAll(entityList);

@@ -192,6 +192,19 @@ public class SupAfterCareEntity {
     @Column(name = "SIGN_USER")
     private String signUser;
 
+    /** 承辦人 */
+    @Column(name = "ACA_USER")
+    private String acaUser;
+
+    /** 承辦人簽收日期(收文日期) */
+    @Column(name = "ACA_RECEIPT_DATE")
+    private LocalDate acaReceiptDate;
+
+    /**承辦人簽收狀態 0=>未介簽收 1=>已簽收)*/
+    @Column(name = "ACA_STATE")
+    private String acaState;
+
+
     /** 是否介接更生保護會(0=>未介接1=>已介接) */
     @Column(name = "UPLOAD_STATE")
     private String uploadState;

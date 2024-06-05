@@ -1,9 +1,7 @@
 package com.hn2.cms.controller;
 
 import com.hn2.cms.dto.Aca1002QueryDto;
-import com.hn2.cms.payload.aca1002.Aca1002QueryPayload;
-import com.hn2.cms.payload.aca1002.Aca1002SignPayload;
-import com.hn2.cms.payload.aca1002.Aca1002TransPortPayload;
+import com.hn2.cms.payload.aca1002.*;
 import com.hn2.cms.service.Aca1002Service;
 import com.hn2.core.dto.DataDto;
 import com.hn2.core.payload.GeneralPayload;
@@ -37,7 +35,7 @@ public class Aca1002Controller {
     }
 
     /**
-     * 發文資料簽收
+     * 承辦人
      *
      * @param payload payload
      * @return 結果列表
@@ -58,6 +56,31 @@ public class Aca1002Controller {
     public ResponseEntity<DataDto<Void>> transPort(
             @Valid @RequestBody GeneralPayload<Aca1002TransPortPayload> payload) {
         return ResponseEntity.ok(aca1002Service.transPort(payload));
+    }
+
+
+    /**
+     * 退回
+     *
+     * @param payload payload
+     * @return 結果列表
+     */
+    @PostMapping("/goBack")
+    public ResponseEntity<DataDto<Void>> goBack(
+            @Valid @RequestBody GeneralPayload<Aca1002GoBackPayload> payload) {
+        return ResponseEntity.ok(aca1002Service.goBack(payload));
+    }
+
+    /**
+     * 轉分派
+     *
+     * @param payload payload
+     * @return 結果列表
+     */
+    @PostMapping("/reassign")
+    public ResponseEntity<DataDto<Void>> reassign(
+            @Valid @RequestBody GeneralPayload<Aca1002ReassignPayload> payload) {
+        return ResponseEntity.ok(aca1002Service.reassign(payload));
     }
 
 }
