@@ -26,7 +26,7 @@ public class Aca1002RepositoryImpl implements Aca1002Repository {
     public List<Aca1002QueryDto> queryList(Aca1002QueryPayload payload, PagePayload pagePayload) {
         String select = "SELECT " +
                 "SAC.ID itemId, " +
-                "SAC.SIGN_STATE, " +
+                "SAC.ACA_STATE, " +
                 "SAC.SIGN_DATE, " +
                 "SAC.SIGN_PROT_NO, " +
                 "SAC.SIGN_PROT_NAME, " +
@@ -92,6 +92,18 @@ public class Aca1002RepositoryImpl implements Aca1002Repository {
         if (StringUtils.hasLength(payload.getSignProtNo())) {
             conditionBuilder.append("AND SAC.SIGN_PROT_NO = :signProtNo ");
             params.put("signProtNo", payload.getSignProtNo());
+        }
+
+        // 承辦人簽收
+        if (StringUtils.hasLength(payload.getAcaReceiptUser())) {
+            conditionBuilder.append("AND SAC.ACA_RECEIPT_USER = :acaReceiptUser ");
+            params.put("acaReceiptUser", payload.getAcaReceiptUser());
+        }
+
+        //承辦簽收狀態
+        if (StringUtils.hasLength(payload.getAcaState())) {
+            conditionBuilder.append("AND isnull(SAC.ACA_STATE,'0') = :acaState ");
+            params.put("acaState", payload.getAcaState());
         }
 
 
