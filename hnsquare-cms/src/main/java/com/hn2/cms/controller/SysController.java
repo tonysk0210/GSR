@@ -23,7 +23,7 @@ public class SysController {
      * @param unit 分會別
      * @return 結果列表
      */
-    @GetMapping("/user/queryList/{unit}")
+    @GetMapping("/user/{unit}")
     public ResponseEntity<DataDto<List<SysUserQueryDto>>> queryList(
             @PathVariable String unit) {
         SysService sysService = new SysService() {
