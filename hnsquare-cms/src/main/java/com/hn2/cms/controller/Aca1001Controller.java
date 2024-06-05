@@ -21,11 +21,6 @@ public class Aca1001Controller {
     @Autowired
     Aca1001Service aca1001Service;
 
-    @GetMapping("/heartCheck")
-    public ResponseEntity<String> heartCheck() {
-        return ResponseEntity.ok("OK");
-    }
-
     /**
      * 發文資料查詢
      *
