@@ -21,6 +21,12 @@ public class AcaJailController {
     @Autowired
     AcaJailService acaJailService;
 
+
+    @GetMapping("/heartCheck")
+    public ResponseEntity<String> heartCheck() {
+        return ResponseEntity.ok("OK");
+    }
+
     /**
      * 發文資料查詢
      *
