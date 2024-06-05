@@ -3,19 +3,14 @@ package com.hn2.cms.repository.impl;
 
 import com.hn2.cms.dto.SysUserQueryDto;
 
-import com.hn2.cms.repository.Aca1001Repository;
 import com.hn2.cms.repository.SysUserRepository;
-import com.hn2.core.payload.PagePayload;
 import com.hn2.util.Sql2oHelper;
 import com.hn2.util.SqlStringHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
-import org.springframework.util.ObjectUtils;
-import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Repository
 public class SysUserRepositoryImpl implements SysUserRepository {

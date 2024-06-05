@@ -7,8 +7,7 @@ import com.hn2.core.payload.GeneralPayload;
 import java.util.List;
 
 public interface SysService {
-    static DataDto<List<SysUserQueryDto>> queryList(String unit) {
-        return null;
-    }
 
+
+    DataDto<List<SysUserQueryDto>> queryList(String unit);
 }
