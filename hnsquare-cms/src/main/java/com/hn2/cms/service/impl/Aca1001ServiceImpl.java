@@ -1,9 +1,11 @@
 package com.hn2.cms.service.impl;
 
 import com.hn2.cms.dto.Aca1001QueryDto;
+import com.hn2.cms.payload.aca1001.Aca1001AssignPayload;
 import com.hn2.cms.payload.aca1001.Aca1001QueryPayload;
 import com.hn2.cms.payload.aca1001.Aca1001SignPayload;
 import com.hn2.cms.payload.aca1001.Aca1001TransPortPayload;
+import com.hn2.cms.payload.aca1002.Aca1002ReassignPayload;
 import com.hn2.cms.repository.Aca1001Repository;
 import com.hn2.cms.repository.SupAfterCareRepository;
 import com.hn2.cms.service.Aca1001Service;
@@ -80,6 +82,22 @@ public class Aca1001ServiceImpl implements Aca1001Service {
         for (var v : entityList) {
             v.setSignProtName(payloadData.getSignProtName());
             v.setSignProtNo(payloadData.getSignProtNo());
+        };
+
+        supAfterCareRepository.saveAll(entityList);
+
+        return new DataDto<>(null, new ResponseInfo(1, "儲存成功"));
+    }
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public DataDto<Void> assign(GeneralPayload<Aca1001AssignPayload> payload) {
+        var payloadData = payload.getData();
+        var entityList = supAfterCareRepository.findAllById(payloadData.getItemIdList());
+
+        for (var v : entityList) {
+            v.setAcaReceiptDate(null);
+            v.setAcaUser(payloadData.getAcaReceiptUser());
+            v.setSignState("0");
         };
 
         supAfterCareRepository.saveAll(entityList);
