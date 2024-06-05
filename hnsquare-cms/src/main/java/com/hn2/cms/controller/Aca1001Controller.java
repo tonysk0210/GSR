@@ -15,7 +15,7 @@ import javax.validation.Valid;
 import java.util.List;
 
 @RestController
-@RequestMapping("/aca/jail/receipt/")
+@RequestMapping("/aca/aca1001")
 public class Aca1001Controller {
 
     @Autowired
