@@ -1,4 +1,4 @@
-package com.hn2.cms.payload;
+package com.hn2.cms.payload.aca1001;
 
 import lombok.Data;
 
@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Data
-public class AcaJailSignPayload {
+public class Aca1001SignPayload {
     /** 項目編號列表 */
     @NotEmpty(message = "項目編號列表不可為空")
     private List<String> itemIdList;

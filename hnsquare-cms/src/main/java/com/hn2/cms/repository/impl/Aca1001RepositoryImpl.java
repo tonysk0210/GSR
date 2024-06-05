@@ -1,8 +1,8 @@
 package com.hn2.cms.repository.impl;
 
-import com.hn2.cms.dto.AcaJailQueryDto;
-import com.hn2.cms.payload.AcaJailQueryPayload;
-import com.hn2.cms.repository.AcaJailRepository;
+import com.hn2.cms.dto.Aca1001QueryDto;
+import com.hn2.cms.payload.aca1001.Aca1001QueryPayload;
+import com.hn2.cms.repository.Aca1001Repository;
 import com.hn2.core.payload.PagePayload;
 import com.hn2.util.Sql2oHelper;
 import com.hn2.util.SqlStringHelper;
@@ -16,14 +16,14 @@ import java.util.List;
 import java.util.Map;
 
 @Repository
-public class AcaJailRepositoryImpl implements AcaJailRepository {
+public class Aca1001RepositoryImpl implements Aca1001Repository {
     @Autowired
     SqlStringHelper sqlStringHelper;
     @Autowired
     Sql2oHelper sql2oHelper;
 
     @Override
-    public List<AcaJailQueryDto> queryList(AcaJailQueryPayload payload, PagePayload pagePayload) {
+    public List<Aca1001QueryDto> queryList(Aca1001QueryPayload payload, PagePayload pagePayload) {
         String select = "SELECT " +
                 "SAC.ID itemId, " +
                 "SAC.SIGN_STATE, " +
@@ -44,11 +44,11 @@ public class AcaJailRepositoryImpl implements AcaJailRepository {
         if (pagePayload != null)
             select += sqlStringHelper.getPageSql(pagePayload.getPage(), pagePayload.getPageSize());
 
-        return sql2oHelper.queryList(select, params, AcaJailQueryDto.class);
+        return sql2oHelper.queryList(select, params, Aca1001QueryDto.class);
     }
 
     @Override
-    public Integer countSearch(AcaJailQueryPayload payload) {
+    public Integer countSearch(Aca1001QueryPayload payload) {
         String select = "SELECT COUNT(1) " +
                 "FROM SUP_AfterCare SAC ";
 
@@ -58,7 +58,7 @@ public class AcaJailRepositoryImpl implements AcaJailRepository {
         return Integer.valueOf(sql2oHelper.executeScalar(select, params).toString());
     }
 
-    private StringBuilder condition(AcaJailQueryPayload payload, Map<String, Object> params) {
+    private StringBuilder condition(Aca1001QueryPayload payload, Map<String, Object> params) {
 
         var conditionBuilder = new StringBuilder();
         conditionBuilder.append("WHERE 1=1 ");

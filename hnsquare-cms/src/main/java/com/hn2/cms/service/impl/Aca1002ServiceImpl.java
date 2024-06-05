@@ -1,12 +1,12 @@
 package com.hn2.cms.service.impl;
 
-import com.hn2.cms.dto.AcaJailQueryDto;
-import com.hn2.cms.payload.AcaJailQueryPayload;
-import com.hn2.cms.payload.AcaJailSignPayload;
-import com.hn2.cms.payload.AcaJailTransPortPayload;
-import com.hn2.cms.repository.AcaJailRepository;
+import com.hn2.cms.dto.Aca1002QueryDto;
+import com.hn2.cms.payload.aca1002.Aca1002QueryPayload;
+import com.hn2.cms.payload.aca1002.Aca1002SignPayload;
+import com.hn2.cms.payload.aca1002.Aca1002TransPortPayload;
+import com.hn2.cms.repository.Aca1002Repository;
 import com.hn2.cms.repository.SupAfterCareRepository;
-import com.hn2.cms.service.AcaJailService;
+import com.hn2.cms.service.Aca1002Service;
 import com.hn2.core.dto.DataDto;
 import com.hn2.core.dto.PageInfo;
 import com.hn2.core.dto.ResponseInfo;
@@ -21,24 +21,24 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
-public class AcaJailServiceImpl implements AcaJailService {
+public class Aca1002ServiceImpl implements Aca1002Service {
     @Autowired
     PagePayloadValidator pagePayloadValidator;
     @Autowired
-    AcaJailRepository acaJailRepository;
+    Aca1002Repository Aca1002Repository;
     @Autowired
     SupAfterCareRepository supAfterCareRepository;
 
     @Override
-    public DataDto<List<AcaJailQueryDto>> queryList(GeneralPayload<AcaJailQueryPayload> payload) {
+    public DataDto<List<Aca1002QueryDto>> queryList(GeneralPayload<Aca1002QueryPayload> payload) {
         var dataPayload = payload.getData();
         var pagePayload = payload.getPage();
 
-        int count = acaJailRepository.countSearch(dataPayload);
+        int count = Aca1002Repository.countSearch(dataPayload);
         if (pagePayload != null && !pagePayloadValidator.checkPageExist(pagePayload, count))
             throw new BusinessException(ErrorType.RESOURCE_NOT_FOUND, "請求分頁不存在");
 
-        var dataList = acaJailRepository.queryList(dataPayload, pagePayload);
+        var dataList = Aca1002Repository.queryList(dataPayload, pagePayload);
 
         PageInfo pageInfo = new PageInfo();
         pageInfo.setTotalDatas((long) count);
@@ -54,7 +54,7 @@ public class AcaJailServiceImpl implements AcaJailService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public DataDto<Void> signList(GeneralPayload<AcaJailSignPayload> payload) {
+    public DataDto<Void> signList(GeneralPayload<Aca1002SignPayload> payload) {
         var payloadData = payload.getData();
         var entityList = supAfterCareRepository.findAllById(payloadData.getItemIdList());
 
@@ -73,7 +73,7 @@ public class AcaJailServiceImpl implements AcaJailService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public DataDto<Void> transPort(GeneralPayload<AcaJailTransPortPayload> payload) {
+    public DataDto<Void> transPort(GeneralPayload<Aca1002TransPortPayload> payload) {
         var payloadData = payload.getData();
         var entityList = supAfterCareRepository.findAllById(payloadData.getItemIdList());
 

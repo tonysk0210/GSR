@@ -1,10 +1,10 @@
 package com.hn2.cms.controller;
 
-import com.hn2.cms.dto.AcaJailQueryDto;
-import com.hn2.cms.payload.AcaJailQueryPayload;
-import com.hn2.cms.payload.AcaJailSignPayload;
-import com.hn2.cms.payload.AcaJailTransPortPayload;
-import com.hn2.cms.service.AcaJailService;
+import com.hn2.cms.dto.Aca1001QueryDto;
+import com.hn2.cms.payload.aca1001.Aca1001QueryPayload;
+import com.hn2.cms.payload.aca1001.Aca1001SignPayload;
+import com.hn2.cms.payload.aca1001.Aca1001TransPortPayload;
+import com.hn2.cms.service.Aca1001Service;
 import com.hn2.core.dto.DataDto;
 import com.hn2.core.payload.GeneralPayload;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,11 +15,11 @@ import javax.validation.Valid;
 import java.util.List;
 
 @RestController
-@RequestMapping("/aca/jail")
-public class AcaJailController {
+@RequestMapping("/aca/jail/receipt/")
+public class Aca1001Controller {
 
     @Autowired
-    AcaJailService acaJailService;
+    Aca1001Service aca1001Service;
 
 
     @GetMapping("/heartCheck")
@@ -34,9 +34,9 @@ public class AcaJailController {
      * @return 結果列表
      */
     @PostMapping("/queryList")
-    public ResponseEntity<DataDto<List<AcaJailQueryDto>>> queryList(
-            @Valid @RequestBody GeneralPayload<AcaJailQueryPayload> payload) {
-        return ResponseEntity.ok(acaJailService.queryList(payload));
+    public ResponseEntity<DataDto<List<Aca1001QueryDto>>> queryList(
+            @Valid @RequestBody GeneralPayload<Aca1001QueryPayload> payload) {
+        return ResponseEntity.ok(aca1001Service.queryList(payload));
     }
 
     /**
@@ -47,8 +47,8 @@ public class AcaJailController {
      */
     @PostMapping("/signList")
     public ResponseEntity<DataDto<Void>> signList(
-            @Valid @RequestBody GeneralPayload<AcaJailSignPayload> payload) {
-        return ResponseEntity.ok(acaJailService.signList(payload));
+            @Valid @RequestBody GeneralPayload<Aca1001SignPayload> payload) {
+        return ResponseEntity.ok(aca1001Service.signList(payload));
     }
 
     /**
@@ -59,8 +59,8 @@ public class AcaJailController {
      */
     @PostMapping("/transPort")
     public ResponseEntity<DataDto<Void>> transPort(
-            @Valid @RequestBody GeneralPayload<AcaJailTransPortPayload> payload) {
-        return ResponseEntity.ok(acaJailService.transPort(payload));
+            @Valid @RequestBody GeneralPayload<Aca1001TransPortPayload> payload) {
+        return ResponseEntity.ok(aca1001Service.transPort(payload));
     }
 
 }

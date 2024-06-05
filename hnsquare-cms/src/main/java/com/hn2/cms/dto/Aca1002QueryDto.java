@@ -5,11 +5,11 @@ import lombok.Data;
 import java.time.LocalDate;
 
 @Data
-public class AcaJailQueryDto {
+public class Aca1002QueryDto {
     /** 項目編號 */
     private String itemId;
-    /** 簽收狀態 */
-    private String signState;
+    /** 承辦人簽收狀態 */
+    private String acaState;
     /** 簽收日期 */
     private LocalDate signDate;
     /** 簽收分會(代碼) */

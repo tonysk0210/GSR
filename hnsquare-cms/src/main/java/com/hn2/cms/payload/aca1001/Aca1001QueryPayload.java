@@ -1,4 +1,4 @@
-package com.hn2.cms.payload;
+package com.hn2.cms.payload.aca1001;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.hn2.core.payload.BasePayload;
@@ -10,7 +10,7 @@ import java.time.LocalDate;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class AcaJailQueryPayload extends BasePayload {
+public class Aca1001QueryPayload extends BasePayload {
     /** 收文日期(起) */
     private LocalDate recvDateS;
     /** 收文日期(迄) */
