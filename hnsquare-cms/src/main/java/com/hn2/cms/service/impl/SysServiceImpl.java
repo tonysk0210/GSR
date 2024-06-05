@@ -14,14 +14,8 @@ public class SysServiceImpl implements SysService {
 
     @Override
     public DataDto<List<SysUserQueryDto>> queryList(String unit) {
-        SysUserRepository repository = new SysUserRepository() {
-            @Override
-            public List<SysUserQueryDto> queryList(String unit) {
-                return null;
-            }
-        };
-        List<SysUserQueryDto> dataList = repository.queryList(unit);
 
+        List<SysUserQueryDto> dataList = SysUserRepository.queryList(unit);
 
         return new DataDto<>(dataList, null, new ResponseInfo(1, "查詢成功"));
     }

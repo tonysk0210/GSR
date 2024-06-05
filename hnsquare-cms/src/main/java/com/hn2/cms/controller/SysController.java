@@ -26,14 +26,7 @@ public class SysController {
     @GetMapping("/user/{unit}")
     public ResponseEntity<DataDto<List<SysUserQueryDto>>> queryList(
             @PathVariable String unit) {
-        SysService sysService = new SysService() {
-            @Override
-            public DataDto<List<SysUserQueryDto>> queryList(String unit) {
-                return null;
-            }
-        };
-        DataDto<List<SysUserQueryDto>> result = sysService.queryList(unit);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(SysService.queryList(unit));
     }
 
 
