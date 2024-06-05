@@ -21,7 +21,7 @@ public class SysUserRepositoryImpl implements SysUserRepository {
 
     @Override
     public  List<SysUserQueryDto> queryList(String unit) {
-        String select = "SELECT " +
+        String select = "SELECT u.userName userId, u.displayname userName " +
                 "FROM CaseManagementDnnDB.dbo.users u\n" +
                 "INNER JOIN CaseManagementDnnDB.dbo.UserPortals p\n" +
                 "\tON u.UserID = p.UserId\n" +
@@ -39,9 +39,9 @@ public class SysUserRepositoryImpl implements SysUserRepository {
                 "\t\t\t\tFROM CaseManagementDnnDB.dbo.ProfilePropertyDefinition c\n" +
                 "\t\t\t\tWHERE up.PropertyDefinitionID = c.PropertyDefinitionID\n" +
                 "\t\t\t\t\tAND c.PropertyName = 'isEmployee'\n" +
-                "\t\t\t\t), '0') = '0'" +
+                "\t\t\t\t), '0') = '0' ";
 
-                "FROM CaseManagementDnnDB..Users   where unit = :unit  ORDER BY SAC.ID  ";
+
 
         HashMap<String, Object> params = new HashMap<>();
         params.put("unit", unit);
