@@ -83,6 +83,9 @@ public class Aca1001ServiceImpl implements Aca1001Service {
         for (var v : entityList) {
             v.setSignProtName(payloadData.getSignProtName());
             v.setSignProtNo(payloadData.getSignProtNo());
+            v.setSignDate(null);
+            v.setSignState("0");
+
         };
 
         supAfterCareRepository.saveAll(entityList);

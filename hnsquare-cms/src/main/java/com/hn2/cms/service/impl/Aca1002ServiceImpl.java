@@ -84,6 +84,7 @@ public class Aca1002ServiceImpl implements Aca1002Service {
             v.setSignProtNo(payloadData.getSignProtNo());
             v.setAcaReceiptDate(null);
             v.setAcaUser(null);
+            v.setSignDate(null);
             v.setSignState("0");
         };
 
