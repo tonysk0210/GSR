@@ -8,7 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping(value = "/aca/jail")
+@RequestMapping(value = "/aca/aca1000")
 @Slf4j
 public class Report01Controller {
     @Autowired
