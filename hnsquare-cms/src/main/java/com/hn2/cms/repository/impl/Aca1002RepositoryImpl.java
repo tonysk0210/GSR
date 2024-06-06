@@ -27,7 +27,7 @@ public class Aca1002RepositoryImpl implements Aca1002Repository {
         String select = "SELECT " +
                 "SAC.ID itemId, " +
                 "SAC.ACA_STATE, " +
-                "SAC.SIGN_DATE, " +
+                "SAC.ACA_RECEIPT_DATE, " +
                 "SAC.SIGN_PROT_NO, " +
                 "SAC.SIGN_PROT_NAME, " +
                 "SAC.RS_DT recvDate, " +

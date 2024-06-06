@@ -35,7 +35,7 @@ public class Aca1002Controller {
     }
 
     /**
-     * 承辦人
+     * 承辦人簽收
      *
      * @param payload payload
      * @return 結果列表

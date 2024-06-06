@@ -10,12 +10,14 @@ public class Aca1002QueryDto {
     private String itemId;
     /** 承辦人簽收狀態 */
     private String acaState;
-    /** 簽收日期 */
-    private LocalDate signDate;
+    /** 承辦人簽收日期 */
+    private LocalDate acaReceiptDate;
+
     /** 簽收分會(代碼) */
     private String signProtNo;
     /** 簽收分會(分會別) */
     private String signProtName;
+
     /** 發文日期 */
     private String recvDate;
     /** 更生人姓名 */
