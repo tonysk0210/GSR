@@ -58,7 +58,7 @@ public class Aca1002ServiceImpl implements Aca1002Service {
         List<SupAfterCareEntity> entityList = supAfterCareRepository.findAllById(payloadData.getItemIdList());
 
         for (SupAfterCareEntity v : entityList){
-            if("0".equals(v.getSignState())){
+            if("0".equals(v.getSignState()) || v.getSignState() == null){
                 v.setAcaReceiptDate(payloadData.getAcaReceiptDate());
                 v.setAcaUser(payloadData.getAcaUser());
                 v.setSignState("1");
