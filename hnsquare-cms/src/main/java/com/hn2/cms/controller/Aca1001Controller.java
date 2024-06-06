@@ -1,6 +1,7 @@
 package com.hn2.cms.controller;
 
 import com.hn2.cms.dto.Aca1001QueryDto;
+import com.hn2.cms.payload.aca1001.Aca1001AssignPayload;
 import com.hn2.cms.payload.aca1001.Aca1001QueryPayload;
 import com.hn2.cms.payload.aca1001.Aca1001SignPayload;
 import com.hn2.cms.payload.aca1001.Aca1001TransPortPayload;
@@ -57,6 +58,11 @@ public class Aca1001Controller {
         return ResponseEntity.ok(aca1001Service.transPort(payload));
     }
 
+    @PostMapping("/assign")
+    public ResponseEntity<DataDto<Void>> assign(
+            @Valid @RequestBody GeneralPayload<Aca1001AssignPayload> payload) {
+        return ResponseEntity.ok(aca1001Service.assign(payload));
+    }
 
 
 }

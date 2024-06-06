@@ -1,6 +1,7 @@
 package com.hn2.cms.service.impl;
 
 import com.hn2.cms.dto.Aca1002QueryDto;
+import com.hn2.cms.model.SupAfterCareEntity;
 import com.hn2.cms.payload.aca1002.*;
 import com.hn2.cms.repository.Aca1002Repository;
 import com.hn2.cms.repository.SupAfterCareRepository;
@@ -53,16 +54,17 @@ public class Aca1002ServiceImpl implements Aca1002Service {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DataDto<Void> signList(GeneralPayload<Aca1002SignPayload> payload) {
-        var payloadData = payload.getData();
-        var entityList = supAfterCareRepository.findAllById(payloadData.getItemIdList());
+        Aca1002SignPayload payloadData = payload.getData();
+        List<SupAfterCareEntity> entityList = supAfterCareRepository.findAllById(payloadData.getItemIdList());
 
-        for (var v : entityList){
+        for (SupAfterCareEntity v : entityList){
             if("0".equals(v.getSignState())){
                 v.setAcaReceiptDate(payloadData.getAcaDate());
                 v.setAcaUser(payloadData.getAcaReceiptUser());
                 v.setSignState("1");
 
                 //todo 需要寫入正式資料
+                //insertAca(v.getId());
             }
         }
 
@@ -123,4 +125,14 @@ public class Aca1002ServiceImpl implements Aca1002Service {
 
         return new DataDto<>(null, new ResponseInfo(1, "儲存成功"));
     }
+    /**
+     * insertAca 寫入ACA個案系統
+     */
+
+    private void insertAca(String id){
+    //寫入個案系統
+    //查詢此身分證是否已存在，若不存在寫入相關資料，若存在自動顯示此人資料
+
+    }
+
 }
