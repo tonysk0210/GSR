@@ -14,8 +14,8 @@ public class Aca1002SignPayload {
     private List<String> itemIdList;
     /** 簽收日期 */
     @NotNull(message = "簽收日期為必填欄位")
-    private LocalDate acaDate;
+    private LocalDate acaReceiptDate;
     /** 簽收人員 */
     @NotNull(message = "簽收人員為必填欄位")
-    private String acaReceiptUser;
+    private String acaUser;
 }

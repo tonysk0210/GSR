@@ -14,5 +14,5 @@ public class Aca1002ReassignPayload {
     private List<String> itemIdList;
     /** 簽收日期 */
     @NotNull(message = "簽收人員為必填欄位")
-    private String acaReceiptUser;
+    private String acaUser;
 }

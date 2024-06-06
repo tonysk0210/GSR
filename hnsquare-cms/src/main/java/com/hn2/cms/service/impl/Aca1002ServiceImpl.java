@@ -59,8 +59,8 @@ public class Aca1002ServiceImpl implements Aca1002Service {
 
         for (SupAfterCareEntity v : entityList){
             if("0".equals(v.getSignState())){
-                v.setAcaReceiptDate(payloadData.getAcaDate());
-                v.setAcaUser(payloadData.getAcaReceiptUser());
+                v.setAcaReceiptDate(payloadData.getAcaReceiptDate());
+                v.setAcaUser(payloadData.getAcaUser());
                 v.setSignState("1");
 
                 //todo 需要寫入正式資料
@@ -117,7 +117,7 @@ public class Aca1002ServiceImpl implements Aca1002Service {
 
         for (var v : entityList) {
             v.setAcaReceiptDate(null);
-            v.setAcaUser(payloadData.getAcaReceiptUser());
+            v.setAcaUser(payloadData.getAcaUser());
             v.setSignState("0");
         };
 

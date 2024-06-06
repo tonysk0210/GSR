@@ -24,6 +24,6 @@ public class Aca1002QueryPayload extends BasePayload {
     /** 承辦人簽收狀態 - 0:未簽收 1:已簽收 */
     private String acaState;
     /** 承辦人-  */
-    private String acaReceiptUser;
+    private String acaUser;
 
 }
