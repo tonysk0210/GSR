@@ -12,6 +12,6 @@ public class Reprot01Payload {
     @NotEmpty(message = "項目編號列表不可為空")
     private List<String> itemIdList;
     /** 簽收人員 */
-    @NotNull(message = "簽收人員為必填欄位")
-    private String signUser;
+    @NotNull(message = "列印人員為必填欄位")
+    private String printUser;
 }
