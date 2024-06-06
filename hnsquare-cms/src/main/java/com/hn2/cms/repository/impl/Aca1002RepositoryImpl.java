@@ -96,8 +96,8 @@ public class Aca1002RepositoryImpl implements Aca1002Repository {
 
         // 承辦人簽收
         if (StringUtils.hasLength(payload.getAcaReceiptUser())) {
-            conditionBuilder.append("AND SAC.ACA_RECEIPT_USER = :acaReceiptUser ");
-            params.put("acaReceiptUser", payload.getAcaReceiptUser());
+            conditionBuilder.append("AND SAC.ACA_USER = :acaUser ");
+            params.put("acaUser", payload.getAcaReceiptUser());
         }
 
         //承辦簽收狀態

@@ -1,6 +1,7 @@
 package com.hn2.cms.service.impl;
 
 import com.hn2.cms.dto.Aca1001QueryDto;
+import com.hn2.cms.model.SupAfterCareEntity;
 import com.hn2.cms.payload.aca1001.Aca1001AssignPayload;
 import com.hn2.cms.payload.aca1001.Aca1001QueryPayload;
 import com.hn2.cms.payload.aca1001.Aca1001SignPayload;
@@ -91,10 +92,13 @@ public class Aca1001ServiceImpl implements Aca1001Service {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DataDto<Void> assign(GeneralPayload<Aca1001AssignPayload> payload) {
-        var payloadData = payload.getData();
-        var entityList = supAfterCareRepository.findAllById(payloadData.getItemIdList());
+        Aca1001AssignPayload payloadData = payload.getData();
+        List<SupAfterCareEntity> entityList = supAfterCareRepository.findAllById(payloadData.getItemIdList());
 
         for (var v : entityList) {
+            v.setSignDate(payloadData.getSignDate());
+            v.setSignUser(payloadData.getSignUser());
+            v.setSignState("1");
             v.setAcaReceiptDate(null);
             v.setAcaUser(payloadData.getAcaReceiptUser());
             v.setSignState("0");

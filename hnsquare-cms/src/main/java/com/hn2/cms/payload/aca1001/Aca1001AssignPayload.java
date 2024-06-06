@@ -4,6 +4,7 @@ import lombok.Data;
 
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -14,4 +15,10 @@ public class Aca1001AssignPayload {
     /** 份派人員 */
     @NotNull(message = "簽收人員為必填欄位")
     private String acaReceiptUser;
+    /** 簽收日期 */
+    @NotNull(message = "簽收日期為必填欄位")
+    private LocalDate signDate;
+    /** 簽收人員 */
+    @NotNull(message = "簽收人員為必填欄位")
+    private String signUser;
 }
