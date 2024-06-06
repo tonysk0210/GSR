@@ -86,6 +86,10 @@ public class Aca1001ServiceImpl implements Aca1001Service {
             v.setSignDate(null);
             v.setSignState("0");
 
+            v.setAcaReceiptDate(null);
+            v.setAcaUser(null);
+            v.setAcaState("0");
+
         };
 
         supAfterCareRepository.saveAll(entityList);
@@ -102,9 +106,10 @@ public class Aca1001ServiceImpl implements Aca1001Service {
             v.setSignDate(payloadData.getSignDate());
             v.setSignUser(payloadData.getSignUser());
             v.setSignState("1");
+
             v.setAcaReceiptDate(null);
             v.setAcaUser(payloadData.getAcaReceiptUser());
-            v.setSignState("1");
+            v.setAcaState("0");
         };
 
         supAfterCareRepository.saveAll(entityList);

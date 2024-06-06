@@ -58,10 +58,11 @@ public class Aca1002ServiceImpl implements Aca1002Service {
         List<SupAfterCareEntity> entityList = supAfterCareRepository.findAllById(payloadData.getItemIdList());
 
         for (SupAfterCareEntity v : entityList){
-            if("0".equals(v.getSignState()) || v.getSignState() == null){
+            if("0".equals(v.getAcaState()) || v.getAcaState() == null){
                 v.setAcaReceiptDate(payloadData.getAcaReceiptDate());
                 v.setAcaUser(payloadData.getAcaUser());
-                v.setSignState("1");
+                v.setAcaState("1");
+
 
                 //todo 需要寫入正式資料
                 //insertAca(v.getId());
@@ -84,8 +85,12 @@ public class Aca1002ServiceImpl implements Aca1002Service {
             v.setSignProtNo(payloadData.getSignProtNo());
             v.setAcaReceiptDate(null);
             v.setAcaUser(null);
+            v.setAcaState("0");
+
             v.setSignDate(null);
+            v.setSignUser(null);
             v.setSignState("0");
+
         };
 
         supAfterCareRepository.saveAll(entityList);
@@ -102,7 +107,7 @@ public class Aca1002ServiceImpl implements Aca1002Service {
         for (var v : entityList) {
             v.setAcaReceiptDate(null);
             v.setAcaUser(null);
-            v.setSignState("0");
+            v.setAcaState("0");
         };
 
         supAfterCareRepository.saveAll(entityList);
@@ -119,7 +124,8 @@ public class Aca1002ServiceImpl implements Aca1002Service {
         for (var v : entityList) {
             v.setAcaReceiptDate(null);
             v.setAcaUser(payloadData.getAcaUser());
-            v.setSignState("0");
+            v.setAcaState("0");
+
         };
 
         supAfterCareRepository.saveAll(entityList);
