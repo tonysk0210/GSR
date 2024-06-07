@@ -14,7 +14,7 @@ public class Aca1001AssignPayload {
     private List<String> itemIdList;
     /** 份派人員 */
     @NotNull(message = "簽收人員為必填欄位")
-    private String acaReceiptUser;
+    private String acaUser;
     /** 簽收日期 */
     @NotNull(message = "簽收日期為必填欄位")
     private LocalDate signDate;

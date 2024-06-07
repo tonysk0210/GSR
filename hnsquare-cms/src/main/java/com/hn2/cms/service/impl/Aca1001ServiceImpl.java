@@ -108,7 +108,7 @@ public class Aca1001ServiceImpl implements Aca1001Service {
             v.setSignState("1");
 
             v.setAcaReceiptDate(null);
-            v.setAcaUser(payloadData.getAcaReceiptUser());
+            v.setAcaUser(payloadData.getAcaUser());
             v.setAcaState("0");
         };
 
