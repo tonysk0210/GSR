@@ -1,9 +1,12 @@
 package com.hn2.cms.service.impl;
 
+import com.hn2.cms.dto.Aca1002ComparyAcaDto;
 import com.hn2.cms.dto.Aca1002QueryDto;
+import com.hn2.cms.model.AcaBrdEntity;
 import com.hn2.cms.model.SupAfterCareEntity;
 import com.hn2.cms.payload.aca1002.*;
 import com.hn2.cms.repository.Aca1002Repository;
+import com.hn2.cms.repository.AcaBrdRepository;
 import com.hn2.cms.repository.SupAfterCareRepository;
 import com.hn2.cms.service.Aca1002Service;
 import com.hn2.core.dto.DataDto;
@@ -27,6 +30,8 @@ public class Aca1002ServiceImpl implements Aca1002Service {
     Aca1002Repository Aca1002Repository;
     @Autowired
     SupAfterCareRepository supAfterCareRepository;
+    @Autowired
+    AcaBrdRepository acaBrdRepository;
 
     @Override
     public DataDto<List<Aca1002QueryDto>> queryList(GeneralPayload<Aca1002QueryPayload> payload) {
@@ -132,14 +137,26 @@ public class Aca1002ServiceImpl implements Aca1002Service {
 
         return new DataDto<>(null, new ResponseInfo(1, "儲存成功"));
     }
-    /**
-     * insertAca 寫入ACA個案系統
-     */
 
-    private void insertAca(String id){
-    //寫入個案系統
-    //查詢此身分證是否已存在，若不存在寫入相關資料，若存在自動顯示此人資料
+    @Override
+    public DataDto<Aca1002ComparyAcaDto> compareAca(GeneralPayload<Aca1002CompareAcaPayload> payload) {
+        Aca1002CompareAcaPayload dataPayload = payload.getData();
+        String itemId = dataPayload.getItemId();
 
+        //1.查詢出A:矯正署資料 透過 itemId 查矯正署資料
+        SupAfterCareEntity namData = supAfterCareRepository.findById(itemId).orElseThrow( () -> new BusinessException(("查不到資料")));
+
+        //2.查詢出B:個案資料 鈄過查矯正署資料 身分證及簽收機關查詢個案
+        AcaBrdEntity acaData = (AcaBrdEntity) acaBrdRepository.findByCreatedByBranchIdAndAcaIdNo(namData.getSignProtNo(), namData.getNamIdno())
+                .orElseThrow( () -> new BusinessException(("查不到資料")));
+
+        Aca1002ComparyAcaDto ComparyAca = new Aca1002ComparyAcaDto();
+        ComparyAca.setA(namData);
+        ComparyAca.setB(acaData);
+
+
+        return new DataDto<Aca1002ComparyAcaDto>(ComparyAca,null, new ResponseInfo(1, "查詢成功"));
     }
+
 
 }

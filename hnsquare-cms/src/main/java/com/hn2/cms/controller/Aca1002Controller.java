@@ -1,5 +1,6 @@
 package com.hn2.cms.controller;
 
+import com.hn2.cms.dto.Aca1002ComparyAcaDto;
 import com.hn2.cms.dto.Aca1002QueryDto;
 import com.hn2.cms.payload.aca1002.*;
 import com.hn2.cms.service.Aca1002Service;
@@ -81,6 +82,18 @@ public class Aca1002Controller {
     public ResponseEntity<DataDto<Void>> reassign(
             @Valid @RequestBody GeneralPayload<Aca1002ReassignPayload> payload) {
         return ResponseEntity.ok(aca1002Service.reassign(payload));
+    }
+
+    /**
+     * 轉分派
+     *
+     * @param payload payload
+     * @return 結果列表
+     */
+    @PostMapping("/compareAca")
+    public ResponseEntity<DataDto<Aca1002ComparyAcaDto>> compareAca(
+            @Valid @RequestBody GeneralPayload<Aca1002CompareAcaPayload> payload) {
+        return ResponseEntity.ok(aca1002Service.compareAca(payload));
     }
 
 }
