@@ -1,8 +1,11 @@
 package com.hn2.cms.controller;
 
+import com.hn2.cms.dto.SysCodeQueryDto;
 import com.hn2.cms.dto.SysUserQueryDto;
+import com.hn2.cms.payload.sys.SysCodeQueryPayload;
 import com.hn2.cms.service.SysService;
 import com.hn2.core.dto.DataDto;
+import com.hn2.core.payload.GeneralPayload;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +30,17 @@ public class SysController {
     public ResponseEntity<DataDto<List<SysUserQueryDto>>> queryList(
             @PathVariable String unit) {
         return ResponseEntity.ok(sysService.queryList(unit));
+    }
+    /**
+     * 下拉代碼查詢
+     *
+     * @param payload payload
+     * @return 結果列表
+     */
+    @PostMapping("/code")
+    public ResponseEntity<DataDto<List<SysCodeQueryDto>>> codeList(
+            @Valid @RequestBody GeneralPayload<SysCodeQueryPayload> payload) {
+        return ResponseEntity.ok(sysService.codeList(payload.getData()));
     }
 
 

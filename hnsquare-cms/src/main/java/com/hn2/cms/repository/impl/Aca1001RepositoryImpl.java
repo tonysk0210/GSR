@@ -83,10 +83,11 @@ public class Aca1001RepositoryImpl implements Aca1001Repository {
         }
 
         // 簽收分會
+        /*
         if (StringUtils.hasLength(payload.getSignProtName())) {
-            conditionBuilder.append("AND SAC.SIGN_PROT_NAME = :signProtName ");
-            params.put("signProtName", payload.getSignProtName());
-        }
+            conditionBuilder.append("AND SAC.SIGN_PROT_NAME like :signProtName ");
+            params.put("signProtName", "%"+payload.getSignProtName()+"%");
+        }*/
 
         // 簽收分會
         if (StringUtils.hasLength(payload.getSignProtNo())) {

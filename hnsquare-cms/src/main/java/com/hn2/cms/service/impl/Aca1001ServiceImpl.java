@@ -62,11 +62,11 @@ public class Aca1001ServiceImpl implements Aca1001Service {
         var entityList = supAfterCareRepository.findAllById(payloadData.getItemIdList());
 
         for (var v : entityList){
-            if("0".equals(v.getSignState())){
+
                 v.setSignDate(payloadData.getSignDate());
                 v.setSignUser(payloadData.getSignUser());
                 v.setSignState("1");
-            }
+
         }
 
         supAfterCareRepository.saveAll(entityList);
