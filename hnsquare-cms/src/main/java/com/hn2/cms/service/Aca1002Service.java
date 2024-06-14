@@ -18,4 +18,5 @@ public interface Aca1002Service {
     DataDto<Void> reassign(GeneralPayload<Aca1002ReassignPayload> payload);
 
     DataDto<Aca1002ComparyAcaDto> compareAca(GeneralPayload<Aca1002CompareAcaPayload> payload);
+    DataDto<Void> save(GeneralPayload<Aca1002SavePayload> payload);
 }

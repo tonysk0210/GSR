@@ -96,4 +96,10 @@ public class Aca1002Controller {
         return ResponseEntity.ok(aca1002Service.compareAca(payload));
     }
 
+    @PostMapping("/save")
+    public ResponseEntity<DataDto<Void>> save(
+            @Valid @RequestBody GeneralPayload<Aca1002SavePayload> payload) {
+        return ResponseEntity.ok(aca1002Service.save(payload));
+    }
+
 }

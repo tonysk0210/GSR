@@ -9,8 +9,8 @@ import java.time.LocalDate;
 @Data
 public class Aca1002ComparyAcaDto {
     /** 項目編號 */
-    private SupAfterCareEntity A;
+    private SupAfterCareEntity nam;
     /** 承辦人簽收狀態 */
-    private AcaBrdEntity B;
+    private AcaBrdEntity aca;
 
 }
