@@ -161,7 +161,7 @@ public class AcaBrdEntity {
 
     // 黑名單
     @Column(name = "IsBlackList")
-    private boolean isBlackList;
+    private String isBlackList;
 
     // 資料所屬分會
     @Column(name = "CreatedByBranchID")

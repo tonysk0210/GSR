@@ -4,6 +4,7 @@ import com.hn2.cms.dto.Aca1002ComparyAcaDto;
 import com.hn2.cms.dto.Aca1002QueryDto;
 import com.hn2.cms.model.AcaBrdEntity;
 import com.hn2.cms.model.SupAfterCareEntity;
+import com.hn2.cms.payload.Aca2001.Aca2001SavePayload;
 import com.hn2.cms.payload.aca1002.*;
 import com.hn2.cms.repository.Aca1002Repository;
 import com.hn2.cms.repository.AcaBrdRepository;
@@ -160,8 +161,8 @@ public class Aca1002ServiceImpl implements Aca1002Service {
     }
 
     @Override
-    public DataDto<Void> save(GeneralPayload<Aca1002SavePayload> payload) {
-        Aca1002SavePayload dataPayload = payload.getData();
+    public DataDto<Void> save(GeneralPayload<Aca2001SavePayload> payload) {
+        Aca2001SavePayload dataPayload = payload.getData();
         String itemId = dataPayload.getNam().getItemId();
 
         //1.查詢出A:矯正署資料 透過 itemId 查矯正署資料
