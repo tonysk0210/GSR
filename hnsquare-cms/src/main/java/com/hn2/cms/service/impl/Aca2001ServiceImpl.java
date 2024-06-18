@@ -37,7 +37,7 @@ public class Aca2001ServiceImpl implements Aca2001Service {
         //1.查詢出A:矯正署資料 透過 itemId 查矯正署資料
         SupAfterCareEntity namData = supAfterCareRepository.findById(itemId).orElseThrow( () -> new BusinessException(("查不到資料")));
         //2.查詢出B:個案資料 鈄過查矯正署資料 身分證及簽收機關查詢個案
-        AcaBrdEntity acaData = (AcaBrdEntity) acaBrdRepository.findByCreatedByBranchIdAndAcaIdNo(namData.getSignProtNo(), namData.getNamIdno())
+        AcaBrdEntity acaData = (AcaBrdEntity) acaBrdRepository.findByAcaIdNo( namData.getNamIdno())
                 .orElseThrow( () -> new BusinessException(("查不到資料")));
 
 
