@@ -12,12 +12,19 @@ public class Aca1001QueryDto {
     private String signState;
     /** 簽收日期 */
     private LocalDate signDate;
+    /** 發文日期 */
+    private LocalDate rsDt;
     /** 簽收分會(代碼) */
     private String signProtNo;
     /** 簽收分會(分會別) */
     private String signProtName;
-    /** 發文日期 */
-    private String recvDate;
+    /** 收文日期 */
+    private LocalDate recvDate;
+    /** 分派承辦人 */
+    private String acaUser;
+    /** 分派承辦人簽收日期 */
+    private LocalDate acaReceiptDate;
+
     /** 更生人姓名 */
     private String namName;
     /** 更生人性別 */

@@ -30,7 +30,10 @@ public class Aca1001RepositoryImpl implements Aca1001Repository {
                 "SAC.SIGN_DATE, " +
                 "SAC.SIGN_PROT_NO, " +
                 "SAC.SIGN_PROT_NAME, " +
-                "SAC.RS_DT recvDate, " +
+                "SAC.RS_DT rsDt, " +
+                "SAC.CR_DATE_TIME recvDate, " +
+                "SAC.ACA_USER acaUser, " +
+                "SAC.ACA_RECEIPT_DATE acaReceiptDate, " +
                 "SAC.NAM_CNAME namName, " +
                 "SAC.NAM_SEX, " +
                 "SAC.NAM_HADDR_TEXT namAddr, " +
