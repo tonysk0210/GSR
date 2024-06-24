@@ -28,7 +28,7 @@ public class Aca2002ServiceImpl implements Aca2002Service {
         String acaCardNo = dataPayload.getAcaCardNo();
 
 
-        CrmRecEntity crmData = (CrmRecEntity) crmRecRepository.findByAcaCartdNo( acaCardNo)
+        CrmRecEntity crmData = (CrmRecEntity) crmRecRepository.findByAcaCardNo( acaCardNo)
                 .orElseThrow( () -> new BusinessException(("查不到資料")));
 
 
