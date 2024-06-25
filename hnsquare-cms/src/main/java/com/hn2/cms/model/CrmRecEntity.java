@@ -115,7 +115,7 @@ public class CrmRecEntity {
 
     // 修檔人員
     @Column(name = "ModifiedByUserID")
-    private int modifiedByUserID;
+    private String modifiedByUserID;
 
     // 修檔時間
     @Column(name = "ModifiedOnDate")
