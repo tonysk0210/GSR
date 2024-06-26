@@ -9,4 +9,5 @@ import java.util.List;
 
 public interface SysUserRepository {
     List<SysUserQueryDto> queryList(String unit);
+    SysUserQueryDto queryByUsername(String username);
 }

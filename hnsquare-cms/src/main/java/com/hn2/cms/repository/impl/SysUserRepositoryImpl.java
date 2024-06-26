@@ -9,6 +9,7 @@ import com.hn2.util.SqlStringHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
+import javax.swing.text.html.Option;
 import java.util.HashMap;
 import java.util.List;
 
@@ -47,6 +48,24 @@ public class SysUserRepositoryImpl implements SysUserRepository {
         params.put("unit", unit);
 
         return sql2oHelper.queryList(select, params, SysUserQueryDto.class);
+    }
+
+
+    @Override
+    public  SysUserQueryDto queryByUsername(String username) {
+        String select = "SELECT top 1 userId, userName " +
+                "FROM CaseManagementDnnDB.dbo.users u\n" +
+                "WHERE isnull(u.isdeleted, 0) = 0\n" +
+                "\t u.username = :username" ;
+
+        HashMap<String, Object> params = new HashMap<>();
+        params.put("username", username);
+
+        List<SysUserQueryDto> datas= sql2oHelper.queryList(select, params, SysUserQueryDto.class);
+        if (datas.size() > 0){
+            return datas.get(0);
+        }
+        return null;
     }
 
 

@@ -23,11 +23,19 @@ public class Aca2002Controller {
     Aca2002Service aca2002Service;
 
 
-
     @PostMapping("/query")
+    public ResponseEntity<DataDto<Aca2002CrmRecQueryDto>> query(
+            @Valid @RequestBody GeneralPayload<Aca2002QueryPayload> payload) {
+        return ResponseEntity.ok(aca2002Service.query(payload));
+    }
+
+
+    @PostMapping("/save")
     public ResponseEntity<DataDto<Aca2002CrmRecQueryDto>> save(
             @Valid @RequestBody GeneralPayload<Aca2002QueryPayload> payload) {
         return ResponseEntity.ok(aca2002Service.query(payload));
     }
+
+
 
 }
