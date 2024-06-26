@@ -6,6 +6,7 @@ import com.hn2.cms.payload.Aca2002.Aca2002QueryPayload;
 import com.hn2.cms.payload.Aca2002.Aca2002SavePayload;
 import com.hn2.cms.repository.CrmRecRepository;
 import com.hn2.cms.service.Aca2002Service;
+import com.hn2.cms.service.SysService;
 import com.hn2.core.dto.DataDto;
 import com.hn2.core.dto.ResponseInfo;
 import com.hn2.core.payload.GeneralPayload;
@@ -24,6 +25,8 @@ public class Aca2002ServiceImpl implements Aca2002Service {
     CrmRecRepository crmRecRepository;
     @Autowired
     ModelMapper modelMapper;
+    @Autowired
+    SysService sysService;
 
 
     @Override
@@ -41,6 +44,9 @@ public class Aca2002ServiceImpl implements Aca2002Service {
     public DataDto<Object> save(GeneralPayload<Aca2002SavePayload> payload) {
         CrmRecEntity data= payload.getData().getCrm();
         data.setId(genNewCrmRecId(data.getCreatedByBranchID()));
+        data.setCreatedByUserID(sysService.convertUsernameToUserId(data.getCreatedByUserID()));
+        data.setModifiedByUserID(sysService.convertUsernameToUserId(data.getModifiedByUserID()));
+
         crmRecRepository.save(data);
         return new DataDto<>(null,  new ResponseInfo(1, "儲存成功"));
     }

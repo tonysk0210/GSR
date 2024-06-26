@@ -56,7 +56,7 @@ public class SysUserRepositoryImpl implements SysUserRepository {
         String select = "SELECT top 1 userId, userName " +
                 "FROM CaseManagementDnnDB.dbo.users u\n" +
                 "WHERE isnull(u.isdeleted, 0) = 0\n" +
-                "\t u.username = :username" ;
+                "\t AND u.username = :username" ;
 
         HashMap<String, Object> params = new HashMap<>();
         params.put("username", username);

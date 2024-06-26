@@ -8,6 +8,7 @@ import com.hn2.cms.repository.AcaBrdRepository;
 import com.hn2.cms.repository.SupAfterCareRepository;
 import com.hn2.cms.repository.SysUserRepository;
 import com.hn2.cms.service.Aca2001Service;
+import com.hn2.cms.service.SysService;
 import com.hn2.core.dto.DataDto;
 import com.hn2.core.dto.ResponseInfo;
 import com.hn2.core.payload.GeneralPayload;
@@ -29,7 +30,7 @@ public class Aca2001ServiceImpl implements Aca2001Service {
     @Autowired
     AcaBrdRepository acaBrdRepository;
     @Autowired
-    SysUserRepository sysUserRepository;
+    SysService sysService;
 
     @Override
     public DataDto<Void> save(GeneralPayload<Aca2001SavePayload> payload) {
@@ -62,8 +63,8 @@ public class Aca2001ServiceImpl implements Aca2001Service {
             //新增資料
             payloadAca.setId(genNewAcaBrdId(payloadAca.getCreatedByBranchId()));
             payloadAca.setAcaCardNo(genNewAcaCardNo(payloadAca.getCreatedByBranchId()));
-            payloadAca.setCreatedByUserId(convertUsernameToUserId(payloadAca.getCreatedByUserId()));
-            payloadAca.setModifiedByUserId(convertUsernameToUserId(payloadAca.getModifiedByUserId()));
+            payloadAca.setCreatedByUserId(sysService.convertUsernameToUserId(payloadAca.getCreatedByUserId()));
+            payloadAca.setModifiedByUserId(sysService.convertUsernameToUserId(payloadAca.getModifiedByUserId()));
             payloadAca.setIsErase(0);
             payloadAca.setIsDeleted(0);
         } else {
@@ -72,28 +73,13 @@ public class Aca2001ServiceImpl implements Aca2001Service {
             payloadAca.setId(oldAcaData.getId());
             payloadAca.setAcaCardNo(oldAcaData.getAcaCardNo());
             payloadAca.setCreatedByUserId(oldAcaData.getCreatedByUserId()); //建立資料不可異動
-            payloadAca.setModifiedByUserId(convertUsernameToUserId(payloadAca.getModifiedByUserId()));
+            payloadAca.setModifiedByUserId(sysService.convertUsernameToUserId(payloadAca.getModifiedByUserId()));
             //payloadAca.setIsErase(0);
             //payloadAca.setIsDeleted(0);
         }
         return acaBrdRepository.save(payloadAca);
     }
 
-    /**
-     * 前端傳入為員工編號(對應資料庫為username) ，轉換成資料內碼
-     * @param username
-     * @return
-     */
-    private String convertUsernameToUserId(String username) {
-        if (StringUtils.isEmpty( username)){
-            return "-1";
-        }
-        SysUserQueryDto user = sysUserRepository.queryByUsername(username);
-        if (user == null ){
-            return "-1";
-        }
-        return user.getUserId();
-    }
 
     /**
      * 個案代碼

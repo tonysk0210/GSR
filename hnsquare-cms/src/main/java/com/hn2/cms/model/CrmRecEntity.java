@@ -107,7 +107,7 @@ public class CrmRecEntity {
 
     // 建檔人員
     @Column(name = "CreatedByUserID")
-    private int createdByUserID;
+    private String createdByUserID;
 
     // 建檔時間
     @Column(name = "CreatedOnDate")

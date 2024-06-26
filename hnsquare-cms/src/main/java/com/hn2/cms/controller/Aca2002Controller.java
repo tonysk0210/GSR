@@ -3,6 +3,7 @@ package com.hn2.cms.controller;
 
 import com.hn2.cms.dto.Aca2002CrmRecQueryDto;
 import com.hn2.cms.payload.Aca2002.Aca2002QueryPayload;
+import com.hn2.cms.payload.Aca2002.Aca2002SavePayload;
 import com.hn2.cms.service.Aca2002Service;
 import com.hn2.core.dto.DataDto;
 import com.hn2.core.payload.GeneralPayload;
@@ -31,9 +32,9 @@ public class Aca2002Controller {
 
 
     @PostMapping("/save")
-    public ResponseEntity<DataDto<Aca2002CrmRecQueryDto>> save(
-            @Valid @RequestBody GeneralPayload<Aca2002QueryPayload> payload) {
-        return ResponseEntity.ok(aca2002Service.query(payload));
+    public ResponseEntity<DataDto<Object>> save(
+            @Valid @RequestBody GeneralPayload<Aca2002SavePayload> payload) {
+        return ResponseEntity.ok(aca2002Service.save(payload));
     }
 
 

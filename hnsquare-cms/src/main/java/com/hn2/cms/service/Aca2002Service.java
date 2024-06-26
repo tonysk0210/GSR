@@ -9,5 +9,5 @@ import com.hn2.core.payload.GeneralPayload;
 
 public interface Aca2002Service {
     DataDto<Aca2002CrmRecQueryDto> query(GeneralPayload<Aca2002QueryPayload> payload);
-    DataDto save(GeneralPayload<Aca2002SavePayload> payload);
+    DataDto<Object> save(GeneralPayload<Aca2002SavePayload> payload);
 }

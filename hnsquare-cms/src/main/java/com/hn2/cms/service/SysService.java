@@ -13,4 +13,6 @@ public interface SysService {
     DataDto<List<SysUserQueryDto>> queryList(String unit);
 
     DataDto<List<SysCodeQueryDto>> codeList(SysCodeQueryPayload payload);
+
+    public String convertUsernameToUserId(String username);
 }
