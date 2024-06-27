@@ -1,7 +1,9 @@
 package com.hn2.cms.service.impl;
 
 import com.hn2.cms.dto.Aca2002CrmRecQueryDto;
+import com.hn2.cms.dto.SysUserQueryDto;
 import com.hn2.cms.model.CrmRecEntity;
+import com.hn2.cms.payload.Aca2002.Aca2002QueryListPayload;
 import com.hn2.cms.payload.Aca2002.Aca2002QueryPayload;
 import com.hn2.cms.payload.Aca2002.Aca2002SavePayload;
 import com.hn2.cms.repository.CrmRecRepository;
@@ -17,6 +19,8 @@ import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class Aca2002ServiceImpl implements Aca2002Service {
@@ -32,12 +36,29 @@ public class Aca2002ServiceImpl implements Aca2002Service {
     @Override
     public DataDto<Aca2002CrmRecQueryDto> query(GeneralPayload<Aca2002QueryPayload> payload) {
         Aca2002QueryPayload dataPayload = payload.getData();
-        String acaCardNo = dataPayload.getAcaCardNo();
+        String crmRecId = dataPayload.getId();
 
-        CrmRecEntity crmData = (CrmRecEntity) crmRecRepository.findByAcaCardNo( acaCardNo)
+        CrmRecEntity crmData = (CrmRecEntity) crmRecRepository.findById( crmRecId)
                 .orElseThrow( () -> new BusinessException(("查不到資料")));
 
         return new DataDto<>(modelMapper.map(crmData,Aca2002CrmRecQueryDto.class) , new ResponseInfo(1, "儲存成功"));
+
+    }
+
+    @Override
+    public DataDto<List<Aca2002CrmRecQueryDto>> queryList(GeneralPayload<Aca2002QueryListPayload> payload) {
+        Aca2002QueryListPayload dataPayload = payload.getData();
+        String acaCardNo = dataPayload.getAcaCardNo();
+
+        List<CrmRecEntity> crmDataList = crmRecRepository.findByAcaCardNo(acaCardNo)
+                .orElseThrow(() -> new BusinessException("查不到資料"));
+
+        //List<Aca2002CrmRecQueryDto> dataList = modelMapper.map(crmData,Aca2002CrmRecQueryDto.class);
+        List<Aca2002CrmRecQueryDto> dataList = crmDataList.stream()
+                .map(entity -> modelMapper.map(entity, Aca2002CrmRecQueryDto.class))
+                .collect(Collectors.toList());
+
+        return new DataDto<>( dataList, new ResponseInfo(1, "查詢成功"));
     }
 
     @Override

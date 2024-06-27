@@ -2,7 +2,6 @@ package com.hn2.cms.controller;
 
 import com.hn2.cms.dto.Aca1002ComparyAcaDto;
 import com.hn2.cms.dto.Aca1002QueryDto;
-import com.hn2.cms.payload.Aca2001.Aca2001SavePayload;
 import com.hn2.cms.payload.aca1002.*;
 import com.hn2.cms.service.Aca1002Service;
 import com.hn2.core.dto.DataDto;
