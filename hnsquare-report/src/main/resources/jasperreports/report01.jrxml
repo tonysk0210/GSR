@@ -5,6 +5,9 @@
 		<![CDATA[]]>
 	</queryString>
 	<field name="org_code" class="java.lang.String"/>
+	<field name="tr_user" class="java.lang.String"/>
+	<field name="tr_tel" class="java.lang.String"/>
+	<field name="tr_email" class="java.lang.String"/>
 	<field name="rs_dt" class="java.lang.String"/>
 	<field name="prot_name" class="java.lang.String"/>
 	<field name="nam_cname" class="java.lang.String"/>
@@ -34,11 +37,12 @@
 	<field name="reld_tel2" class="java.lang.String"/>
 	<field name="reld_addr" class="java.lang.String"/>
 	<field name="vir_no" class="java.lang.String"/>
+	<field name="docu_remark_text" class="java.lang.String"/>
 	<background>
 		<band splitType="Stretch"/>
 	</background>
 	<detail>
-		<band height="650" splitType="Stretch">
+		<band height="800" splitType="Stretch">
 			<textField>
 				<reportElement x="0" y="0" width="555" height="30" uuid="40d6898d-a924-4139-9dc1-f516cd932ae2">
 					<property name="com.jaspersoft.studio.unit.height" value="px"/>
@@ -55,7 +59,7 @@
 				<textFieldExpression><![CDATA["更生保護通知書"]]></textFieldExpression>
 			</textField>
 			<staticText>
-				<reportElement x="0" y="540" width="555" height="110" uuid="33650eaa-6329-40e6-8da9-23736b3388c5">
+				<reportElement x="0" y="618" width="555" height="110" uuid="33650eaa-6329-40e6-8da9-23736b3388c5">
 					<property name="com.jaspersoft.studio.unit.height" value="px"/>
 					<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
 				</reportElement>
@@ -74,7 +78,8 @@
 2.更生保護會各分會簽收後，應儘速附寄訪視表格及回郵信封，請更生輔導員於接獲通知書後十日內填
    妥寄回分會。
 3.期滿釋放者，矯正機關應於釋放前十日通知更生保護會分會。
-4.本項資料應妥為保存，不得外洩，以確保受保護人權益。
+4.本項資料應妥為保存，不得外洩，以確保受保護人權益。
+
 ]]></text>
 			</staticText>
 			<textField>
@@ -103,10 +108,10 @@
 					<font fontName="微軟正黑體" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
-				<textFieldExpression><![CDATA["通知書編號："]]></textFieldExpression>
+				<textFieldExpression><![CDATA["承辦人："+($F{tr_user}!=null?$F{tr_user}:"")]]></textFieldExpression>
 			</textField>
 			<textField>
-				<reportElement x="0" y="470" width="280" height="70" uuid="3abc5b4f-0920-4385-b884-59cd892a11b9">
+				<reportElement x="0" y="548" width="280" height="70" uuid="3abc5b4f-0920-4385-b884-59cd892a11b9">
 					<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
 				</reportElement>
 				<box topPadding="1" leftPadding="1" bottomPadding="1" rightPadding="1">
@@ -125,7 +130,7 @@
 "5.地址："+($F{reld_addr}!=null?$F{reld_addr}:"")]]></textFieldExpression>
 			</textField>
 			<textField>
-				<reportElement x="0" y="120" width="555" height="350" uuid="050ad6ed-2ab7-4aa4-8c98-0e17273bdaf0">
+				<reportElement x="0" y="160" width="555" height="388" uuid="050ad6ed-2ab7-4aa4-8c98-0e17273bdaf0">
 					<property name="com.jaspersoft.studio.unit.height" value="px"/>
 					<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
 				</reportElement>
@@ -137,7 +142,7 @@
 				</box>
 				<textElement>
 					<font fontName="微軟正黑體" size="12"/>
-					<paragraph leftIndent="5"/>
+					<paragraph lineSpacing="Fixed" lineSpacingSize="13.0" leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["受保護者資料："+"\n"+
 "1.姓名："+($F{nam_cname}!=null?$F{nam_cname}:"")+"\n"+
@@ -159,10 +164,12 @@
 "17.宗教信仰："+($F{relig_text}!=null?$F{relig_text}:"")+"\n"+
 "18.是否有暴力傾向："+($F{docu_violent_text}!=null?$F{docu_violent_text}:"")+"\n"+
 "19.經濟狀況："+($F{economic_text}!=null?$F{economic_text}:"")+"\n"+
-"20.婚姻狀況："+($F{marriage_text}!=null?$F{marriage_text}:"")]]></textFieldExpression>
+"20.婚姻狀況："+($F{marriage_text}!=null?$F{marriage_text}:"")+"\n"+
+"21.其他(補充事項)："+($F{docu_remark}!=null?$F{docu_remark}:"")
+]]></textFieldExpression>
 			</textField>
 			<staticText>
-				<reportElement x="0" y="30" width="290" height="60" uuid="bf97dc1a-3718-4507-b8b1-bd066f3a2692"/>
+				<reportElement x="0" y="30" width="290" height="100" uuid="bf97dc1a-3718-4507-b8b1-bd066f3a2692"/>
 				<box>
 					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
@@ -172,7 +179,7 @@
 				<text><![CDATA[]]></text>
 			</staticText>
 			<textField>
-				<reportElement x="0" y="90" width="555" height="30" uuid="35097d22-8b7c-4c07-b35d-296fdb43d3d5">
+				<reportElement x="0" y="130" width="555" height="30" uuid="35097d22-8b7c-4c07-b35d-296fdb43d3d5">
 					<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
 				</reportElement>
 				<box topPadding="1" leftPadding="1" bottomPadding="1" rightPadding="1">
@@ -202,7 +209,7 @@
 				<textFieldExpression><![CDATA["發文日期："+($F{rs_dt}!=null?$F{rs_dt}:"")]]></textFieldExpression>
 			</textField>
 			<textField>
-				<reportElement x="280" y="470" width="275" height="70" uuid="81683807-7a9e-413a-a3a3-c6f3e466953d">
+				<reportElement x="280" y="548" width="275" height="70" uuid="81683807-7a9e-413a-a3a3-c6f3e466953d">
 					<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
 				</reportElement>
 				<box topPadding="1" leftPadding="1" bottomPadding="1" rightPadding="1">
@@ -218,6 +225,34 @@
 				<textFieldExpression><![CDATA["\n"+
 "2.關係："+($F{reld_no_text}!=null?$F{reld_no_text}:"")+"\n"+
 "4.手機："+($F{reld_tel2}!=null?$F{reld_tel2}:"")]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="290" y="90" width="265" height="20" uuid="f5c44db9-e20c-41a5-b317-57bb29e60121">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
+				</reportElement>
+				<box topPadding="1" leftPadding="1" bottomPadding="1" rightPadding="1">
+					<rightPen lineWidth="1.0"/>
+				</box>
+				<textElement>
+					<font fontName="微軟正黑體" size="12"/>
+					<paragraph leftIndent="5"/>
+				</textElement>
+				<textFieldExpression><![CDATA["連絡電話："+($F{tr_tel}!=null?$F{tr_tel}:"")]]></textFieldExpression>
+			</textField>
+			<textField>
+				<reportElement x="290" y="110" width="265" height="20" uuid="94d1d1c7-e518-42a5-b5ef-827f4897d3b5">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
+				</reportElement>
+				<box topPadding="1" leftPadding="1" bottomPadding="1" rightPadding="1">
+					<rightPen lineWidth="1.0"/>
+				</box>
+				<textElement>
+					<font fontName="微軟正黑體" size="12"/>
+					<paragraph leftIndent="5"/>
+				</textElement>
+				<textFieldExpression><![CDATA["電子郵件："+($F{tr_email}!=null?$F{tr_email}:"")]]></textFieldExpression>
 			</textField>
 		</band>
 	</detail>

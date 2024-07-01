@@ -17,6 +17,12 @@ public class Reprot01Dto {
     private String vir_no;
     /**發文日期*/
     private String rs_dt;
+    /**承辦人*/
+    private String tr_user;
+    /**承辦人電話*/
+    private String tr_tel;
+    /**承辦人email*/
+    private String tr_email;
     /**受文者*/
     private String prot_name;
     /**姓名*/
@@ -61,6 +67,8 @@ public class Reprot01Dto {
     private String economic_text;
     /**婚姻狀況**/
     private String marriage_text;
+    /**其他*/
+    private String docu_remark;
     /**聯絡人姓名*/
     private String reld_name;
     /**連絡人關係*/

@@ -31,6 +31,9 @@ public class Reprot01RepositoryImpl implements Reprot01Repository {
                     "      ,SA.ORG_CODE as org\n" +
                     "      ,[vir_no]\n" +
                     "      ,[RS_DT]\n" +
+                    "      ,[TR_USER]\n" +
+                    "      ,[TR_TEL]\n" +
+                    "      ,[TR_EMAIL]\n" +
                     "      ,[PROT_NAME]\n" +
                     "      ,[NAM_CNAME]\n" +
                     "      ,[NAM_SEX]\n" +
@@ -51,6 +54,7 @@ public class Reprot01RepositoryImpl implements Reprot01Repository {
                     "      ,[DOCU_LICENSE_TEXT]\n" +
                     "      ,[RELIG_TEXT]\n" +
                     "      ,[DOCU_VIOLENT_TEXT]\n" +
+                    "      ,[DOCU_REMARK]\n" +
                     "      ,[ECONOMIC_TEXT]\n" +
                     "      ,[MARRIAGE_TEXT]\n" +
                     "      ,[RELD_NAME]\n" +
