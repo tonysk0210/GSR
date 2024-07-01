@@ -37,7 +37,7 @@
 	<field name="reld_tel2" class="java.lang.String"/>
 	<field name="reld_addr" class="java.lang.String"/>
 	<field name="vir_no" class="java.lang.String"/>
-	<field name="docu_remark_text" class="java.lang.String"/>
+	<field name="docu_remark" class="java.lang.String"/>
 	<background>
 		<band splitType="Stretch"/>
 	</background>
