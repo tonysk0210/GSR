@@ -31,7 +31,7 @@ public class Reprot01RepositoryImpl implements Reprot01Repository {
                     "      ,SA.ORG_CODE as org\n" +
                     "      ,[vir_no]\n" +
                     "      ,[RS_DT]\n" +
-                    "      ,[TR_USER]\n" +
+                    "      ,[TR_USER_NAME] TR_USER\n" +
                     "      ,[TR_TEL]\n" +
                     "      ,[TR_EMAIL]\n" +
                     "      ,[PROT_NAME]\n" +
