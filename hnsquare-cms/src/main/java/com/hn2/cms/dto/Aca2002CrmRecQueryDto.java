@@ -67,16 +67,16 @@ public class Aca2002CrmRecQueryDto {
     private LocalDate crmVerdictDate;
 
     // 建檔分會
-    private String createdByBranchID;
+    private String createdByBranchId;
 
     // 建檔人員
-    private int createdByUserID;
+    private int createdByUserId;
 
     // 建檔時間
     private LocalDate createdOnDate;
 
     // 修檔人員
-    private int modifiedByUserID;
+    private int modifiedByUserId;
 
     // 修檔時間
     private LocalDate modifiedOnDate;

@@ -64,9 +64,9 @@ public class Aca2002ServiceImpl implements Aca2002Service {
     @Override
     public DataDto<Object> save(GeneralPayload<Aca2002SavePayload> payload) {
         CrmRecEntity data= payload.getData().getCrm();
-        data.setId(genNewCrmRecId(data.getCreatedByBranchID()));
-        data.setCreatedByUserID(sysService.convertUsernameToUserId(data.getCreatedByUserID()));
-        data.setModifiedByUserID(sysService.convertUsernameToUserId(data.getModifiedByUserID()));
+        data.setId(genNewCrmRecId(data.getCreatedByBranchId()));
+        data.setCreatedByUserId(sysService.convertUsernameToUserId(data.getCreatedByUserId()));
+        data.setModifiedByUserId(sysService.convertUsernameToUserId(data.getModifiedByUserId()));
 
         crmRecRepository.save(data);
         return new DataDto<>(null,  new ResponseInfo(1, data.getAcaCardNo() +":儲存成功"));

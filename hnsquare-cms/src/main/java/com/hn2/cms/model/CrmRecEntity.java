@@ -103,11 +103,11 @@ public class CrmRecEntity {
 
     // 建檔分會
     @Column(name = "CreatedByBranchID")
-    private String createdByBranchID;
+    private String createdByBranchId;
 
     // 建檔人員
     @Column(name = "CreatedByUserID")
-    private String createdByUserID;
+    private String createdByUserId;
 
     // 建檔時間
     @Column(name = "CreatedOnDate")
@@ -115,7 +115,7 @@ public class CrmRecEntity {
 
     // 修檔人員
     @Column(name = "ModifiedByUserID")
-    private String modifiedByUserID;
+    private String modifiedByUserId;
 
     // 修檔時間
     @Column(name = "ModifiedOnDate")
