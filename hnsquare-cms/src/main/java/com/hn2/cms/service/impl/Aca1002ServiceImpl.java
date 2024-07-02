@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class Aca1002ServiceImpl implements Aca1002Service {
@@ -149,12 +150,17 @@ public class Aca1002ServiceImpl implements Aca1002Service {
         SupAfterCareEntity namData = supAfterCareRepository.findById(itemId).orElseThrow( () -> new BusinessException(("查不到資料")));
 
         //2.查詢出B:個案資料 鈄過查矯正署資料 身分證及簽收機關查詢個案
-        AcaBrdEntity acaData = (AcaBrdEntity) acaBrdRepository.findByAcaIdNo( namData.getNamIdno())
-                .orElseThrow( () -> new BusinessException(("查不到資料")));
+        Optional<AcaBrdEntity> acaData = acaBrdRepository.findByAcaIdNo( namData.getNamIdno());
+
 
         Aca1002ComparyAcaDto ComparyAca = new Aca1002ComparyAcaDto();
         ComparyAca.setNam(namData);
-        ComparyAca.setAca(acaData);
+        if (acaData.isEmpty()){
+            ComparyAca.setAca(null);
+        } else {
+            ComparyAca.setAca(acaData.get());
+        }
+
 
 
         return new DataDto<Aca1002ComparyAcaDto>(ComparyAca,null, new ResponseInfo(1, "查詢成功"));
