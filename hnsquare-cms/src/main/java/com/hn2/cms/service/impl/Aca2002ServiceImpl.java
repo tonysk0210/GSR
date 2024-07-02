@@ -69,7 +69,7 @@ public class Aca2002ServiceImpl implements Aca2002Service {
         data.setModifiedByUserID(sysService.convertUsernameToUserId(data.getModifiedByUserID()));
 
         crmRecRepository.save(data);
-        return new DataDto<>(null,  new ResponseInfo(1, "儲存成功"));
+        return new DataDto<>(null,  new ResponseInfo(1, data.getAcaCardNo() +":儲存成功"));
     }
 
     /**
