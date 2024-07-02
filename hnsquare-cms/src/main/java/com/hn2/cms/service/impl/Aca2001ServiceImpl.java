@@ -49,7 +49,7 @@ public class Aca2001ServiceImpl implements Aca2001Service {
 
         supAfterCareRepository.save(namData);
 
-        return new DataDto<>(null, new ResponseInfo(1, acaData.getAcaCardNo() +": 儲存成功"));
+        return new DataDto<>(null, new ResponseInfo(1, acaData.getAcaCardNo() +":"+acaData.getId()));
     }
 
     private AcaBrdEntity doSaveOrUpdateAcaBrdData(SupAfterCareEntity namData, AcaBrdEntity payloadAca) {
