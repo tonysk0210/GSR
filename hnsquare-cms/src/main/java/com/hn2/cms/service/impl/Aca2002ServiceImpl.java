@@ -38,7 +38,7 @@ public class Aca2002ServiceImpl implements Aca2002Service {
         Aca2002QueryPayload dataPayload = payload.getData();
         String crmRecId = dataPayload.getId();
 
-        CrmRecEntity crmData = (CrmRecEntity) crmRecRepository.findById( crmRecId)
+        CrmRecEntity crmData = (CrmRecEntity) crmRecRepository.findById(crmRecId)
                 .orElseThrow( () -> new BusinessException(("查不到資料")));
 
         return new DataDto<>(modelMapper.map(crmData,Aca2002CrmRecQueryDto.class) , new ResponseInfo(1, "儲存成功"));

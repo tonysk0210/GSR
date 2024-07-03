@@ -54,7 +54,7 @@ public class Aca2001ServiceImpl implements Aca2001Service {
 
     private AcaBrdEntity doSaveOrUpdateAcaBrdData(SupAfterCareEntity namData, AcaBrdEntity payloadAca) {
 
-        Optional<AcaBrdEntity> acaDataOptional = acaBrdRepository.findByAcaIdNo( namData.getNamIdno());
+        Optional<AcaBrdEntity> acaDataOptional = acaBrdRepository.findByAcaIdNo( payloadAca.getAcaIdNo());
         //  依查詢結果分為
         //    有資料：進行資料異動；注意建立資訊不可變更
         //    無資料：以payload建立個案資料(AcaBrd)，系統額外做個案代碼(ID)、建檔編號(ACACardNo)及isErase=0、isDelete=0動作。
@@ -92,7 +92,7 @@ public class Aca2001ServiceImpl implements Aca2001Service {
         SimpleDateFormat sf = new SimpleDateFormat("yyyyMM");
         String datestr = sf.format(date);
         String key = createdByBranchId + datestr ;
-        String no = acaBrdRepository.genNewId(key+ "%'");
+        String no = acaBrdRepository.genNewId(key+ "%");
         return key + no;
     }
 
@@ -107,7 +107,7 @@ public class Aca2001ServiceImpl implements Aca2001Service {
         SimpleDateFormat sf = new SimpleDateFormat("yy");
         String datestr = sf.format(date);
         String key = createdByBranchId + datestr ;
-        String no = acaBrdRepository.genNewAcaCardNo(key+ "%'");
+        String no = acaBrdRepository.genNewAcaCardNo(key+ "%");
         return key + no;
     }
 }
