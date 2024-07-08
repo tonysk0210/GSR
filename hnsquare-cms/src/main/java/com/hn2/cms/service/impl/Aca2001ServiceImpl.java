@@ -1,12 +1,10 @@
 package com.hn2.cms.service.impl;
 
-import com.hn2.cms.dto.SysUserQueryDto;
 import com.hn2.cms.model.AcaBrdEntity;
 import com.hn2.cms.model.SupAfterCareEntity;
-import com.hn2.cms.payload.Aca2001.Aca2001SavePayload;
+import com.hn2.cms.payload.aca2001.Aca2001SavePayload;
 import com.hn2.cms.repository.AcaBrdRepository;
 import com.hn2.cms.repository.SupAfterCareRepository;
-import com.hn2.cms.repository.SysUserRepository;
 import com.hn2.cms.service.Aca2001Service;
 import com.hn2.cms.service.SysService;
 import com.hn2.core.dto.DataDto;
@@ -15,7 +13,6 @@ import com.hn2.core.payload.GeneralPayload;
 import com.hn2.util.BusinessException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.thymeleaf.util.StringUtils;
 
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
