@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -55,6 +56,7 @@ public class Aca2002ServiceImpl implements Aca2002Service {
         //List<Aca2002CrmRecQueryDto> dataList = modelMapper.map(crmData,Aca2002CrmRecQueryDto.class);
         List<Aca2002CrmRecQueryDto> dataList = crmDataList.stream()
                 .map(entity -> modelMapper.map(entity, Aca2002CrmRecQueryDto.class))
+                .sorted(Comparator.comparing(Aca2002CrmRecQueryDto::getCreatedOnDate).reversed()) // 添加這行代碼進行逆序排序
                 .collect(Collectors.toList());
 
         return new DataDto<>( dataList, new ResponseInfo(1, "查詢成功"));
