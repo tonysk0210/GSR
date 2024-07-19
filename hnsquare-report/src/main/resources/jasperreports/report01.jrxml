@@ -54,7 +54,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement textAlignment="Center">
-					<font fontName="微軟正黑體" size="20"/>
+					<font fontName="Microsoft JhengHei UI" size="20"/>
 				</textElement>
 				<textFieldExpression><![CDATA["更生保護通知書"]]></textFieldExpression>
 			</textField>
@@ -70,7 +70,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="微軟正黑體" size="12"/>
+					<font fontName="Microsoft JhengHei UI" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<text><![CDATA[說明：
@@ -91,7 +91,7 @@
 					<rightPen lineWidth="1.0"/>
 				</box>
 				<textElement>
-					<font fontName="微軟正黑體" size="12"/>
+					<font fontName="Microsoft JhengHei UI" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["發文機關："+($F{org_code}!=null?$F{org_code}:"")]]></textFieldExpression>
@@ -105,7 +105,7 @@
 					<rightPen lineWidth="1.0"/>
 				</box>
 				<textElement>
-					<font fontName="微軟正黑體" size="12"/>
+					<font fontName="Microsoft JhengHei UI" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["承辦人："+($F{tr_user}!=null?$F{tr_user}:"")]]></textFieldExpression>
@@ -121,7 +121,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="微軟正黑體" size="12"/>
+					<font fontName="Microsoft JhengHei UI" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["連絡人："+"\n"+
@@ -141,7 +141,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="微軟正黑體" size="12"/>
+					<font fontName="Microsoft JhengHei UI" size="12"/>
 					<paragraph lineSpacing="Fixed" lineSpacingSize="13.0" leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["受保護者資料："+"\n"+
@@ -165,8 +165,7 @@
 "18.是否有暴力傾向："+($F{docu_violent_text}!=null?$F{docu_violent_text}:"")+"\n"+
 "19.經濟狀況："+($F{economic_text}!=null?$F{economic_text}:"")+"\n"+
 "20.婚姻狀況："+($F{marriage_text}!=null?$F{marriage_text}:"")+"\n"+
-"21.其他(補充事項)："+($F{docu_remark}!=null?$F{docu_remark}:"")
-]]></textFieldExpression>
+"21.其他(補充事項)："+($F{docu_remark}!=null?$F{docu_remark}:"")]]></textFieldExpression>
 			</textField>
 			<staticText>
 				<reportElement x="0" y="30" width="290" height="100" uuid="bf97dc1a-3718-4507-b8b1-bd066f3a2692"/>
@@ -189,7 +188,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="微軟正黑體" size="20"/>
+					<font fontName="Microsoft JhengHei UI" size="20"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["受文者："+($F{prot_name}!=null?$F{prot_name}:"")]]></textFieldExpression>
@@ -203,7 +202,7 @@
 					<rightPen lineWidth="1.0"/>
 				</box>
 				<textElement>
-					<font fontName="微軟正黑體" size="12"/>
+					<font fontName="Microsoft JhengHei UI" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["發文日期："+($F{rs_dt}!=null?$F{rs_dt}:"")]]></textFieldExpression>
@@ -219,7 +218,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="微軟正黑體" size="12"/>
+					<font fontName="Microsoft JhengHei UI" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["\n"+
@@ -235,7 +234,7 @@
 					<rightPen lineWidth="1.0"/>
 				</box>
 				<textElement>
-					<font fontName="微軟正黑體" size="12"/>
+					<font fontName="Microsoft JhengHei UI" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["連絡電話："+($F{tr_tel}!=null?$F{tr_tel}:"")]]></textFieldExpression>
@@ -249,7 +248,7 @@
 					<rightPen lineWidth="1.0"/>
 				</box>
 				<textElement>
-					<font fontName="微軟正黑體" size="12"/>
+					<font fontName="Microsoft JhengHei UI" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["電子郵件："+($F{tr_email}!=null?$F{tr_email}:"")]]></textFieldExpression>
