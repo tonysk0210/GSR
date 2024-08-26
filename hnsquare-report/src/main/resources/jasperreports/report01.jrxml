@@ -54,7 +54,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement textAlignment="Center">
-					<font fontName="Microsoft JhengHei UI" size="20"/>
+					<font fontName="微軟正黑體" size="20"/>
 				</textElement>
 				<textFieldExpression><![CDATA["更生保護通知書"]]></textFieldExpression>
 			</textField>
@@ -70,7 +70,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="Microsoft JhengHei UI" size="12"/>
+					<font fontName="微軟正黑體" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<text><![CDATA[說明：
@@ -121,7 +121,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="Microsoft JhengHei UI" size="12"/>
+					<font fontName="微軟正黑體" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["連絡人："+"\n"+
@@ -141,7 +141,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="Microsoft JhengHei UI" size="12"/>
+					<font fontName="微軟正黑體" size="12"/>
 					<paragraph lineSpacing="Fixed" lineSpacingSize="13.0" leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["受保護者資料："+"\n"+
@@ -218,7 +218,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="Microsoft JhengHei UI" size="12"/>
+					<font fontName="微軟正黑體" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["\n"+
