@@ -13,11 +13,7 @@ dependencies {
         exclude group: 'com.lowagie', module: 'itext'
         exclude group: 'org.eclipse.jdt', module: 'ecj'
     }
-    implementation('com.lowagie:itext:2.1.7.js4') {
-        exclude group: 'bouncycastle', module: 'bcmail-jdk14'
-        exclude group: 'bouncycastle', module: 'bcprov-jdk14'
-        exclude group: 'bouncycastle', module: 'bctsp-jdk14'
-    }
+    implementation group: 'com.lowagie', name: 'itext', version: '2.1.7.js4'
 
 }
 
