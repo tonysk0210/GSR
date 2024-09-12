@@ -107,6 +107,7 @@ public class ReportGenerator {
         exporter.setExporterOutput(new SimpleOutputStreamExporterOutput(oStream));
         exporter.setConfiguration(configuration);
         exporter.exportReport();
+        oStream.flush();
         return oStream.toByteArray();
     }
 
