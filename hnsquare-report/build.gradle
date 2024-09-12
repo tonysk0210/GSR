@@ -1,7 +1,8 @@
 
 
 repositories {
-    mavenCentral()
+    maven { url 'https://jasperreports.sourceforge.net/maven2/' }
+    maven { url 'https://jaspersoft.artifactoryonline.com/jaspersoft/third-party-ce-artifacts/' }
 }
 
 
@@ -13,7 +14,11 @@ dependencies {
         exclude group: 'com.lowagie', module: 'itext'
         exclude group: 'org.eclipse.jdt', module: 'ecj'
     }
-    implementation group: 'com.lowagie', name: 'itext', version: '2.1.7.js4'
+    implementation('com.lowagie:itext:2.1.7.js4') {
+        exclude group: 'bouncycastle', module: 'bcmail-jdk14'
+        exclude group: 'bouncycastle', module: 'bcprov-jdk14'
+        exclude group: 'bouncycastle', module: 'bctsp-jdk14'
+    }
 
 }
 
