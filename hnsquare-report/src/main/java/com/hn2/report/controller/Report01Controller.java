@@ -22,7 +22,7 @@ public class Report01Controller {
         byte[] bytes = service.getReport(payload);
 
         return ResponseEntity.ok()
-                .header("Content-Type", "application/octet-stream; charset=UTF-8")
+                .header("Content-Type", "application/pdf; charset=UTF-8")
                 .body(bytes);
     }
 }
