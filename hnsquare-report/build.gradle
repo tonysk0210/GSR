@@ -2,10 +2,6 @@
 
 repositories {
     mavenCentral()
-    jcenter()
-    maven { url 'https://jasperreports.sourceforge.net/maven2/' }
-    //maven { url 'https://jaspersoft.artifactoryonline.com/jaspersoft/third-party-ce-artifacts/' }
-    maven { url 'https://oss.jfrog.org/artifactory/oss-snapshot-local/' }
 }
 
 
