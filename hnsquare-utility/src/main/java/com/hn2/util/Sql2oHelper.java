@@ -126,7 +126,8 @@ public class Sql2oHelper {
           query.executeUpdate();
           con.commit();
       } catch (Exception e) {
-          e.printStackTrace();
+          //e.printStackTrace();
+
           connection.rollback();
           throw new BusinessException(ErrorType.UNKNOWN, e.getMessage());
       }
