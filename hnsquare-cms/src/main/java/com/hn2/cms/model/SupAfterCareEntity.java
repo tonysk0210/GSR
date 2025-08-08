@@ -232,5 +232,5 @@ public class SupAfterCareEntity {
     /** 修改電腦IP */
     @Column(name = "UP_IP")
     private String upIp;
-
+//
 }
