@@ -144,7 +144,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="微軟正黑體" size="12"/>
+					<font fontName="kai" size="12"/>
 					<paragraph lineSpacing="Fixed" lineSpacingSize="18.0" leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["受保護者資料："+"\n"+
