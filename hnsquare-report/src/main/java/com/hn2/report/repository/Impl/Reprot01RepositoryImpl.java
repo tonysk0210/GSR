@@ -62,6 +62,9 @@ public class Reprot01RepositoryImpl implements Reprot01Repository {
                     "      ,[RELD_TEL1]\n" +
                     "      ,[RELD_TEL2]\n" +
                     "      ,[RELD_ADDR]\n" +
+                    "     , [ADDR]\n" + //新撈通訊地址
+                    "     , [OPR_ADDR]\n" + //新撈出監擬住地址
+                    "     , [DRG_USER_TEXT]\n" + //新撈是否使用毒品
                     "  FROM SUP_AfterCare sa\n" +
                     "where id in (:ids) \n";
 
@@ -103,8 +106,8 @@ public class Reprot01RepositoryImpl implements Reprot01Repository {
 
             for (Insert_to_SUP_AfterCare_Print_Log_DTO dto : insertDTOList) {
                 Map<String, Object> params = new HashMap<>();
-                params.put("ORG_CODE",dto.getOrg_code());
-                params.put("VIR_NO",dto.getVir_no());
+                params.put("ORG_CODE", dto.getOrg_code());
+                params.put("VIR_NO", dto.getVir_no());
                 params.put("RS_DT", dto.getRs_dt());
                 params.put("PRINT_PROT_NAME", dto.getPrint_prot_name());
                 params.put("PRINT_DATE", dto.getPrint_date());

@@ -19,7 +19,7 @@ public class Report01Controller {
 
         //payload.setPrintUser(principalAccessor.getPrincipal().getCname());
         log.info(payload.toString());
-        byte[] bytes = service.getReport(payload);
+        byte[] bytes = service.getReport(payload); //pdf generated
 
         return ResponseEntity.ok()
                 .header("Content-Type", "application/pdf; charset=UTF-8")

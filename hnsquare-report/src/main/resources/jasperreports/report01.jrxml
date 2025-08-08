@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Created with Jaspersoft Studio version 6.17.0.final using JasperReports Library version 6.17.0-6d93193241dd8cc42629e188b94f9e0bc5722efd  -->
+<!-- Created with Jaspersoft Studio version 6.20.6.final using JasperReports Library version 6.20.6-5c96b6aa8a39ac1dc6b6bea4b81168e16dd39231  -->
 <jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="report" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="493f2d07-f2b7-4212-b487-34b6450d9419">
 	<queryString>
 		<![CDATA[]]>
@@ -38,6 +38,9 @@
 	<field name="reld_addr" class="java.lang.String"/>
 	<field name="vir_no" class="java.lang.String"/>
 	<field name="docu_remark" class="java.lang.String"/>
+	<field name="addr" class="java.lang.String"/>
+	<field name="opr_addr" class="java.lang.String"/>
+	<field name="drg_user_text" class="java.lang.String"/>
 	<background>
 		<band splitType="Stretch"/>
 	</background>
@@ -54,12 +57,12 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement textAlignment="Center">
-					<font fontName="Microsoft JhengHei UI" size="20"/>
+					<font fontName="標楷體" size="20"/>
 				</textElement>
 				<textFieldExpression><![CDATA["更生保護通知書"]]></textFieldExpression>
 			</textField>
 			<staticText>
-				<reportElement x="0" y="618" width="555" height="110" uuid="33650eaa-6329-40e6-8da9-23736b3388c5">
+				<reportElement x="0" y="618" width="555" height="142" uuid="33650eaa-6329-40e6-8da9-23736b3388c5">
 					<property name="com.jaspersoft.studio.unit.height" value="px"/>
 					<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
 				</reportElement>
@@ -70,15 +73,15 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="Microsoft JhengHei UI" size="12"/>
-					<paragraph leftIndent="5"/>
+					<font fontName="標楷體" size="12"/>
+					<paragraph lineSpacingSize="2.0" leftIndent="5"/>
 				</textElement>
 				<text><![CDATA[說明：
-1.本通知書資訊由矯正機關系統介接獲知。
-2.更生保護會各分會簽收後，應儘速附寄訪視表格及回郵信封，請更生輔導員於接獲通知書後十日內填
-   妥寄回分會。
-3.期滿釋放者，矯正機關應於釋放前十日通知更生保護會分會。
+1.本通知書由矯正機關填發並影印留存。
+2.更生保護會分會接獲通知書後後，應儘速影印，附寄訪視表格及回郵信封，請更生輔導員於接獲通知書後十日內填妥寄回分會。
+3.期滿釋放者，填發單位應於釋放前十日將通知書寄送更生保護會分會。
 4.本項資料應妥為保存，不得外洩，以確保受保護人權益。
+5.矯正機關及更生保護會分會均應將通知書或影本編號留存建檔。
 
 ]]></text>
 			</staticText>
@@ -91,7 +94,7 @@
 					<rightPen lineWidth="1.0"/>
 				</box>
 				<textElement>
-					<font fontName="Microsoft JhengHei UI" size="12"/>
+					<font fontName="標楷體" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["發文機關："+($F{org_code}!=null?$F{org_code}:"")]]></textFieldExpression>
@@ -105,7 +108,7 @@
 					<rightPen lineWidth="1.0"/>
 				</box>
 				<textElement>
-					<font fontName="Microsoft JhengHei UI" size="12"/>
+					<font fontName="標楷體" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["承辦人："+($F{tr_user}!=null?$F{tr_user}:"")]]></textFieldExpression>
@@ -121,7 +124,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="Microsoft JhengHei UI" size="12"/>
+					<font fontName="標楷體" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["連絡人："+"\n"+
@@ -141,31 +144,32 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="Microsoft JhengHei UI" size="12"/>
-					<paragraph lineSpacing="Fixed" lineSpacingSize="13.0" leftIndent="5"/>
+					<font fontName="微軟正黑體" size="12"/>
+					<paragraph lineSpacing="Fixed" lineSpacingSize="18.0" leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["受保護者資料："+"\n"+
 "1.姓名："+($F{nam_cname}!=null?$F{nam_cname}:"")+"\n"+
-"2.性別："+($F{nam_sex}!=null?$F{nam_sex}:"")+"\n"+
-"3.出生日期："+($F{nam_brdt}!=null?$F{nam_brdt}:"")+"\n"+
-"4.出生地："+($F{nam_bonp_text}!=null?$F{nam_bonp_text}:"")+"\n"+
-"5.國民身分證統一編號："+($F{nam_idno}!=null?$F{nam_idno}:"")+"\n"+
+"2.性別："+($F{nam_sex}!=null?$F{nam_sex}:"")+  "\t\t\t\t\t" +  "3.出生日期："+($F{nam_brdt}!=null?$F{nam_brdt}:"")+"\n"+
+"4.出生地："+($F{nam_bonp_text}!=null?$F{nam_bonp_text}:"")+ "\t\t\t\t\t"+ "5.國民身分證統一編號："+($F{nam_idno}!=null?$F{nam_idno}:"")+"\n"+
 "6.戶籍地址："+($F{nam_haddr_text}!=null?$F{nam_haddr_text}:"")+"\n"+
-"7.聯絡電話："+($F{nam_tel}!=null?$F{nam_tel}:"")+"\n"+
-"8.以前職業："+($F{docu_proc_text}!=null?$F{docu_proc_text}:"")+"\n"+
-"9.教育程度："+($F{nam_educ_text}!=null?$F{nam_educ_text}:"")+"\n"+
-"10.罪名："+($F{nam_cnames_text}!=null?$F{nam_cnames_text}:"")+"\n"+
-"11.刑期："+($F{nam_pen_text}!=null?$F{nam_pen_text}:"")+"\n"+
-"12.入監所或被收容日期："+($F{nam_mvdt}!=null?$F{nam_mvdt}:"")+"\n"+
-"13.預計獲釋日期及原因："+($F{docu_otdt}!=null?$F{docu_otdt}:"")+"     "+($F{docu_otop_text}!=null?$F{docu_otop_text}:"")+"\n"+
-"14.專長："+($F{skill_text}!=null?$F{skill_text}:"")+"\n"+
-"15.需要何種更生保護："+($F{protect_text}!=null?$F{protect_text}:"")+"\n"+
-"16.取得證照職種："+($F{docu_license_text}!=null?$F{docu_license_text}:"")+"\n"+
-"17.宗教信仰："+($F{relig_text}!=null?$F{relig_text}:"")+"\n"+
-"18.是否有暴力傾向："+($F{docu_violent_text}!=null?$F{docu_violent_text}:"")+"\n"+
-"19.經濟狀況："+($F{economic_text}!=null?$F{economic_text}:"")+"\n"+
-"20.婚姻狀況："+($F{marriage_text}!=null?$F{marriage_text}:"")+"\n"+
-"21.其他(補充事項)："+($F{docu_remark}!=null?$F{docu_remark}:"")]]></textFieldExpression>
+"7.通訊地址："+($F{addr}!=null?$F{addr}:"")+"\n"+
+"8.出監（所、校）後擬住地址："+($F{opr_addr}!=null?$F{opr_addr}:"")+"\n"+
+"9.聯絡電話："+($F{nam_tel}!=null?$F{nam_tel}:"")+"\n"+
+"10.以前職業："+($F{docu_proc_text}!=null?$F{docu_proc_text}:"")+"\n"+
+"11.教育程度："+($F{nam_educ_text}!=null?$F{nam_educ_text}:"")+"\n"+
+"12.罪名："+($F{nam_cnames_text}!=null?$F{nam_cnames_text}:"")+"\n"+
+"13.是否施用毒品："+($F{drg_user_text}!=null?$F{drg_user_text}:"")+"\n"+
+"14.刑期："+($F{nam_pen_text}!=null?$F{nam_pen_text}:"")+"\n"+
+"15.入監所或被收容日期："+($F{nam_mvdt}!=null?$F{nam_mvdt}:"")+"\n"+
+"16.預計獲釋日期及原因："+($F{docu_otdt}!=null?$F{docu_otdt}:"")+"     "+($F{docu_otop_text}!=null?$F{docu_otop_text}:"")+"\n"+
+"17.專長："+($F{skill_text}!=null?$F{skill_text}:"")+"\n"+
+"18.需要何種更生保護："+($F{protect_text}!=null?$F{protect_text}:"")+"\n"+
+"19.取得證照職種："+($F{docu_license_text}!=null?$F{docu_license_text}:"")+"\n"+
+"20.宗教信仰："+($F{relig_text}!=null?$F{relig_text}:"")+"\n"+
+"21.是否有暴力傾向："+($F{docu_violent_text}!=null?$F{docu_violent_text}:"")+"\n"+
+"22.經濟狀況："+($F{economic_text}!=null?$F{economic_text}:"")+"\n"+
+"23.婚姻狀況："+($F{marriage_text}!=null?$F{marriage_text}:"")+"\n"+
+"24.其他(補充事項)："+($F{docu_remark}!=null?$F{docu_remark}:"")]]></textFieldExpression>
 			</textField>
 			<staticText>
 				<reportElement x="0" y="30" width="290" height="100" uuid="bf97dc1a-3718-4507-b8b1-bd066f3a2692"/>
@@ -188,7 +192,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="Microsoft JhengHei UI" size="20"/>
+					<font fontName="標楷體" size="20"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["受文者："+($F{prot_name}!=null?$F{prot_name}:"")]]></textFieldExpression>
@@ -202,7 +206,7 @@
 					<rightPen lineWidth="1.0"/>
 				</box>
 				<textElement>
-					<font fontName="Microsoft JhengHei UI" size="12"/>
+					<font fontName="標楷體" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["發文日期："+($F{rs_dt}!=null?$F{rs_dt}:"")]]></textFieldExpression>
@@ -218,7 +222,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="Microsoft JhengHei UI" size="12"/>
+					<font fontName="標楷體" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["\n"+
@@ -234,7 +238,7 @@
 					<rightPen lineWidth="1.0"/>
 				</box>
 				<textElement>
-					<font fontName="Microsoft JhengHei UI" size="12"/>
+					<font fontName="標楷體" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["連絡電話："+($F{tr_tel}!=null?$F{tr_tel}:"")]]></textFieldExpression>
@@ -248,7 +252,7 @@
 					<rightPen lineWidth="1.0"/>
 				</box>
 				<textElement>
-					<font fontName="Microsoft JhengHei UI" size="12"/>
+					<font fontName="標楷體" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["電子郵件："+($F{tr_email}!=null?$F{tr_email}:"")]]></textFieldExpression>

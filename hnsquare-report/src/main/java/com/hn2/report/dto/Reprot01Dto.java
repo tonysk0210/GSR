@@ -26,6 +26,7 @@ public class Reprot01Dto {
     /**受文者*/
     private String prot_name;
     /**姓名*/
+    // 1.
     private String nam_cname;
     /**性別*/
     private String nam_sex;
@@ -37,6 +38,10 @@ public class Reprot01Dto {
     private String nam_idno;
     /**戶籍地址*/
     private String nam_haddr_text;
+    //通訊地址 7.(新增)
+    private String addr;
+    //出監(所、校)後擬住地址 8.(新增)
+    private String opr_addr;
     /**聯絡電話*/
     private String nam_tel;
     /**以前職業*/
@@ -45,6 +50,8 @@ public class Reprot01Dto {
     private String nam_educ_text;
     /**罪名*/
     private String nam_cnames_text;
+    //是否施用毒品 13.(新增)
+    private String drg_user_text;
     /**刑期*/
     private String nam_pen_text;
     /**入監所或被收容日期*/
@@ -52,6 +59,7 @@ public class Reprot01Dto {
     /**預計獲釋日期*/
     private String docu_otdt;
     /**預計獲釋原因*/
+    //與上同一行 16.
     private String docu_otop_text;
     /**專長*/
     private String skill_text;
@@ -68,7 +76,7 @@ public class Reprot01Dto {
     /**婚姻狀況**/
     private String marriage_text;
     /**其他*/
-    private String docu_remark;
+    private String docu_remark; //說明(需調整)
     /**聯絡人姓名*/
     private String reld_name;
     /**連絡人關係*/
