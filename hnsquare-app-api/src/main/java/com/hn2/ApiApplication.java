@@ -20,7 +20,7 @@ import springfox.documentation.spring.data.rest.configuration.SpringDataRestConf
 @Import(SpringDataRestConfiguration.class)
 @EnableWebMvc
 public class ApiApplication {
-  public static void main(String[] args) {
-    SpringApplication.run(ApiApplication.class, args);
-  }
+    public static void main(String[] args) {
+        SpringApplication.run(ApiApplication.class, args);
+    }
 }

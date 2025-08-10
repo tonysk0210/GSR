@@ -5,6 +5,8 @@ import io.swagger.annotations.ApiModel;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.sql.Date;
+
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 @ApiModel(description = "更生保護通知書")

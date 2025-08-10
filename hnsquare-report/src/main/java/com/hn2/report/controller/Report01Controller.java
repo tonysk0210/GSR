@@ -18,6 +18,7 @@ public class Report01Controller {
     public ResponseEntity<Object> getListByCustom(@RequestBody Reprot01Payload payload) {
 
         //payload.setPrintUser(principalAccessor.getPrincipal().getCname());
+        System.out.println("print log");
         log.info(payload.toString());
         byte[] bytes = service.getReport(payload); //pdf generated
 

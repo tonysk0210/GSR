@@ -57,12 +57,12 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement textAlignment="Center">
-					<font fontName="kai" size="20"/>
+					<font fontName="標楷體" size="20"/>
 				</textElement>
 				<textFieldExpression><![CDATA["更生保護通知書"]]></textFieldExpression>
 			</textField>
 			<staticText>
-				<reportElement x="0" y="618" width="555" height="142" uuid="33650eaa-6329-40e6-8da9-23736b3388c5">
+				<reportElement x="0" y="618" width="555" height="112" uuid="33650eaa-6329-40e6-8da9-23736b3388c5">
 					<property name="com.jaspersoft.studio.unit.height" value="px"/>
 					<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
 				</reportElement>
@@ -73,7 +73,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="kai" size="12"/>
+					<font fontName="標楷體" size="12"/>
 					<paragraph lineSpacingSize="2.0" leftIndent="5"/>
 				</textElement>
 				<text><![CDATA[說明：
@@ -94,7 +94,7 @@
 					<rightPen lineWidth="1.0"/>
 				</box>
 				<textElement>
-					<font fontName="kai" size="12"/>
+					<font fontName="標楷體" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["發文機關："+($F{org_code}!=null?$F{org_code}:"")]]></textFieldExpression>
@@ -108,7 +108,7 @@
 					<rightPen lineWidth="1.0"/>
 				</box>
 				<textElement>
-					<font fontName="kai" size="12"/>
+					<font fontName="標楷體" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["承辦人："+($F{tr_user}!=null?$F{tr_user}:"")]]></textFieldExpression>
@@ -124,7 +124,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="kai" size="12"/>
+					<font fontName="標楷體" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["連絡人："+"\n"+
@@ -144,12 +144,12 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="kai" size="12"/>
+					<font fontName="微軟正黑體" size="12"/>
 					<paragraph lineSpacing="Fixed" lineSpacingSize="18.0" leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["受保護者資料："+"\n"+
 "1.姓名："+($F{nam_cname}!=null?$F{nam_cname}:"")+"\n"+
-"2.性別："+($F{nam_sex}!=null?$F{nam_sex}:"")+  "\t\t\t\t\t" +  "3.出生日期："+($F{nam_brdt}!=null?$F{nam_brdt}:"")+"\n"+
+"2.性別："+($F{nam_sex}!=null?$F{nam_sex}:"")+  "\t\t\t\t\t" +  "3.出生日期：" + ($F{nam_brdt} != null? com.hn2.util.DateUtil.date2Roc($F{nam_brdt},com.hn2.util.DateUtil.DateFormat.yyy年M月d日): "")+"\n"+
 "4.出生地："+($F{nam_bonp_text}!=null?$F{nam_bonp_text}:"")+ "\t\t\t\t\t"+ "5.國民身分證統一編號："+($F{nam_idno}!=null?$F{nam_idno}:"")+"\n"+
 "6.戶籍地址："+($F{nam_haddr_text}!=null?$F{nam_haddr_text}:"")+"\n"+
 "7.通訊地址："+($F{addr}!=null?$F{addr}:"")+"\n"+
@@ -160,8 +160,8 @@
 "12.罪名："+($F{nam_cnames_text}!=null?$F{nam_cnames_text}:"")+"\n"+
 "13.是否施用毒品："+($F{drg_user_text}!=null?$F{drg_user_text}:"")+"\n"+
 "14.刑期："+($F{nam_pen_text}!=null?$F{nam_pen_text}:"")+"\n"+
-"15.入監所或被收容日期："+($F{nam_mvdt}!=null?$F{nam_mvdt}:"")+"\n"+
-"16.預計獲釋日期及原因："+($F{docu_otdt}!=null?$F{docu_otdt}:"")+"     "+($F{docu_otop_text}!=null?$F{docu_otop_text}:"")+"\n"+
+"15.入監所或被收容日期："+($F{nam_mvdt} != null? com.hn2.util.DateUtil.date2Roc($F{nam_mvdt},com.hn2.util.DateUtil.DateFormat.yyy年M月d日): "")+"\n"+
+"16.預計獲釋日期及原因："+($F{docu_otdt} != null? com.hn2.util.DateUtil.date2Roc($F{docu_otdt},com.hn2.util.DateUtil.DateFormat.yyy年M月d日): "")+"     "+($F{docu_otop_text}!=null?$F{docu_otop_text}:"")+"\n"+
 "17.專長："+($F{skill_text}!=null?$F{skill_text}:"")+"\n"+
 "18.需要何種更生保護："+($F{protect_text}!=null?$F{protect_text}:"")+"\n"+
 "19.取得證照職種："+($F{docu_license_text}!=null?$F{docu_license_text}:"")+"\n"+
@@ -192,7 +192,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="kai" size="20"/>
+					<font fontName="標楷體" size="20"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["受文者："+($F{prot_name}!=null?$F{prot_name}:"")]]></textFieldExpression>
@@ -206,10 +206,10 @@
 					<rightPen lineWidth="1.0"/>
 				</box>
 				<textElement>
-					<font fontName="kai" size="12"/>
+					<font fontName="微軟正黑體" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
-				<textFieldExpression><![CDATA["發文日期："+($F{rs_dt}!=null?$F{rs_dt}:"")]]></textFieldExpression>
+				<textFieldExpression><![CDATA["發文日期：" + ($F{rs_dt} != null? com.hn2.util.DateUtil.date2Roc($F{rs_dt},com.hn2.util.DateUtil.DateFormat.yyy年M月d日): "")]]></textFieldExpression>
 			</textField>
 			<textField>
 				<reportElement x="280" y="548" width="275" height="70" uuid="81683807-7a9e-413a-a3a3-c6f3e466953d">
@@ -222,7 +222,7 @@
 					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 				</box>
 				<textElement>
-					<font fontName="kai" size="12"/>
+					<font fontName="標楷體" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["\n"+
@@ -238,7 +238,7 @@
 					<rightPen lineWidth="1.0"/>
 				</box>
 				<textElement>
-					<font fontName="kai" size="12"/>
+					<font fontName="標楷體" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["連絡電話："+($F{tr_tel}!=null?$F{tr_tel}:"")]]></textFieldExpression>
@@ -252,7 +252,7 @@
 					<rightPen lineWidth="1.0"/>
 				</box>
 				<textElement>
-					<font fontName="kai" size="12"/>
+					<font fontName="標楷體" size="12"/>
 					<paragraph leftIndent="5"/>
 				</textElement>
 				<textFieldExpression><![CDATA["電子郵件："+($F{tr_email}!=null?$F{tr_email}:"")]]></textFieldExpression>

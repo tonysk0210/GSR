@@ -38,31 +38,32 @@ public class Report01ServiceImpl implements Report01Service {
 
     @Override
     public byte[] getReport(Reprot01Payload payload) {
-        List<Reprot01Dto> listDto = repository.getList(payload);
+        List<Reprot01Dto> listDto = repository.getList(payload); //get listDto from repository
+        System.out.println("listDto: " + listDto); //print listDto for debugging
 
         Date date = new Date();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd :hh:mm:ss");
-        String  rocDate = date2Roc(new Date(),yyy年M月d日);
-        String dd = dateFormat.format(date);
+        String rocDate = date2Roc(new Date(), yyy年M月d日); //create another date to ROC date format
+        String dd = dateFormat.format(date); //create date string in "yyyy-MM-dd :hh:mm:ss" format
         HashMap<String, Object> params = new HashMap<String, Object>();
         params.put("reportNo", "Reprot01");
         params.put("reportCreateDateTime", rocDate);
 
         if (listDto == null || listDto.size() == 0) {
             throw new BusinessException("查無資料");
-        }else {
+        } else {
             List<Insert_to_SUP_AfterCare_Print_Log_DTO> insertDTOList = new ArrayList<>();
-            for(int i=0;i<listDto.size();i++){
-                Insert_to_SUP_AfterCare_Print_Log_DTO insertDTO=new Insert_to_SUP_AfterCare_Print_Log_DTO();
+            for (int i = 0; i < listDto.size(); i++) {
+                Insert_to_SUP_AfterCare_Print_Log_DTO insertDTO = new Insert_to_SUP_AfterCare_Print_Log_DTO();
                 insertDTO.setOrg_code(listDto.get(i).getOrg());
                 insertDTO.setVir_no(listDto.get(i).getVir_no());
                 insertDTO.setRs_dt(listDto.get(i).getRs_dt());
                 insertDTO.setPrint_prot_name("更生保護分會");
-                insertDTO.setPrint_date(dd.substring(0,10));
+                insertDTO.setPrint_date(dd.substring(0, 10));
                 insertDTO.setPrint_user(payload.getPrintUser());
                 insertDTOList.add(insertDTO);
             }
-            repository.insertToSUP_AfterCare_Print_Log(insertDTOList);
+            repository.insertToSUP_AfterCare_Print_Log(insertDTOList); //insert insertDTOList into SUP_AfterCare_Print_Log table
         }
 
         try {
