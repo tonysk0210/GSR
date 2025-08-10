@@ -2,7 +2,7 @@
 <fontFamilies>
 
     <fontFamily name="kai">
-        <normal>jasperreports/fonts/kai/kai.ttf</normal>
+        <normal>jasperreports/fonts/kai/kaiu.ttf</normal>
         <pdfEncoding>Identity-H</pdfEncoding>
         <pdfEmbedded>true</pdfEmbedded>
     </fontFamily>
