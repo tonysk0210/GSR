@@ -23,7 +23,7 @@ public class Report01Controller {
         byte[] bytes = service.getReport(payload); //pdf generated
 
         return ResponseEntity.ok()
-                .header("Content-Type", "application/pdf")
+                .header("Content-Type", "application/pdf") //; charset=UTF-8
                 .body(bytes);
     }
 }
