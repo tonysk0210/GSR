@@ -65,7 +65,7 @@
                     <rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
                 </box>
                 <textElement textAlignment="Center">
-                    <font fontName="標楷體" size="20"/>
+                    <font fontName="kai" size="20"/>
                 </textElement>
                 <textFieldExpression><![CDATA["更生保護通知書"]]></textFieldExpression>
             </textField>
@@ -83,7 +83,7 @@
                     <rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
                 </box>
                 <textElement>
-                    <font fontName="標楷體" size="12"/>
+                    <font fontName="kai" size="12"/>
                     <paragraph lineSpacingSize="2.0" leftIndent="5"/>
                 </textElement>
                 <text><![CDATA[說明：
@@ -107,7 +107,7 @@
                     <rightPen lineWidth="1.0"/>
                 </box>
                 <textElement>
-                    <font fontName="標楷體" size="12"/>
+                    <font fontName="kai" size="12"/>
                     <paragraph leftIndent="5"/>
                 </textElement>
                 <textFieldExpression><![CDATA["發文機關："+($F{org_code}!=null?$F{org_code}:"")]]></textFieldExpression>
@@ -123,7 +123,7 @@
                     <rightPen lineWidth="1.0"/>
                 </box>
                 <textElement>
-                    <font fontName="標楷體" size="12"/>
+                    <font fontName="kai" size="12"/>
                     <paragraph leftIndent="5"/>
                 </textElement>
                 <textFieldExpression><![CDATA["承辦人："+($F{tr_user}!=null?$F{tr_user}:"")]]></textFieldExpression>
@@ -141,7 +141,7 @@
                     <rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
                 </box>
                 <textElement>
-                    <font fontName="標楷體" size="12"/>
+                    <font fontName="kai" size="12"/>
                     <paragraph leftIndent="5"/>
                 </textElement>
                 <textFieldExpression><![CDATA["連絡人："+"\n"+
@@ -163,7 +163,7 @@
                     <rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
                 </box>
                 <textElement>
-                    <font fontName="標楷體" size="12"/>
+                    <font fontName="kai" size="12"/>
                     <paragraph lineSpacing="Fixed" lineSpacingSize="14.0" leftIndent="5"/>
                 </textElement>
                 <textFieldExpression><![CDATA["受保護者資料："+"\n"+
@@ -215,7 +215,7 @@
                     <rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
                 </box>
                 <textElement>
-                    <font fontName="標楷體" size="20"/>
+                    <font fontName="kai" size="20"/>
                     <paragraph leftIndent="5"/>
                 </textElement>
                 <textFieldExpression><![CDATA["受文者："+($F{prot_name}!=null?$F{prot_name}:"")]]></textFieldExpression>
@@ -232,7 +232,7 @@
                 </box>
                 <textElement>
 
-                    <font fontName="標楷體" size="12"/>
+                    <font fontName="kai" size="12"/>
                     <paragraph leftIndent="5"/>
                 </textElement>
                 <textFieldExpression>
@@ -251,7 +251,7 @@
                     <rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
                 </box>
                 <textElement>
-                    <font fontName="標楷體" size="12"/>
+                    <font fontName="kai" size="12"/>
                     <paragraph leftIndent="5"/>
                 </textElement>
                 <textFieldExpression><![CDATA["\n"+
@@ -269,7 +269,7 @@
                     <rightPen lineWidth="1.0"/>
                 </box>
                 <textElement>
-                    <font fontName="標楷體" size="12"/>
+                    <font fontName="kai" size="12"/>
                     <paragraph leftIndent="5"/>
                 </textElement>
                 <textFieldExpression><![CDATA["連絡電話："+($F{tr_tel}!=null?$F{tr_tel}:"")]]></textFieldExpression>
@@ -285,7 +285,7 @@
                     <rightPen lineWidth="1.0"/>
                 </box>
                 <textElement>
-                    <font fontName="標楷體" size="12"/>
+                    <font fontName="kai" size="12"/>
                     <paragraph leftIndent="5"/>
                 </textElement>
                 <textFieldExpression><![CDATA["電子郵件："+($F{tr_email}!=null?$F{tr_email}:"")]]></textFieldExpression>
