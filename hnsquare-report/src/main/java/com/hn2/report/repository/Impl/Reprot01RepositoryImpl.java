@@ -78,10 +78,10 @@ public class Reprot01RepositoryImpl implements Reprot01Repository {
                 }
 
                 // SimpleFlatMapper
-                query.setAutoDeriveColumnNames(true);
-                query.setResultSetHandlerFactoryBuilder(new SfmResultSetHandlerFactoryBuilder());
+                query.setAutoDeriveColumnNames(true); //Sql2o 會自動依欄位名稱對應到 DTO 屬性
+                query.setResultSetHandlerFactoryBuilder(new SfmResultSetHandlerFactoryBuilder()); //SimpleFlatMapper（SFM）整合，支援自動 mapping + 複雜欄位型別
 
-                return query.executeAndFetch(Reprot01Dto.class);
+                return query.executeAndFetch(Reprot01Dto.class); //執行 SQL，結果自動轉成 Reprot01Dto 的列表
             }
         }
     }
