@@ -21,6 +21,7 @@ dependencies {
     implementation project(':hnsquare-base')
     implementation project(':hnsquare-cms')
     implementation project(':hnsquare-report')
+    implementation project(':hnsquare-assessment') // Assuming this is the correct project dependency
 
     providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
