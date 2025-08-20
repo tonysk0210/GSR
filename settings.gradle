@@ -6,4 +6,4 @@ include 'hnsquare-base'
 include 'hnsquare-cms'
 include 'hnsquare-report'
 
-include 'hnsquare-assessment' // Assessment module for handling assessments and evaluations
+include 'hnsquare-evaluation' // Assessment module for handling assessments and evaluations
