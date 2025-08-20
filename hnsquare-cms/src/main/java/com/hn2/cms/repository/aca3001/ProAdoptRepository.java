@@ -27,16 +27,14 @@ public class ProAdoptRepository {
         */
 
         // 方案二：ProRec 直接關聯 ACABrd（舉例用 AcaId）
-        String sql = """
-            SELECT TOP 1
-                   b.ACAName,
-                   b.ACAIDNo,
-                   b.ACACardNo
-            FROM dbo.ProRec r
-            JOIN dbo.ACABrd b ON b.ACACardNo = r.ACACardNo
-            WHERE r.ProCaseID = ?
-            ORDER BY b.ModifiedOnDate DESC
-        """;
+        String sql = "SELECT TOP 1\n" +
+                "       b.ACAName,\n" +
+                "       b.ACAIDNo,\n" +
+                "       b.ACACardNo\n" +
+                "FROM dbo.ProRec r\n" +
+                "JOIN dbo.ACABrd b ON b.ACACardNo = r.ACACardNo\n" +
+                "WHERE r.ProCaseID = ?\n" +
+                "ORDER BY b.ModifiedOnDate DESC";
 
         List<ProfileRow> list = jdbcTemplate.query(sql, (rs, i) -> {
             ProfileRow row = new ProfileRow();
