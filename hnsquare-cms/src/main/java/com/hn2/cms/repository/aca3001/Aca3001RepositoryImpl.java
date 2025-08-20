@@ -6,11 +6,11 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public class ProAdoptRepository {
+public class Aca3001RepositoryImpl implements Aca3001Repository {
 
     private final JdbcTemplate jdbcTemplate;
 
-    public ProAdoptRepository(JdbcTemplate jdbcTemplate) {
+    public Aca3001RepositoryImpl(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -52,12 +52,30 @@ public class ProAdoptRepository {
         private String acaName;
         private String acaIdNo;
         private String acaCardNo;
+
         // getters/setters
-        public String getAcaName() { return acaName; }
-        public void setAcaName(String acaName) { this.acaName = acaName; }
-        public String getAcaIdNo() { return acaIdNo; }
-        public void setAcaIdNo(String acaIdNo) { this.acaIdNo = acaIdNo; }
-        public String getAcaCardNo() { return acaCardNo; }
-        public void setAcaCardNo(String acaCardNo) { this.acaCardNo = acaCardNo; }
+        public String getAcaName() {
+            return acaName;
+        }
+
+        public void setAcaName(String acaName) {
+            this.acaName = acaName;
+        }
+
+        public String getAcaIdNo() {
+            return acaIdNo;
+        }
+
+        public void setAcaIdNo(String acaIdNo) {
+            this.acaIdNo = acaIdNo;
+        }
+
+        public String getAcaCardNo() {
+            return acaCardNo;
+        }
+
+        public void setAcaCardNo(String acaCardNo) {
+            this.acaCardNo = acaCardNo;
+        }
     }
 }

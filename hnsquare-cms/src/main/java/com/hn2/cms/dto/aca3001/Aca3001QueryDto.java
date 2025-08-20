@@ -3,7 +3,7 @@ package com.hn2.cms.dto.aca3001;
 import lombok.Data;
 
 @Data
-public class ProAdoptViewResponse {
+public class Aca3001QueryDto {
     private Meta meta;
     private Header header;          // 先不填，可為 null
     private Profile profile;
