@@ -104,7 +104,7 @@ public class Aca3001QueryDto {
     // --------- Summary (總結/訪談紀要、策略目標) ----------
     @Data
     public static class Summary {
-        private List<ServiceTypeOption> serviceTypeOptions = List.of();
+//        private List<ServiceTypeOption> serviceTypeOptions = List.of();
         private List<ServiceTypeSelected> serviceTypeSelected = List.of();
         private String proEmploymentStatus; // 若為代碼建議改為 value+text
         private String proStatus;           // 同上
