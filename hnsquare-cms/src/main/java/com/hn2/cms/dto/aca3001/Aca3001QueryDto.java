@@ -3,6 +3,7 @@ package com.hn2.cms.dto.aca3001;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -27,8 +28,8 @@ public class Aca3001QueryDto {
     @Data
     public static class Header {
         private String branchName;    // 分會名稱
-        private LocalDate proNoticeDate; // 申請通知日期
-        private LocalDate proDate;       // 保護日期
+        private String proNoticeDate; // 申請通知日期
+        private String proDate;       // 保護日期
     }
 
     // --------- Profile 區塊 ----------
@@ -67,7 +68,7 @@ public class Aca3001QueryDto {
     public static class EvalAdoptCriteria {
         private List<Option> options;    // 可選清單
         private List<Selected> selected; // 已勾選
-        private EvalScore evalscores;           // 九項評估分數
+        private EvalScore evalScores;           // 九項評估分數
 
         @Data
         public static class Option {
@@ -104,23 +105,11 @@ public class Aca3001QueryDto {
     // --------- Summary (總結/訪談紀要、策略目標) ----------
     @Data
     public static class Summary {
-//        private List<ServiceTypeOption> serviceTypeOptions = List.of();
+        //        private List<ServiceTypeOption> serviceTypeOptions = List.of();
         private List<ServiceTypeSelected> serviceTypeSelected = List.of();
         private String proEmploymentStatus; // 若為代碼建議改為 value+text
         private String proStatus;           // 同上
         private CaseStatus caseStatus;
-
-        @Data
-        public static class ServiceTypeOption {
-            private Integer parentId;
-            private Integer entryId;
-            private String value;
-            private String text;
-            private Integer level;
-            private Integer sortOrder;
-            private boolean hasChildren;
-            private List<ServiceTypeOption> children = List.of(); // lazy 時可為空陣列
-        }
 
         @Data
         public static class ServiceTypeSelected {

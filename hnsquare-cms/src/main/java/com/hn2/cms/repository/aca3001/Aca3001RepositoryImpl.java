@@ -1,6 +1,7 @@
 package com.hn2.cms.repository.aca3001;
 
 import com.hn2.cms.dto.aca3001.Aca3001QueryDto;
+import com.hn2.util.DateUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -10,102 +11,125 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Repository
 public class Aca3001RepositoryImpl implements Aca3001Repository {
 
-    // jdbcTemplate 幫你處理了連線、SQL 執行、ResultSet 轉換等細節，你只要專注寫 SQL + RowMapper。
-    private final JdbcTemplate jdbcTemplate;
+    private final JdbcTemplate jdbcTemplate; // use JdbcTemplate for querying database
 
     @Autowired
     public Aca3001RepositoryImpl(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    // ---------- 介面實作 ----------
+    // ========================= 介面實作 "/query" =========================
     @Override
     public Integer findProAdoptIdByProRecId(String proRecId) {
-        final String SQL_FIND_PROADOPT_ID = "SELECT ID FROM ProAdopt WHERE ProRecID = ?";
-        List<Integer> ids = jdbcTemplate.query(SQL_FIND_PROADOPT_ID, (rs, i) -> rs.getInt("ID"), proRecId);
-        return ids.isEmpty() ? null : ids.get(0);
+        final String SQL_FIND_PROADOPT_ID = "SELECT ID FROM dbo.ProAdopt WHERE ProRecID = ?";
+
+        List<Integer> proAdoptIds = jdbcTemplate.query(SQL_FIND_PROADOPT_ID, (rs, i) -> rs.getInt("ID"), proRecId);
+        return proAdoptIds.isEmpty() ? null : proAdoptIds.get(0); // 空→null，多筆→取第一筆
     }
 
+    @Override
     public Aca3001QueryDto.Profile findProfileByProRecId(String proRecId) {
+        final String SQL_FIND_PROFILE =
+                "SELECT b.ACAName, b.ACAIDNo, b.ACACardNo " +
+                        "FROM dbo.ProRec r " +
+                        "JOIN dbo.ACABrd b ON b.ACACardNo = r.ACACardNo " +
+                        "WHERE r.ID = ?";
 
-        // 這是 SQL 查詢語句，從 ProRec 和 ACABrd 表中查找資料
-        // 把 ProRec 表的案件，跟 ACABrd 表的受保護人基本資料，用 ACACardNo（卡號）對應起來
-        final String SQL_FIND_PROFILE = "SELECT b.ACAName, b.ACAIDNo, b.ACACardNo " +
-                "FROM ProRec r " +
-                "JOIN ACABrd b ON b.ACACardNo = r.ACACardNo " +
-                "WHERE r.ID = ?";
-
-        // 這是 RowMapper，把每一筆 ResultSet 轉換成 Aca3001QueryDto.Profile 物件
-        // 注意：這裡的 rs 是 ResultSet，i 是行號（從 0 開始）
-        // rs.getString("ACAName") 會從 ResultSet 中取出名為 "ACAName" 的欄位值
-        // 這裡使用了 lambda 表達式來簡化 RowMapper 的實現
-        // 這樣可以讓程式碼更簡潔易讀
-        // 最後，jdbcTemplate.query()
-        // 會執行 SQL 查詢，並把結果轉換成 List<Aca3001QueryDto.Profile>。
         List<Aca3001QueryDto.Profile> list = jdbcTemplate.query(SQL_FIND_PROFILE, (rs, i) -> {
-            Aca3001QueryDto.Profile profile = new Aca3001QueryDto.Profile();
+            var profile = new Aca3001QueryDto.Profile();
             profile.setAcaName(rs.getString("ACAName"));
             profile.setAcaIdNo(rs.getString("ACAIDNo"));
             profile.setAcaCardNo(rs.getString("ACACardNo"));
             return profile;
         }, proRecId);
-
         return list.isEmpty() ? null : list.get(0);
     }
 
     @Override
     public Aca3001QueryDto.Header findHeaderByProRecId(String proRecId) {
         final String SQL_FIND_HEADER =
-                "SELECT l.[Text] AS BranchName, " +                 // 最終顯示名稱
-                        "       r.ProNoticeDate AS ProNoticeDate, " +
-                        "       r.ProDate       AS ProDate " +
-                        "FROM dbo.ProRec  r " +
-                        "JOIN dbo.ACABrd  ab ON ab.ID = r.ID " +            // 關聯：ProRec.ID = ACABrd.ID
-                        "LEFT JOIN dbo.Lists l " +
-                        "  ON l.ParentID = 26 " +                           // 只取分會那群清單
-                        " AND l.Value = ab.CreatedByBranchID " +
+                "SELECT l.[Text] AS BranchName, r.ProNoticeDate, r.ProDate " +
+                        "FROM dbo.ProRec r " +
+                        "JOIN dbo.ACABrd ab ON ab.ID = r.ID " +
+                        "LEFT JOIN dbo.Lists l ON l.ParentID = 26 AND l.Value = ab.CreatedByBranchID " +
                         "WHERE r.ID = ?";
 
-        RowMapper<Aca3001QueryDto.Header> HEADER_MAPPER = (rs, i) -> {
-            Aca3001QueryDto.Header h = new Aca3001QueryDto.Header();
-            h.setBranchName(rs.getString("BranchName"));
-            h.setProNoticeDate(getLocalDate(rs, "ProNoticeDate"));
-            h.setProDate(getLocalDate(rs, "ProDate"));
-            return h;
-        };
-        List<Aca3001QueryDto.Header> list = jdbcTemplate.query(SQL_FIND_HEADER, HEADER_MAPPER, proRecId);
+        List<Aca3001QueryDto.Header> list = jdbcTemplate.query(SQL_FIND_HEADER, (rs, i) -> {
+            var header = new Aca3001QueryDto.Header();
+            header.setBranchName(rs.getString("BranchName"));
+            header.setProNoticeDate(getLocalDateToROC(rs, "ProNoticeDate"));
+            header.setProDate(getLocalDateToROC(rs, "ProDate"));
+            return header;
+        }, proRecId);
         return list.isEmpty() ? null : list.get(0);
     }
 
+    /**
+     * 初始化「直接認輔條件（DirectAdoptCriteria）」的選單與預設值。
+     * 用途：建立新案件（尚未有 ProAdoptId）或作為既有案件的預設顯示。
+     *
+     * @return 已載入可用選項且 selected 為空的 {@link Aca3001QueryDto.DirectAdoptCriteria} 物件
+     */
+    @Override
+    public Aca3001QueryDto.DirectAdoptCriteria initDirectCriteriaOptions() {
+        var dacDto = new Aca3001QueryDto.DirectAdoptCriteria();
+        // dacDto載入「直接認輔條件清單」where IsDisabled = 0
+        dacDto.setOptions(loadDirectOptions());
+        // dacDto載入所屬「直接認輔條件清單」
+        dacDto.setSelected(List.of());
+        return dacDto;
+    }
+
+    /**
+     * 初始化「評估認輔條件（EvalAdoptCriteria）」的選單與預設評分。
+     * 用途：建立新案件（尚未有 ProAdoptId）或既有案件的預設載入畫面。
+     *
+     * @return 已載入可用選項、selected為空、且評分為預設值 0  {@link Aca3001QueryDto.EvalAdoptCriteria}
+     */
+    @Override
+    public Aca3001QueryDto.EvalAdoptCriteria initEvalCriteriaOptions() {
+        var eacDto = new Aca3001QueryDto.EvalAdoptCriteria();
+        // eacDto載入「評估認輔條件清單」where IsDisabled = 0
+        eacDto.setOptions(loadEvalOptions());
+        // eacDto載入所屬「評估認輔條件清單」
+        eacDto.setSelected(List.of());
+
+        var scDto = new Aca3001QueryDto.EvalAdoptCriteria.EvalScore();
+        scDto.setScoreEconomy(0);
+        scDto.setScoreEmployment(0);
+        scDto.setScoreFamily(0);
+        scDto.setScoreSocial(0);
+        scDto.setScorePhysical(0);
+        scDto.setScorePsych(0);
+        scDto.setScoreParenting(0);
+        scDto.setScoreLegal(0);
+        scDto.setScoreResidence(0);
+        scDto.setTotalScore(0);
+        scDto.setComment(null);
+        // edcDto載入所屬「評估認輔條件分數」預設值
+        eacDto.setEvalScores(scDto);
+
+        return eacDto;
+    }
+
+    /**
+     * 載入指定 ProAdopt 的「直接認輔條件（DirectAdoptCriteria）」：包含可選清單（options）與 已勾選清單（selected）。
+     *
+     * @param proAdoptId
+     * @return 已包含 options 與 selected 的 {@link Aca3001QueryDto.DirectAdoptCriteria}
+     */
     @Override
     public Aca3001QueryDto.DirectAdoptCriteria loadDirectCriteria(Integer proAdoptId) {
-        Aca3001QueryDto.DirectAdoptCriteria dto = new Aca3001QueryDto.DirectAdoptCriteria();
+        var dacDto = new Aca3001QueryDto.DirectAdoptCriteria();
+        // dacDto載入「直接認輔條件清單」where IsDisabled = 0
+        dacDto.setOptions(loadDirectOptions());
 
-        final String SQL_DIRECT_OPTIONS =
-                "SELECT EntryID, Value, [Text], SortOrder " +
-                        "FROM dbo.Lists " +
-                        "WHERE ListName = 'PROADOPT_DAC' " +
-                        "  AND IsDisabled = 0 " +         // bit 欄位：用 0/1，不要用 '0'/'1'
-                        "ORDER BY SortOrder ASC, EntryID ASC";
-        // options
-        var options = jdbcTemplate.query(SQL_DIRECT_OPTIONS, (rs, i) -> {
-            Aca3001QueryDto.DirectAdoptCriteria.Option o = new Aca3001QueryDto.DirectAdoptCriteria.Option();
-            o.setEntryId(rs.getInt("EntryID"));
-            o.setValue(rs.getString("Value"));
-            o.setText(rs.getString("Text"));
-            o.setSortOrder(rs.getInt("SortOrder"));
-            return o;
-        });
-        dto.setOptions(options);
-
+        // dacDto載入所屬「直接認輔條件清單」
         final String SQL_DIRECT_SELECTED =
                 "SELECT l.EntryID, l.Value, l.[Text], l.IsDisabled " +
                         "FROM dbo.Lists AS l " +
@@ -114,190 +138,189 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                         "WHERE c.ProAdoptID = ? " +
                         "  AND l.ListName = 'PROADOPT_DAC' " +
                         "ORDER BY l.SortOrder ASC, l.EntryID ASC";
-        // selected
-        var selected = jdbcTemplate.query(SQL_DIRECT_SELECTED, (rs, i) -> {
-            Aca3001QueryDto.DirectAdoptCriteria.Selected s = new Aca3001QueryDto.DirectAdoptCriteria.Selected();
-            s.setEntryId(rs.getInt("EntryID"));
-            s.setValue(rs.getString("Value"));
-            s.setText(rs.getString("Text"));
-            s.setDisabled(rs.getBoolean("IsDisabled")); // bit -> boolean
-            return s;
+        List<Aca3001QueryDto.DirectAdoptCriteria.Selected> list = jdbcTemplate.query(SQL_DIRECT_SELECTED, (rs, i) -> {
+            var selected = new Aca3001QueryDto.DirectAdoptCriteria.Selected();
+            selected.setEntryId(rs.getInt("EntryID"));
+            selected.setValue(rs.getString("Value"));
+            selected.setText(rs.getString("Text"));
+            selected.setDisabled(rs.getBoolean("IsDisabled")); // bit -> boolean
+            return selected;
         }, proAdoptId);
-        dto.setSelected(selected);
+        dacDto.setSelected(list);
 
-        return dto;
+        return dacDto;
     }
 
+    /**
+     * 載入指定 ProAdopt 的「評估認輔條件（EvalAdoptCriteria）」：包含可選清單（options）、已勾選清單（selected）與評分（evalScores）。
+     *
+     * @param proAdoptId
+     * @return 已包含 options、selected 與 evalScores 的 {@link Aca3001QueryDto.EvalAdoptCriteria}
+     */
     @Override
     public Aca3001QueryDto.EvalAdoptCriteria loadEvalCriteria(Integer proAdoptId) {
+        var eacDto = new Aca3001QueryDto.EvalAdoptCriteria();
+        // eacDto載入「評估認輔條件清單」where IsDisabled = 0
+        eacDto.setOptions(loadEvalOptions());
 
-        Aca3001QueryDto.EvalAdoptCriteria dto = new Aca3001QueryDto.EvalAdoptCriteria();
-
-        // options
-        final String SQL_EVAL_OPTIONS =
-                "SELECT EntryID, Value, [Text], SortOrder " +
-                        "FROM dbo.Lists " +
-                        "WHERE ListName = 'PROADOPT_EAC' " +
-                        "  AND IsDisabled = 0 " +         // bit 欄位：用 0/1，不要用 '0'/'1'
-                        "ORDER BY SortOrder ASC, EntryID ASC";
-
-        var options = jdbcTemplate.query(SQL_EVAL_OPTIONS, (rs, i) -> {
-            Aca3001QueryDto.EvalAdoptCriteria.Option o = new Aca3001QueryDto.EvalAdoptCriteria.Option();
-            o.setEntryId(rs.getInt("EntryID"));
-            o.setValue(rs.getString("Value"));
-            o.setText(rs.getString("Text"));
-            o.setSortOrder(rs.getInt("SortOrder"));
-            return o;
-        });
-        dto.setOptions(options);
-
-        // selected
+        // eacDto載入所屬「評估認輔條件清單」
         final String SQL_EVAL_SELECTED =
                 "SELECT l.EntryID, l.Value, l.[Text], l.IsDisabled " +
                         "FROM dbo.Lists AS l " +
-                        "JOIN dbo.EvalAdoptCriteria AS c " +
-                        "  ON c.ListsEntryID = l.EntryID " +
-                        "WHERE c.ProAdoptID = ? " +
-                        "  AND l.ListName = 'PROADOPT_EAC' " +
+                        "JOIN dbo.EvalAdoptCriteria AS c ON c.ListsEntryID = l.EntryID " +
+                        "WHERE c.ProAdoptID = ? AND l.ListName = 'PROADOPT_EAC' " +
                         "ORDER BY l.SortOrder ASC, l.EntryID ASC";
-
-        var selected = jdbcTemplate.query(SQL_EVAL_SELECTED, (rs, i) -> {
-            Aca3001QueryDto.EvalAdoptCriteria.Selected s = new Aca3001QueryDto.EvalAdoptCriteria.Selected();
-            s.setEntryId(rs.getInt("EntryID"));
-            s.setValue(rs.getString("Value"));
-            s.setText(rs.getString("Text"));
-            s.setDisabled(rs.getBoolean("IsDisabled")); // bit -> boolean
-            return s;
+        List<Aca3001QueryDto.EvalAdoptCriteria.Selected> list = jdbcTemplate.query(SQL_EVAL_SELECTED, (rs, i) -> {
+            Aca3001QueryDto.EvalAdoptCriteria.Selected selected = new Aca3001QueryDto.EvalAdoptCriteria.Selected();
+            selected.setEntryId(rs.getInt("EntryID"));
+            selected.setValue(rs.getString("Value"));
+            selected.setText(rs.getString("Text"));
+            selected.setDisabled(rs.getBoolean("IsDisabled")); // bit -> boolean
+            return selected;
         }, proAdoptId);
-        dto.setSelected(selected);
+        eacDto.setSelected(list);
 
-        // scores
+        // eacDto載入所屬「評估認輔條件分數」
         final String SQL_EVAL_SCORES =
                 "SELECT ScoreEconomy, ScoreEmployment, ScoreFamily, " +
-                        "       ScoreSocial, ScorePhysical, ScorePsych, " +
-                        "       ScoreParenting, ScoreLegal, ScoreResidence, " +
-                        "       ScoreTotal, Comment " +
+                        "   ScoreSocial, ScorePhysical, ScorePsych, " +
+                        "   ScoreParenting, ScoreLegal, ScoreResidence, " +
+                        "   ScoreTotal, Comment " +
                         "FROM dbo.ProAdopt WHERE ID = ?";
-        dto.setEvalscores(jdbcTemplate.query(SQL_EVAL_SCORES, rs -> {
-            Aca3001QueryDto.EvalAdoptCriteria.EvalScore sc = new Aca3001QueryDto.EvalAdoptCriteria.EvalScore();
+        eacDto.setEvalScores(jdbcTemplate.query(SQL_EVAL_SCORES, rs -> { //ResultSetExtractor<T>
+            var evalScore = new Aca3001QueryDto.EvalAdoptCriteria.EvalScore();
             if (rs.next()) {
-                sc.setScoreEconomy(rs.getInt("ScoreEconomy"));
-                sc.setScoreEmployment(rs.getInt("ScoreEmployment"));
-                sc.setScoreFamily(rs.getInt("ScoreFamily"));
-                sc.setScoreSocial(rs.getInt("ScoreSocial"));
-                sc.setScorePhysical(rs.getInt("ScorePhysical"));
-                sc.setScorePsych(rs.getInt("ScorePsych"));
-                sc.setScoreParenting(rs.getInt("ScoreParenting"));
-                sc.setScoreLegal(rs.getInt("ScoreLegal"));
-                sc.setScoreResidence(rs.getInt("ScoreResidence"));
-                sc.setTotalScore(rs.getInt("ScoreTotal"));
-                sc.setComment(rs.getString("Comment"));
+                evalScore.setScoreEconomy(rs.getInt("ScoreEconomy"));
+                evalScore.setScoreEmployment(rs.getInt("ScoreEmployment"));
+                evalScore.setScoreFamily(rs.getInt("ScoreFamily"));
+                evalScore.setScoreSocial(rs.getInt("ScoreSocial"));
+                evalScore.setScorePhysical(rs.getInt("ScorePhysical"));
+                evalScore.setScorePsych(rs.getInt("ScorePsych"));
+                evalScore.setScoreParenting(rs.getInt("ScoreParenting"));
+                evalScore.setScoreLegal(rs.getInt("ScoreLegal"));
+                evalScore.setScoreResidence(rs.getInt("ScoreResidence"));
+                evalScore.setTotalScore(rs.getInt("ScoreTotal"));
+                evalScore.setComment(rs.getString("Comment"));
             }
-            return sc;
+            return evalScore;
         }, proAdoptId));
 
-        return dto;
+        return eacDto;
     }
 
+    /**
+     * 載入「案件摘要（Summary）」：
+     * 1) 服務類型選擇（serviceTypeSelected）：由個案在 ACA_PROTECT 勾選到的每個「葉節點」(LeafEntryID) 向上回溯父節點，
+     *    組成由「父 → … → 葉」的完整路徑（不含根節點 EntryID=37），並彙總禁用/刪除狀態。
+     * 2) 基本欄位：同時查詢並設定 Pro_EmploymentStaus（對應屬性：proEmploymentStatus）與 ProStatus（對應屬性：proStatus）。
+     *
+     * @param proRecId
+     * @return 已組裝完成的 {@link Aca3001QueryDto.Summary}（永不為 {@code null}）
+     */
     @Override
     public Aca3001QueryDto.Summary loadSummaryBasics(String proRecId) {
-        final String SQL_LOAD_SUMMARY_BASICS =
-                "SELECT "
-                        + "    r.Pro_EmploymentStaus as ProEmploymentStatus, "
-                        + "    r.ProStatus as ProStatus "
-                        + "FROM dbo.ProRec r "
-                        + "WHERE r.ID = ?";
-        return jdbcTemplate.query(SQL_LOAD_SUMMARY_BASICS, rs -> {
-            Aca3001QueryDto.Summary s = new Aca3001QueryDto.Summary();
-            if (rs.next()) {
-                s.setProEmploymentStatus(rs.getString("ProEmploymentStatus"));
-                s.setProStatus(rs.getString("ProStatus"));
+        final String SQL_LOAD_SERVICE_SELECTED =
+                "WITH Leaf AS ( " + //該個案在 ACA_PROTECT 裡面勾到哪些葉子代碼
+                        "  SELECT DISTINCT l.EntryID AS LeafEntryID " +
+                        "  FROM dbo.ProRec  r " +
+                        "  JOIN dbo.ProDtl  d ON d.ProRecID = r.ID " +
+                        "  CROSS APPLY STRING_SPLIT(d.ProItem, ',') s " +
+                        "  JOIN dbo.Lists   l " +
+                        "    ON l.ListName = 'ACA_PROTECT' " +
+                        "   AND ( l.Value = LTRIM(RTRIM(s.value)) " +
+                        "      OR l.EntryID = TRY_CONVERT(int, LTRIM(RTRIM(s.value))) ) " +
+                        "  WHERE r.ID = ? " +
+                        "), cte AS ( " + //這是遞迴的起點 (anchor row)
+                        "  SELECT l.EntryID, l.ParentID, l.[Text], l.[Level], " +
+                        "         l.IsDisabled, ISNULL(l.IsDeleted,0) AS IsDeleted, " +
+                        "         0 AS depth, lf.LeafEntryID " +
+                        "  FROM dbo.Lists l " +
+                        "  JOIN Leaf lf ON lf.LeafEntryID = l.EntryID " +
+                        "  WHERE l.ListName = 'ACA_PROTECT' " +
+                        "  UNION ALL " + //這是遞迴部分，會一直撈父節點，直到遇到 37 為止
+                        "  SELECT p.EntryID, p.ParentID, p.[Text], p.[Level], " +
+                        "         p.IsDisabled, ISNULL(p.IsDeleted,0) AS IsDeleted, " +
+                        "         c.depth + 1, c.LeafEntryID " +
+                        "  FROM dbo.Lists p " +
+                        "  JOIN cte c ON p.EntryID = c.ParentID " +
+                        "  WHERE p.ListName = 'ACA_PROTECT' " +
+                        "    AND c.ParentID <> 37 " + //每個 葉子 (LeafEntryID) 對應的一條向上路徑（直到遇到 Parent=37）
+                        ") " +
+                        "SELECT LeafEntryID, EntryID, [Text], [Level], IsDisabled, IsDeleted " +
+                        "FROM cte " +
+                        "ORDER BY LeafEntryID, [Level] ASC " +  //先依葉子 ID，再依層級排序
+                        "OPTION (MAXRECURSION 32);"; //限制遞迴最多 32 層，避免無限迴圈
+
+        final String SQL_LOAD_EMPLOYMENTSTATUS_AND_PROSTATUS =
+                "SELECT r.Pro_EmploymentStaus AS ProEmploymentStatus, r.ProStatus AS ProStatus " +
+                        "FROM dbo.ProRec r WHERE r.ID = ?";
+
+        var summary = new Aca3001QueryDto.Summary();
+
+        List<Aca3001QueryDto.Summary.ServiceTypeSelected> list = jdbcTemplate.query(SQL_LOAD_SERVICE_SELECTED, rs -> {
+
+            // 以 LeafEntryID 分組：同一個「葉節點」只會有一個容器（value），用來累積該葉的整條路徑
+            Map<Integer, Aca3001QueryDto.Summary.ServiceTypeSelected> byLeaf = new LinkedHashMap<>();
+
+            // 每一列 = 路徑上的一個節點（父/祖先...直到葉），SQL 已依 LeafEntryID, Level 升冪排序
+            while (rs.next()) {
+                int leaf = rs.getInt("LeafEntryID"); // 此列屬於哪個葉節點
+                int entryId = rs.getInt("EntryID"); // 路徑中的某個節點 ID（不一定是葉節點）
+                if (entryId == 37) continue; // 略過根節點（保護類別），不納入路徑
+
+                String text = rs.getString("Text");
+                boolean dis = rs.getBoolean("IsDisabled");
+                boolean del = rs.getBoolean("IsDeleted");
+
+                // 取得/建立「此葉節點」的容器：第一次遇到 leaf 會初始化一個空容器，其後重複使用
+                var serviceTypeSelectedDto = byLeaf.computeIfAbsent(leaf, k -> {
+                    var x = new Aca3001QueryDto.Summary.ServiceTypeSelected();
+                    x.setLeafEntryId(k);
+                    x.setPathEntryIds(new ArrayList<>());
+                    x.setPathText(new ArrayList<>());
+                    x.setHistoricalEntryIds(new ArrayList<>());
+                    x.setHasDisabled(false);
+                    return x;
+                });
+
+                // 把目前節點接到路徑尾端（Level ASC 已保證父在前、葉在最後）
+                serviceTypeSelectedDto.getPathEntryIds().add(entryId);
+                serviceTypeSelectedDto.getPathText().add(text);
+
+                // 任何一個節點被禁用/刪除，都把整條路徑的彙總旗標設為 true
+                if (dis) serviceTypeSelectedDto.setHasDisabled(true);
+                if (del) serviceTypeSelectedDto.setHasDeleted(true);
+
+                // 收集需標示的節點：此處以「禁用」為歷史依據；若要改成以「已刪除」為準，改這行即可
+                if (dis) serviceTypeSelectedDto.getHistoricalEntryIds().add(entryId);
             }
 
-            // serviceTypeSelected 若有獨立關聯表，這裡補查並填 s.setServiceTypeSelected(...)
-            final String SQL_SVC_SELECTED =
-                    "WITH Leaf AS ( " +
-                            "  SELECT DISTINCT l.EntryID AS LeafEntryID " +
-                            "  FROM dbo.ProRec  r " +
-                            "  JOIN dbo.ProDtl  d ON d.ProRecID = r.ID " +
-                            "  CROSS APPLY STRING_SPLIT(d.ProItem, ',') s " +
-                            "  JOIN dbo.Lists   l " +
-                            "    ON l.ListName = 'ACA_PROTECT' " +
-                            "   AND ( l.Value = LTRIM(RTRIM(s.value)) " +
-                            "      OR l.EntryID = TRY_CONVERT(int, LTRIM(RTRIM(s.value))) ) " +
-                            "  WHERE r.ID = ? " +
-                            "), cte AS ( " +
-                            "  SELECT l.EntryID, l.ParentID, l.[Text], l.[Level], " +
-                            "         l.IsDisabled, ISNULL(l.IsDeleted,0) AS IsDeleted, " +
-                            "         0 AS depth, lf.LeafEntryID " +
-                            "  FROM dbo.Lists l " +
-                            "  JOIN Leaf lf ON lf.LeafEntryID = l.EntryID " +
-                            "  WHERE l.ListName = 'ACA_PROTECT' " +
-                            "  UNION ALL " +
-                            "  SELECT p.EntryID, p.ParentID, p.[Text], p.[Level], " +
-                            "         p.IsDisabled, ISNULL(p.IsDeleted,0) AS IsDeleted, " +
-                            "         c.depth + 1, c.LeafEntryID " +
-                            "  FROM dbo.Lists p " +
-                            "  JOIN cte c ON p.EntryID = c.ParentID " +
-                            "  WHERE p.ListName = 'ACA_PROTECT' " +
-                            "    AND c.ParentID <> 37 " +        // ← 遇到其父=37就停止，不再往上把 37 撈進來
-                            ") " +
-                            "SELECT LeafEntryID, EntryID, [Text], [Level], IsDisabled, IsDeleted " +
-                            "FROM cte " +
-                            "ORDER BY LeafEntryID, [Level] ASC " +  // 子於 37 的層先出，然後葉
-                            "OPTION (MAXRECURSION 32);";
-
-            List<Aca3001QueryDto.Summary.ServiceTypeSelected> svcSelected =
-                    jdbcTemplate.query(SQL_SVC_SELECTED, ps -> ps.setString(1, proRecId), rs2 -> {
-                        //用 LeafEntryID 當 key，確保同一個葉節點的路徑節點會累積在一起
-                        //LinkedHashMap 保持插入順序
-                        Map<Integer, Aca3001QueryDto.Summary.ServiceTypeSelected> byLeaf = new LinkedHashMap<>();
-
-                        while (rs2.next()) {
-                            int leaf = rs2.getInt("LeafEntryID");
-                            int entryId = rs2.getInt("EntryID");
-                            String text = rs2.getString("Text");
-                            boolean dis = rs2.getBoolean("IsDisabled");
-                            boolean del = rs2.getBoolean("IsDeleted");
-
-                            // 跳過根節點 37（雙重保險）
-                            if (entryId == 37) continue;
-
-
-                            // 取得或建立該葉節點的 ServiceTypeSelected
-                            // computeIfAbsent：如果 byLeaf 中沒有這個 leaf，則建立一個
-                            // 新的 ServiceTypeSelected，並放入 byLeaf 中
-                            // 這樣可以確保每個葉節點只會有一個 ServiceTypeSelected 實例
-                            // leaf 當作 key，ServiceTypeSelected 當作 value
-                            // 注意：這裡的 leaf 是 LeafEntryID，代表這個 ServiceTypeSelected
-                            //       是針對哪個葉節點的服務類型選擇
-                            //       這樣可以確保每個葉節點的服務類型選擇都會被正確地累積
-                            Aca3001QueryDto.Summary.ServiceTypeSelected sel = byLeaf.computeIfAbsent(leaf, k -> {
-                                var x = new Aca3001QueryDto.Summary.ServiceTypeSelected();
-                                x.setLeafEntryId(k);
-                                x.setPathEntryIds(new ArrayList<>());   // 一定要可變
-                                x.setPathText(new ArrayList<>());
-                                x.setHistoricalEntryIds(new ArrayList<>());
-                                x.setHasDisabled(false);
-                                return x;
-                            });
-
-                            sel.getPathEntryIds().add(entryId);  //[101, 202, 123]       // 已按 Level 升冪：37之下的節點 → 葉
-                            sel.getPathText().add(text); //["直接保護", "追蹤輔導訪視", "一般追蹤"]
-                            if (dis) sel.setHasDisabled(true); // 是否有禁用的節點
-                            if (del) sel.setHasDeleted(true); // 是否有刪除的節點
-                            if (dis) sel.getHistoricalEntryIds().add(entryId); // 預設isDisable為歷史節點(or use isDeleted)
-                        }
-                        //byLeaf.values() 會回傳 Map 裡所有的 value (ServiceTypeSelected 物件集合)
-                        //new ArrayList<>(...) 把它轉成一個新的 ArrayList<ServiceTypeSelected>
-                        return new ArrayList<>(byLeaf.values());
-                    });
-
-            s.setServiceTypeSelected(svcSelected);
-            return s;
+            // 將分組結果由 Map 轉為 List；若無資料則回傳空清單（避免回傳 null）
+            return byLeaf.isEmpty()
+                    ? Collections.emptyList()
+                    : new ArrayList<>(byLeaf.values());
         }, proRecId);
+        //1. summary 載入「服務類型選擇」ServiceTypeSelected
+        summary.setServiceTypeSelected(list);
+
+
+        jdbcTemplate.query(SQL_LOAD_EMPLOYMENTSTATUS_AND_PROSTATUS, rs -> {
+            if (rs.next()) {
+                //2. summary載入 ProRec 的 Pro_EmploymentStaus 與 ProStatus
+                summary.setProEmploymentStatus(rs.getString("ProEmploymentStatus"));
+                summary.setProStatus(rs.getString("ProStatus"));
+            }
+            return null; // ResultSetExtractor 需要回傳值，但我們直接修改外部物件
+        }, proRecId);
+
+        return summary;
     }
 
+    /**
+     *
+     * @param proAdoptId
+     * @return
+     */
     @Override
     public Aca3001QueryDto.Summary.CaseStatus loadCaseStatus(Integer proAdoptId) {
 
@@ -342,69 +365,65 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
     }
 
     //
-    @Override
-    public Aca3001QueryDto.DirectAdoptCriteria initDirectCriteriaOptions() {
-        Aca3001QueryDto.DirectAdoptCriteria dto = new Aca3001QueryDto.DirectAdoptCriteria();
 
-        final String SQL_DIRECT_OPTIONS =
-                "SELECT EntryID, Value, Text, SortOrder " +
-                        "FROM dbo.Lists " +
-                        "WHERE ListName = 'ProAdopt_DAC' AND IsDisabled = '0' " +
-                        "ORDER BY SortOrder ASC, EntryID ASC";
-        var options = jdbcTemplate.query(SQL_DIRECT_OPTIONS, (rs, i) -> {
-            Aca3001QueryDto.DirectAdoptCriteria.Option o = new Aca3001QueryDto.DirectAdoptCriteria.Option();
-            o.setEntryId(rs.getInt("EntryID"));
-            o.setValue(rs.getString("Value"));
-            o.setText(rs.getString("Text"));
-            o.setSortOrder(rs.getInt("SortOrder"));
-            return o;
-        });
-        dto.setOptions(options);
-        dto.setSelected(List.of());
-        return dto;
+
+    // ---------- 私有方法區 ----------
+
+    /**
+     * 從當前 {@link ResultSet} 的指定欄位讀取 DATETIME/DATETIME2 值，並轉換為民國日期字串（格式：yyy年M月d日）。
+     *
+     * @param rs
+     * @param columnLabel
+     * @return 民國日期字串（yyy年M月d日），若欄位為 NULL 則回傳 {@code null}
+     * @throws SQLException
+     */
+    private String getLocalDateToROC(ResultSet rs, String columnLabel) throws SQLException {
+        Timestamp ts = rs.getTimestamp(columnLabel); // 讀出該欄位的 Timestamp
+        String roc = (ts == null) ? null : DateUtil.date2Roc(new java.util.Date(ts.getTime()), DateUtil.DateFormat.yyy年M月d日);
+        return roc;
     }
 
-    @Override
-    public Aca3001QueryDto.EvalAdoptCriteria initEvalCriteriaOptions() {
-        Aca3001QueryDto.EvalAdoptCriteria dto = new Aca3001QueryDto.EvalAdoptCriteria();
 
-        final String SQL_EVAL_OPTIONS =
-                "SELECT EntryID, Value, Text, SortOrder " +
-                        "FROM dbo.Lists " +
-                        "WHERE ListName = 'ProAdopt_EAC' AND IsDisabled = '0' " +
+    /**
+     * 載入「直接認輔條件」IsDisabled = 0（僅載入目前有效的條件）
+     * 建立新 ProAdopt（proAdoptId = null）與查詢既有 ProAdopt（proAdoptId != null）皆會使用。
+     *
+     * @return 已排序的直接認輔條件選項清單（永不為 {@code null}）
+     */
+    private List<Aca3001QueryDto.DirectAdoptCriteria.Option> loadDirectOptions() {
+        final String sql =
+                "SELECT EntryID, Value, [Text], SortOrder FROM dbo.Lists " +
+                        "WHERE ListName = 'PROADOPT_DAC' AND IsDisabled = 0 " +
                         "ORDER BY SortOrder ASC, EntryID ASC";
-        var options = jdbcTemplate.query(SQL_EVAL_OPTIONS, (rs, i) -> {
-            Aca3001QueryDto.EvalAdoptCriteria.Option o = new Aca3001QueryDto.EvalAdoptCriteria.Option();
-            o.setEntryId(rs.getInt("EntryID"));
-            o.setValue(rs.getString("Value"));
-            o.setText(rs.getString("Text"));
-            o.setSortOrder(rs.getInt("SortOrder"));
-            return o;
+        return jdbcTemplate.query(sql, (rs, i) -> {
+            var option = new Aca3001QueryDto.DirectAdoptCriteria.Option();
+            option.setEntryId(rs.getInt("EntryID"));
+            option.setValue(rs.getString("Value"));
+            option.setText(rs.getString("Text"));
+            option.setSortOrder(rs.getInt("SortOrder"));
+            return option;
         });
-        dto.setOptions(options);
-        dto.setSelected(List.of());
-
-        var sc = new Aca3001QueryDto.EvalAdoptCriteria.EvalScore();
-        sc.setScoreEconomy(0);
-        sc.setScoreEmployment(0);
-        sc.setScoreFamily(0);
-        sc.setScoreSocial(0);
-        sc.setScorePhysical(0);
-        sc.setScorePsych(0);
-        sc.setScoreParenting(0);
-        sc.setScoreLegal(0);
-        sc.setScoreResidence(0);
-        sc.setTotalScore(0);
-        sc.setComment(null);
-        dto.setEvalscores(sc);
-
-        return dto;
     }
 
-    // convenience method to convert ResultSet timestamp to LocalDate
-    private LocalDate getLocalDate(ResultSet rs, String columnLabel) throws SQLException {
-        Timestamp ts = rs.getTimestamp(columnLabel); // datetime 對應 java.sql.Timestamp
-        return (ts != null) ? ts.toLocalDateTime().toLocalDate() : null;
+    /**
+     * 載入「評估認輔條件」IsDisabled = 0（僅載入目前有效的條件）
+     * 建立新 ProAdopt（proAdoptId = null）與查詢既有 ProAdopt（proAdoptId != null）皆會使用。
+     *
+     * @return 已排序的評估認輔條件選項清單（永不為 {@code null}）
+     */
+    private List<Aca3001QueryDto.EvalAdoptCriteria.Option> loadEvalOptions() {
+        final String sql =
+                "SELECT EntryID, Value, [Text], SortOrder FROM dbo.Lists " +
+                        "WHERE ListName = 'PROADOPT_EAC' AND IsDisabled = 0 " +
+                        "ORDER BY SortOrder ASC, EntryID ASC";
+        return jdbcTemplate.query(sql, (rs, i) -> {
+            var option = new Aca3001QueryDto.EvalAdoptCriteria.Option();
+            option.setEntryId(rs.getInt("EntryID"));
+            option.setValue(rs.getString("Value"));
+            option.setText(rs.getString("Text"));
+            option.setSortOrder(rs.getInt("SortOrder"));
+            return option;
+        });
     }
 
 }
