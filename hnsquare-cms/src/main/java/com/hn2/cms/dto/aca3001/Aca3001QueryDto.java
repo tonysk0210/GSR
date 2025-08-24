@@ -3,9 +3,22 @@ package com.hn2.cms.dto.aca3001;
 import lombok.Data;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
+
 import java.util.List;
 
+/**
+ * Aca3001 認輔評估表查詢用 DTO
+ *
+ * 主要分為六個區塊：
+ *
+ *   Meta：案件基本控制資訊（ID、是否可編輯、鎖定日期）
+ *   Header：表頭顯示資訊（分會、通知日期、案件日期）
+ *   Profile：個案基本資料（姓名、身分證、卡號）
+ *   DirectAdoptCriteria：直接認輔條件（選項與已選清單）
+ *   EvalAdoptCriteria：認輔評估條件（選項、已選清單、評估分數）
+ *   Summary：總結（服務類型、案件狀態、策略目標）
+ *
+ */
 @Data
 public class Aca3001QueryDto {
     private Meta meta;
@@ -15,36 +28,45 @@ public class Aca3001QueryDto {
     private EvalAdoptCriteria evalAdoptCriteria;
     private Summary summary;
 
-    // --------- Meta 區塊 ----------
+    // ===== Meta：案件基本控制資訊 =====
     @Data
     public static class Meta {
-        private String proRecId; // 保護紀錄編號
-        private Integer proAdoptId; // 認輔評估表 ID（若未建立則 null）
-        private boolean editable;    // 是否可編輯（依時間鎖決定）
-        private LocalDate lockDate;     // 鎖定日期（null 表示尚未鎖）
+        /** 保護紀錄 ID（必填，對應 ProRec.ID） */
+        private String proRecId;
+        /** 認輔評估表 ID（可能為 null，表示尚未建立） */
+        private Integer proAdoptId;
+        /** 是否允許修改（受時間鎖或業務規則影響） */
+        private boolean editable = true;
+        /** 鎖定日期（若不為 null，超過此日期即不可再修改） */
+        private LocalDate lockDate;
     }
 
-    // --------- Header 區塊 ----------
+    // ===== Header：表頭顯示資訊 =====
     @Data
     public static class Header {
-        private String branchName;    // 分會名稱
-        private String proNoticeDate; // 申請通知日期
-        private String proDate;       // 保護日期
+        /** 分會名稱（由 BranchID 對應 Lists.Text） */
+        private String branchName;
+        /** 通知日期（ProNoticeDate） */
+        private String proNoticeDate;
+        /** 保護日期（ProDate） */
+        private String proDate;
     }
 
-    // --------- Profile 區塊 ----------
+    // ===== Profile：個案基本資料 =====
     @Data
     public static class Profile {
-        private String acaName;   // 更生人姓名
-        private String acaIdNo;   // 身分證字號
-        private String acaCardNo; // 建檔編號
+        private String acaName;
+        private String acaIdNo;
+        private String acaCardNo;
     }
 
-    // --------- DirectAdoptCriteria (直接認輔條件) ----------
+    // ===== DirectAdoptCriteria：直接認輔條件 =====
     @Data
     public static class DirectAdoptCriteria {
-        private List<Option> options = List.of();    // 可選清單（從 Lists 來）
-        private List<Selected> selected = List.of(); // 已勾選的條件
+        /** 所有可供選擇的直接認輔條件 */
+        private List<Option> options = List.of();
+        /** 已被勾選的條件（含可能已失效/禁用的選項） */
+        private List<Selected> selected = List.of();
 
         @Data
         public static class Option {
@@ -59,16 +81,20 @@ public class Aca3001QueryDto {
             private Integer entryId;
             private String value;
             private String text;
-            private boolean isDisabled; // 是否已被法規刪除/禁用
+            /** 是否因法規異動而失效（禁用/刪除） */
+            private boolean isDisabled;
         }
     }
 
-    // --------- EvalAdoptCriteria (評估條件) ----------
+    // ===== EvalAdoptCriteria：認輔評估條件 =====
     @Data
     public static class EvalAdoptCriteria {
-        private List<Option> options;    // 可選清單
-        private List<Selected> selected; // 已勾選
-        private EvalScore evalScores;           // 九項評估分數
+        /** 所有可供選擇的認輔評估條件 */
+        private List<Option> options = List.of();
+        /** 已被勾選的條件（含可能已失效/禁用的選項） */
+        private List<Selected> selected = List.of();
+        /** 各項分數與總分 */
+        private EvalScore evalScores;
 
         @Data
         public static class Option {
@@ -86,52 +112,61 @@ public class Aca3001QueryDto {
             private boolean isDisabled;
         }
 
+        /** 認輔評估各面向分數 */
         @Data
         public static class EvalScore {
-            private Integer scoreEconomy;
-            private Integer scoreEmployment;
-            private Integer scoreFamily;
-            private Integer scoreSocial;
-            private Integer scorePhysical;
-            private Integer scorePsych;
-            private Integer scoreParenting;
-            private Integer scoreLegal;
-            private Integer scoreResidence;
-            private Integer totalScore; // 後端計算
+            private Integer scoreEconomy = 0;
+            private Integer scoreEmployment = 0;
+            private Integer scoreFamily = 0;
+            private Integer scoreSocial = 0;
+            private Integer scorePhysical = 0;
+            private Integer scorePsych = 0;
+            private Integer scoreParenting = 0;
+            private Integer scoreLegal = 0;
+            private Integer scoreResidence = 0;
+            /** 總分（由後端計算，不由前端輸入） */
+            private Integer totalScore = 0;
             private String comment;
         }
     }
 
-    // --------- Summary (總結/訪談紀要、策略目標) ----------
+    // ===== Summary：總結／訪談紀要／策略目標 =====
     @Data
     public static class Summary {
-        //        private List<ServiceTypeOption> serviceTypeOptions = List.of();
+        /** 個案勾選的服務類型 */
         private List<ServiceTypeSelected> serviceTypeSelected = List.of();
-        private String proEmploymentStatus; // 若為代碼建議改為 value+text
-        private String proStatus;           // 同上
+        /** 就業狀態 */
+        private String proEmploymentStatus;
+        /** 個案訪談紀要(輔導情形) */
+        private String proStatus;
+        /** 案件最終狀態（拒絕/接受/結案等） */
         private CaseStatus caseStatus;
 
         @Data
         public static class ServiceTypeSelected {
+            /** 最末層勾選的 entryId */
             private Integer leafEntryId;
+            /** 該路徑的所有節點 entryIds */
             private List<Integer> pathEntryIds = List.of();
+            /** 該路徑對應的文字名稱 */
             private List<String> pathText = List.of();
-            private boolean hasDisabled;           // 路徑是否含禁用節點(預設)
-            private boolean hasDeleted;            // 路徑是否含已刪除節點
-            private List<Integer> historicalEntryIds = List.of(); // lazy 時可為空陣列
+            /** 路徑中是否包含禁用節點 */
+            private boolean hasDisabled;
+            /** 路徑中是否包含已刪除節點 Optional */
+            private boolean hasDeleted;
+            /** 歷史 entryIds（若有異動，保留歷史紀錄） */
+            private List<Integer> historicalEntryIds = List.of();
         }
 
+        /** 案件狀態（拒絕/接受/結案），僅能擇一 */
         @Data
         public static class CaseStatus {
-            private StatusFlag reject;
-            private StatusFlag accept;
-            private StatusFlag end;
-        }
+            public enum CaseState {NONE, REJECT, ACCEPT, END}
 
-        @Data
-        public static class StatusFlag {
-            private boolean flag;
-            private String reason;
+            /** 預設為 NONE，表示尚未設定 */
+            private CaseState caseState = CaseState.NONE;
+            /** 狀態說明原因（如拒絕原因） */
+            private String reason = null;
         }
     }
 }

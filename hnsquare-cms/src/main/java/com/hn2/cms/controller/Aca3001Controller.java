@@ -3,7 +3,6 @@ package com.hn2.cms.controller;
 import com.hn2.cms.dto.aca3001.Aca3001QueryDto;
 import com.hn2.cms.payload.aca3001.Aca3001QueryPayload;
 import com.hn2.cms.service.aca3001.Aca3001Service;
-import com.hn2.cms.service.aca3001.Aca3001ServiceImpl;
 import com.hn2.core.dto.DataDto;
 import com.hn2.core.payload.GeneralPayload;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,9 +27,7 @@ public class Aca3001Controller {
 
     @PostMapping("/query")
     public ResponseEntity<DataDto<Aca3001QueryDto>> query(@Valid @RequestBody GeneralPayload<Aca3001QueryPayload> payload) {
-
-        DataDto<Aca3001QueryDto> result = service.query(payload); // 業務邏輯
-
-        return ResponseEntity.ok(result); // 代表 HTTP 200 OK，並把 result 當作 JSON 回傳。
+        DataDto<Aca3001QueryDto> result = service.query(payload);
+        return ResponseEntity.ok(result);
     }
 }
