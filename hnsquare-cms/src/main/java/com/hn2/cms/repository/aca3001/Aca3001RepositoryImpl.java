@@ -30,7 +30,6 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
 
     private final JdbcTemplate jdbcTemplate;
 
-
     @Autowired
     public Aca3001RepositoryImpl(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -85,7 +84,7 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
         }
 
         // 4) 建立 MetaDto
-        Aca3001QueryDto.Meta meta = new Aca3001QueryDto.Meta();
+        var meta = new Aca3001QueryDto.Meta();
         meta.setProRecId(proRecId);
         meta.setProAdoptId(proAdoptId);
         meta.setLockDate(timelockDate); // 可能為 null
@@ -107,21 +106,21 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
      */
     @Override
     public Aca3001QueryDto.Header computeHeader(String proRecId) {
-        final String SQL_FIND_HEADER =
+        final String SQL_HEADER =
                 "SELECT l.[Text] AS BranchName, r.ProNoticeDate, r.ProDate " +
                         "FROM dbo.ProRec r " +
                         "JOIN dbo.ACABrd ab ON ab.ID = r.ID " +
                         "LEFT JOIN dbo.Lists l ON l.ParentID = 26 AND l.Value = ab.CreatedByBranchID " +
                         "WHERE r.ID = ?";
 
-        List<Aca3001QueryDto.Header> list = jdbcTemplate.query(SQL_FIND_HEADER, (rs, i) -> {
+        return jdbcTemplate.query(SQL_HEADER, ps -> ps.setString(1, proRecId), rs -> {
+            if (!rs.next()) return null;
             var header = new Aca3001QueryDto.Header();
             header.setBranchName(rs.getString("BranchName"));
             header.setProNoticeDate(getLocalDateToROC(rs, "ProNoticeDate"));
             header.setProDate(getLocalDateToROC(rs, "ProDate"));
             return header;
-        }, proRecId);
-        return list.isEmpty() ? null : list.get(0);
+        });
     }
 
     /**
@@ -131,20 +130,20 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
      */
     @Override
     public Aca3001QueryDto.Profile computeProfile(String proRecId) {
-        final String SQL_FIND_PROFILE =
+        final String SQL_PROFILE =
                 "SELECT b.ACAName, b.ACAIDNo, b.ACACardNo " +
                         "FROM dbo.ProRec r " +
                         "JOIN dbo.ACABrd b ON b.ACACardNo = r.ACACardNo " +
                         "WHERE r.ID = ?";
 
-        List<Aca3001QueryDto.Profile> list = jdbcTemplate.query(SQL_FIND_PROFILE, (rs, i) -> {
-            var profile = new Aca3001QueryDto.Profile();
-            profile.setAcaName(rs.getString("ACAName"));
-            profile.setAcaIdNo(rs.getString("ACAIDNo"));
-            profile.setAcaCardNo(rs.getString("ACACardNo"));
-            return profile;
-        }, proRecId);
-        return list.isEmpty() ? null : list.get(0);
+        return jdbcTemplate.query(SQL_PROFILE, ps -> ps.setString(1, proRecId), rs -> {
+            if (!rs.next()) return null;
+            var p = new Aca3001QueryDto.Profile();
+            p.setAcaName(rs.getString("ACAName"));
+            p.setAcaIdNo(rs.getString("ACAIDNo"));
+            p.setAcaCardNo(rs.getString("ACACardNo"));
+            return p;
+        });
     }
 
     /**
@@ -172,7 +171,7 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
         var dto = new Aca3001QueryDto.DirectAdoptCriteria();
 
         // 2) options：一律來自 Lists（僅取 IsDisabled=0）
-        List<Aca3001QueryDto.DirectAdoptCriteria.Option> options =
+        List<Aca3001QueryDto.DirectAdoptCriteria.Option> listOptions =
                 jdbcTemplate.query(SQL_OPTIONS, (rs, i) -> {
                     var o = new Aca3001QueryDto.DirectAdoptCriteria.Option();
                     o.setEntryId(rs.getInt("EntryID"));
@@ -181,15 +180,14 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                     o.setSortOrder(rs.getInt("SortOrder"));
                     return o;
                 });
-        dto.setOptions(options);
+        dto.setOptions(listOptions);
 
         // 3) selected：若 proAdoptId 為 null → 空清單；否則撈實際勾選
-        List<Aca3001QueryDto.DirectAdoptCriteria.Selected> selected;
+        List<Aca3001QueryDto.DirectAdoptCriteria.Selected> listSelected;
         if (proAdoptId == null) {
-            // 若之後前端/程式會對 selected 追加元素，改成 new ArrayList<>()
-            selected = java.util.Collections.emptyList();
+            listSelected = List.of();
         } else {
-            selected = jdbcTemplate.query(SQL_SELECTED, (rs, i) -> {
+            listSelected = jdbcTemplate.query(SQL_SELECTED, (rs, i) -> {
                 var s = new Aca3001QueryDto.DirectAdoptCriteria.Selected();
                 s.setEntryId(rs.getInt("EntryID"));
                 s.setValue(rs.getString("Value"));
@@ -198,7 +196,7 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                 return s;
             }, proAdoptId);
         }
-        dto.setSelected(selected);
+        dto.setSelected(listSelected);
 
         return dto;
     }
@@ -229,10 +227,11 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                         "   ScoreParenting, ScoreLegal, ScoreResidence, " +
                         "   ScoreTotal, Comment " +
                         "FROM dbo.ProAdopt WHERE ID = ?";
+
         var dto = new Aca3001QueryDto.EvalAdoptCriteria();
 
         // 1) options：一律載入有效選項
-        List<Aca3001QueryDto.EvalAdoptCriteria.Option> options =
+        List<Aca3001QueryDto.EvalAdoptCriteria.Option> listOptions =
                 jdbcTemplate.query(SQL_OPTIONS, (rs, i) -> {
                     var o = new Aca3001QueryDto.EvalAdoptCriteria.Option();
                     o.setEntryId(rs.getInt("EntryID"));
@@ -241,12 +240,12 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                     o.setSortOrder(rs.getInt("SortOrder"));
                     return o;
                 });
-        dto.setOptions(options);
+        dto.setOptions(listOptions);
 
         // 2) selected + scores：依 proAdoptId 是否為 null 決定
         if (proAdoptId == null) {
             // 新建情境：selected 空、scores 預設 0
-            dto.setSelected(java.util.Collections.emptyList());
+            dto.setSelected(List.of());
             dto.setEvalScores(new Aca3001QueryDto.EvalAdoptCriteria.EvalScore());
         } else {
             // 2-1 selected：載入此個案勾選過的評估條件（保留 IsDisabled 以便前端標示「已失效」）
@@ -340,7 +339,7 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                         "FROM dbo.ProAdopt " +
                         "WHERE ID = ?";
         var summary = new Aca3001QueryDto.Summary();
-        List<Aca3001QueryDto.Summary.ServiceTypeSelected> list = jdbcTemplate.query(SQL_SERVICE, rs -> {
+        List<Aca3001QueryDto.Summary.ServiceTypeSelected> listService = jdbcTemplate.query(SQL_SERVICE, rs -> {
 
             // 以 LeafEntryID 分組：同一個「葉節點」只會有一個容器（value），用來累積該葉的整條路徑
             Map<Integer, Aca3001QueryDto.Summary.ServiceTypeSelected> byLeaf = new LinkedHashMap<>();
@@ -380,11 +379,12 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
 
             // 將分組結果由 Map 轉為 List；若無資料則回傳空清單（避免回傳 null）
             return byLeaf.isEmpty()
-                    ? Collections.emptyList()
+                    ? List.of()
                     : new ArrayList<>(byLeaf.values());
         }, proRecId);
+
         //1. summary 載入「服務類型選擇」ServiceTypeSelected
-        summary.setServiceTypeSelected(list);
+        summary.setServiceTypeSelected(listService);
 
         jdbcTemplate.query(SQL_EMPLOYMENTSTATUS_AND_PROSTATUS, rs -> {
             if (rs.next()) {
@@ -406,47 +406,26 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                     return new Aca3001QueryDto.Summary.CaseStatus();
                 }
 
-                // 旗標：非 null、且互斥由 DB 保障
-                boolean rej = rs.getBoolean("CaseReject");
-                boolean acc = rs.getBoolean("CaseAccept");
-                boolean end = rs.getBoolean("CaseEnd");
-
-                // reason：做個 trimOrNull 保險
-                String rr = rs.getString("ReasonReject");
-                if (rr != null) {
-                    rr = rr.trim();
-                }
-
-                String ar = rs.getString("ReasonAccept");
-                if (ar != null) {
-                    ar = ar.trim();
-                }
-
-                String er = rs.getString("ReasonEnd");
-                if (er != null) {
-                    er = er.trim();
-                }
-
                 var cs = new Aca3001QueryDto.Summary.CaseStatus();
-                if (rej) {
+
+                if (rs.getBoolean("CaseReject")) {
                     cs.setCaseState(Aca3001QueryDto.Summary.CaseStatus.CaseState.REJECT);
-                    cs.setReason(rr);
-                } else if (acc) {
+                    cs.setReason(rs.getString("ReasonReject").trim());
+                } else if (rs.getBoolean("CaseAccept")) {
                     cs.setCaseState(Aca3001QueryDto.Summary.CaseStatus.CaseState.ACCEPT);
-                    cs.setReason(ar);
-                } else if (end) {
+                    cs.setReason(rs.getString("ReasonAccept").trim());
+                } else if (rs.getBoolean("CaseEnd")) {
                     cs.setCaseState(Aca3001QueryDto.Summary.CaseStatus.CaseState.END);
-                    cs.setReason(er);
+                    cs.setReason(rs.getString("ReasonEnd").trim());
                 } else {
                     cs.setCaseState(Aca3001QueryDto.Summary.CaseStatus.CaseState.NONE);
                     cs.setReason(null);
                 }
                 return cs;
             }, proAdoptId);
+            //3. summary載入 ProAdopt 的 CaseStatus
             summary.setCaseStatus(caseStatus);
         }
-
-
         return summary;
     }
 
