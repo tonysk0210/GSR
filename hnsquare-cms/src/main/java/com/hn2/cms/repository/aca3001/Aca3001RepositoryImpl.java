@@ -498,6 +498,11 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
         );
     }
 
+    // Delete API
+    @Override
+    public void deleteProAdoptCascade(Integer proAdoptId) {
+        jdbcTemplate.update("DELETE FROM dbo.ProAdopt WHERE ID = ?", proAdoptId);
+    }
 
     // ---------- 私有方法區 ----------
 
@@ -518,7 +523,6 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
     private static String nullOrTrim(String s) {
         return (s == null) ? null : s.trim();
     }
-
 
     public LocalDate loadTimeLockDate() {
         final String SQL_TIMELOCK = "SELECT TOP 1 Value FROM Lists WHERE ListName = 'TIMELOCK_ACABRD'";

@@ -2,6 +2,7 @@ package com.hn2.cms.controller;
 
 import com.hn2.cms.dto.aca3001.Aca3001QueryDto;
 import com.hn2.cms.dto.aca3001.Aca3001SaveResponse;
+import com.hn2.cms.payload.aca3001.Aca3001DeletePayload;
 import com.hn2.cms.payload.aca3001.Aca3001QueryPayload;
 import com.hn2.cms.payload.aca3001.Aca3001SavePayload;
 import com.hn2.cms.service.aca3001.Aca3001Service;
@@ -9,10 +10,7 @@ import com.hn2.core.dto.DataDto;
 import com.hn2.core.payload.GeneralPayload;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 
@@ -38,6 +36,14 @@ public class Aca3001Controller {
     public ResponseEntity<DataDto<Aca3001SaveResponse>> save(
             @Valid @RequestBody GeneralPayload<Aca3001SavePayload> payload) {
         DataDto<Aca3001SaveResponse> result = service.save(payload);
+        return ResponseEntity.ok(result);
+    }
+
+    //Delete API
+    @DeleteMapping("/delete")
+    public ResponseEntity<DataDto<Void>> delete(
+            @Valid @RequestBody GeneralPayload<Aca3001DeletePayload> payload) {
+        DataDto<Void> result = service.delete(payload);
         return ResponseEntity.ok(result);
     }
 

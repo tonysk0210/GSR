@@ -11,10 +11,11 @@ import java.util.List;
 
 
 public interface Aca3001Repository {
-
+    //Query API
     Integer findProAdoptIdByProRecId(String proRecId);
 
     LocalDate loadTimeLockDate();
+
     boolean isEditable(String proRecId, LocalDate timeLockDate);
 
     Aca3001QueryDto.Meta computeMeta(String proRecId, Integer proAdoptId);
@@ -39,4 +40,6 @@ public interface Aca3001Repository {
     void replaceEvalAdoptCriteria(Integer proAdoptId, @NotNull List<Integer> evalSelectedEntryIds);
 
 
+    //Delete API
+    void deleteProAdoptCascade(Integer proAdoptId);
 }

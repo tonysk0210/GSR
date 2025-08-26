@@ -2,6 +2,7 @@ package com.hn2.cms.service.aca3001;
 
 import com.hn2.cms.dto.aca3001.Aca3001QueryDto;
 import com.hn2.cms.dto.aca3001.Aca3001SaveResponse;
+import com.hn2.cms.payload.aca3001.Aca3001DeletePayload;
 import com.hn2.cms.payload.aca3001.Aca3001QueryPayload;
 import com.hn2.cms.payload.aca3001.Aca3001SavePayload;
 import com.hn2.cms.repository.aca3001.Aca3001Repository;
@@ -211,5 +212,36 @@ public class Aca3001ServiceImpl implements Aca3001Service {
                 + s.getParenting()
                 + s.getLegal()
                 + s.getResidence();
+    }
+
+    //Delete API
+    @Override
+    @Transactional
+    public DataDto<Void> delete(GeneralPayload<Aca3001DeletePayload> payload) {
+        final String proRecId = (payload == null || payload.getData() == null)
+                ? null : payload.getData().getProRecId();
+        if (proRecId == null || proRecId.isBlank()) {
+            return new DataDto<>(null, new ResponseInfo(0, "proRecId 不可為空"));
+        }
+
+        // 1) 找出對應的 ProAdoptID（代表是否曾「儲存過此表」）
+        Integer proAdoptId = repo.findProAdoptIdByProRecId(proRecId);
+        if (proAdoptId == null) {
+            // 依規格：未儲存過則按鈕應該隱藏；若仍打到 API，就友善回覆
+            return new DataDto<>(null, new ResponseInfo(0, "尚未儲存過此表，無可刪除資料"));
+        }
+
+        // 2) 鎖定日檢核（與 save 同規則）
+        LocalDate timeLockDate = repo.loadTimeLockDate(); // Lists.TIMELOCK_ACABRD
+        boolean editable = repo.isEditable(proRecId, timeLockDate);
+        if (!editable) {
+            return new DataDto<>(null, new ResponseInfo(0, "已逾鎖定日，不可刪除"));
+        }
+
+        // 3) 進行實體刪除（先子表後主表）
+        repo.deleteProAdoptCascade(proAdoptId);
+
+        // 4) 成功
+        return new DataDto<>(null, new ResponseInfo(1, "刪除成功"));
     }
 }
