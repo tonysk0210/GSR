@@ -2,11 +2,14 @@ package com.hn2.cms.repository.aca3001;
 
 import com.hn2.cms.dto.aca3001.Aca3001QueryDto;
 
+import com.hn2.cms.payload.aca3001.Aca3001SavePayload;
 import com.hn2.util.DateUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -30,6 +33,7 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
 
     private final JdbcTemplate jdbcTemplate;
 
+    // Query API
     @Autowired
     public Aca3001RepositoryImpl(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -59,42 +63,13 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
      */
     @Override
     public Aca3001QueryDto.Meta computeMeta(String proRecId, Integer proAdoptId) {
-        final String SQL_PRODATE = "SELECT ProDate FROM ProRec WHERE ID = ?";
-        final String SQL_TIMELOCK = "SELECT TOP 1 Value FROM Lists WHERE ListName = 'TIMELOCK_ACABRD'";
-
-        // 1) 取得 proDate（可為 null）
-        LocalDate proDate = jdbcTemplate.query(SQL_PRODATE, ps -> ps.setString(1, proRecId), rs -> {
-            if (rs.next()) {
-                Timestamp ts = rs.getTimestamp("ProDate");
-                return (ts != null) ? ts.toLocalDateTime().toLocalDate() : null;
-            }
-            return null;
-        });
-
-        // 2) 取得 timeLock String（可為 null）
-        String timeLockStr = jdbcTemplate.query(SQL_TIMELOCK, rs -> rs.next() ? rs.getString(1) : null);
-
-        // 3) 解析timeLock → LocalDate (yyyy/M/d)
-        LocalDate timelockDate = null;
-        if (timeLockStr != null && !timeLockStr.isBlank()) {
-            try {
-                timelockDate = LocalDate.parse(timeLockStr.trim(), DateTimeFormatter.ofPattern("yyyy/M/d"));
-            } catch (Exception ignore) {
-            }
-        }
 
         // 4) 建立 MetaDto
         var meta = new Aca3001QueryDto.Meta();
         meta.setProRecId(proRecId);
         meta.setProAdoptId(proAdoptId);
-        meta.setLockDate(timelockDate); // 可能為 null
-
-        // 5) 決定 editable 規則：
-        // - 無 timeLock → 可編輯
-        // - proDate 為 null → 可編輯
-        // - 否則 proDate > timeLock 才可編輯
-        boolean editable = (timelockDate == null) || (proDate == null) || proDate.isAfter(timelockDate);
-        meta.setEditable(editable);
+        meta.setLockDate(loadTimeLockDate()); // 可能為 null
+        meta.setEditable(isEditable(proRecId, loadTimeLockDate()));
         return meta;
     }
 
@@ -188,12 +163,12 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
             listSelected = List.of();
         } else {
             listSelected = jdbcTemplate.query(SQL_SELECTED, (rs, i) -> {
-                var s = new Aca3001QueryDto.DirectAdoptCriteria.Selected();
-                s.setEntryId(rs.getInt("EntryID"));
-                s.setValue(rs.getString("Value"));
-                s.setText(rs.getString("Text"));
-                s.setDisabled(rs.getBoolean("IsDisabled")); // bit -> boolean
-                return s;
+                var scores = new Aca3001QueryDto.DirectAdoptCriteria.Selected();
+                scores.setEntryId(rs.getInt("EntryID"));
+                scores.setValue(rs.getString("Value"));
+                scores.setText(rs.getString("Text"));
+                scores.setDisabled(rs.getBoolean("IsDisabled")); // bit -> boolean
+                return scores;
             }, proAdoptId);
         }
         dto.setSelected(listSelected);
@@ -251,12 +226,12 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
             // 2-1 selected：載入此個案勾選過的評估條件（保留 IsDisabled 以便前端標示「已失效」）
             List<Aca3001QueryDto.EvalAdoptCriteria.Selected> selected =
                     jdbcTemplate.query(SQL_SELECTED, (rs, i) -> {
-                        var s = new Aca3001QueryDto.EvalAdoptCriteria.Selected();
-                        s.setEntryId(rs.getInt("EntryID"));
-                        s.setValue(rs.getString("Value"));
-                        s.setText(rs.getString("Text"));
-                        s.setDisabled(rs.getBoolean("IsDisabled"));
-                        return s;
+                        var scores = new Aca3001QueryDto.EvalAdoptCriteria.Selected();
+                        scores.setEntryId(rs.getInt("EntryID"));
+                        scores.setValue(rs.getString("Value"));
+                        scores.setText(rs.getString("Text"));
+                        scores.setDisabled(rs.getBoolean("IsDisabled"));
+                        return scores;
                     }, proAdoptId);
             dto.setSelected(selected);
 
@@ -300,11 +275,11 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                         "  SELECT DISTINCT l.EntryID AS LeafEntryID " +
                         "  FROM dbo.ProRec  r " +
                         "  JOIN dbo.ProDtl  d ON d.ProRecID = r.ID " +
-                        "  CROSS APPLY STRING_SPLIT(d.ProItem, ',') s " +
+                        "  CROSS APPLY STRING_SPLIT(d.ProItem, ',') scores " +
                         "  JOIN dbo.Lists   l " +
                         "    ON l.ListName = 'ACA_PROTECT' " +
-                        "   AND ( l.Value = LTRIM(RTRIM(s.value)) " +
-                        "      OR l.EntryID = TRY_CONVERT(int, LTRIM(RTRIM(s.value))) ) " +
+                        "   AND ( l.Value = LTRIM(RTRIM(scores.value)) " +
+                        "      OR l.EntryID = TRY_CONVERT(int, LTRIM(RTRIM(scores.value))) ) " +
                         "  WHERE r.ID = ? " +
                         "), cte AS ( " + //這是遞迴的起點 (anchor row)
                         "  SELECT l.EntryID, l.ParentID, l.[Text], l.[Level], " +
@@ -429,6 +404,101 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
         return summary;
     }
 
+
+    //Save API
+    @Override
+    public Integer insertProAdopt(String proRecId, Aca3001SavePayload.@NotNull @Valid Scores scores, boolean caseReject, String reasonReject, boolean caseAccept, String reasonAccept, boolean caseEnd, String reasonEnd, Integer createdByUserId) {
+        final String sql = "INSERT INTO dbo.ProAdopt " +
+                "(ProRecID, " +
+                " ScoreEconomy, ScoreEmployment, ScoreFamily, ScoreSocial, " +
+                " ScorePhysical, ScorePsych, ScoreParenting, ScoreLegal, ScoreResidence, " +
+                " [Comment], " +
+                " CaseReject, ReasonReject, CaseAccept, ReasonAccept, CaseEnd, ReasonEnd, " +
+                " CreatedByUserID, CreatedOnDate) " +
+                "OUTPUT INSERTED.ID " +
+                "VALUES " +
+                "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, " +
+                " ?, ?, ?, ?, ?, ?, ?, " +
+                " ?, GETDATE())";
+        //回傳新紀錄的 ID
+        return jdbcTemplate.queryForObject(sql, Integer.class, // 希望回傳的型別
+                proRecId,
+                scores.getEconomy(), scores.getEmployment(), scores.getFamily(), scores.getSocial(),
+                scores.getPhysical(), scores.getPsych(), scores.getParenting(), scores.getLegal(), scores.getResidence(),
+                nullOrTrim(scores.getComment()),
+                caseReject, reasonReject,
+                caseAccept, reasonAccept,
+                caseEnd, reasonEnd,
+                createdByUserId
+        );
+    }
+
+    @Override
+    public void updateProAdopt(Integer proAdoptId, Aca3001SavePayload.@NotNull @Valid Scores scores, boolean caseReject, String reasonReject, boolean caseAccept, String reasonAccept, boolean caseEnd, String reasonEnd, Integer modifiedByUserId) {
+        String sql =
+                "UPDATE dbo.ProAdopt " +
+                        "   SET ScoreEconomy    = ?, " +
+                        "       ScoreEmployment = ?, " +
+                        "       ScoreFamily     = ?, " +
+                        "       ScoreSocial     = ?, " +
+                        "       ScorePhysical   = ?, " +
+                        "       ScorePsych      = ?, " +
+                        "       ScoreParenting  = ?, " +
+                        "       ScoreLegal      = ?, " +
+                        "       ScoreResidence  = ?, " +
+                        "       [Comment]       = ?, " +
+                        "       CaseReject      = ?, " +
+                        "       ReasonReject    = ?, " +
+                        "       CaseAccept      = ?, " +
+                        "       ReasonAccept    = ?, " +
+                        "       CaseEnd         = ?, " +
+                        "       ReasonEnd       = ?, " +
+                        "       ModifiedByUserID= ?, " +
+                        "       ModifiedOnDate  = GETDATE() " +
+                        " WHERE ID = ?";
+        jdbcTemplate.update(sql,
+                scores.getEconomy(), scores.getEmployment(), scores.getFamily(), scores.getSocial(),
+                scores.getPhysical(), scores.getPsych(), scores.getParenting(), scores.getLegal(), scores.getResidence(),
+                nullOrTrim(scores.getComment()),
+                caseReject, reasonReject,
+                caseAccept, reasonAccept,
+                caseEnd, reasonEnd,
+                modifiedByUserId,
+                proAdoptId
+        );
+    }
+
+    @Override
+    public void replaceDirectAdoptCriteria(Integer proAdoptId, List<Integer> directSelectedEntryIds) {
+        jdbcTemplate.update("DELETE FROM dbo.DirectAdoptCriteria WHERE ProAdoptID = ?", proAdoptId);
+        if (directSelectedEntryIds == null || directSelectedEntryIds.isEmpty()) return;
+        jdbcTemplate.batchUpdate(
+                "INSERT INTO dbo.DirectAdoptCriteria (ProAdoptID, ListsEntryID) VALUES (?, ?)",
+                directSelectedEntryIds,
+                directSelectedEntryIds.size(),
+                (ps, entryId) -> {
+                    ps.setInt(1, proAdoptId);
+                    ps.setInt(2, entryId);
+                }
+        );
+    }
+
+    @Override
+    public void replaceEvalAdoptCriteria(Integer proAdoptId, List<Integer> evalSelectedEntryIds) {
+        jdbcTemplate.update("DELETE FROM dbo.EvalAdoptCriteria WHERE ProAdoptID = ?", proAdoptId);
+        if (evalSelectedEntryIds == null || evalSelectedEntryIds.isEmpty()) return;
+        jdbcTemplate.batchUpdate(
+                "INSERT INTO dbo.EvalAdoptCriteria (ProAdoptID, ListsEntryID) VALUES (?, ?)",
+                evalSelectedEntryIds,
+                evalSelectedEntryIds.size(),
+                (ps, entryId) -> {
+                    ps.setInt(1, proAdoptId);
+                    ps.setInt(2, entryId);
+                }
+        );
+    }
+
+
     // ---------- 私有方法區 ----------
 
     /**
@@ -445,7 +515,41 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
         return roc;
     }
 
+    private static String nullOrTrim(String s) {
+        return (s == null) ? null : s.trim();
+    }
 
+
+    public LocalDate loadTimeLockDate() {
+        final String SQL_TIMELOCK = "SELECT TOP 1 Value FROM Lists WHERE ListName = 'TIMELOCK_ACABRD'";
+        String timeLockStr = jdbcTemplate.query(SQL_TIMELOCK, rs -> rs.next() ? rs.getString(1) : null);
+
+        if (timeLockStr == null || timeLockStr.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(timeLockStr.trim(), DateTimeFormatter.ofPattern("yyyy/M/d"));
+        } catch (Exception e) {
+            // 建議 log.warn("Invalid TIMELOCK_ACABRD: {}", timeLockStr, e);
+            return null;
+        }
+    }
+
+    public boolean isEditable(String proRecId, LocalDate timeLockDate) {
+        final String SQL_PRODATE = "SELECT ProDate FROM ProRec WHERE ID = ?";
+
+        // 取得 proDate（可為 null）
+        LocalDate proDate = jdbcTemplate.query(SQL_PRODATE, ps -> ps.setString(1, proRecId), rs -> {
+            if (rs.next()) {
+                Timestamp ts = rs.getTimestamp("ProDate");
+                return (ts != null) ? ts.toLocalDateTime().toLocalDate() : null;
+            }
+            return null;
+        });
+
+        // 規則判斷
+        return (timeLockDate == null) || (proDate == null) || proDate.isAfter(timeLockDate);
+    }
 }
 
 

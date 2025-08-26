@@ -1,7 +1,9 @@
 package com.hn2.cms.controller;
 
 import com.hn2.cms.dto.aca3001.Aca3001QueryDto;
+import com.hn2.cms.dto.aca3001.Aca3001SaveResponse;
 import com.hn2.cms.payload.aca3001.Aca3001QueryPayload;
+import com.hn2.cms.payload.aca3001.Aca3001SavePayload;
 import com.hn2.cms.service.aca3001.Aca3001Service;
 import com.hn2.core.dto.DataDto;
 import com.hn2.core.payload.GeneralPayload;
@@ -30,4 +32,14 @@ public class Aca3001Controller {
         DataDto<Aca3001QueryDto> result = service.query(payload);
         return ResponseEntity.ok(result);
     }
+
+    //Save API
+    @PostMapping("/save")
+    public ResponseEntity<DataDto<Aca3001SaveResponse>> save(
+            @Valid @RequestBody GeneralPayload<Aca3001SavePayload> payload) {
+        DataDto<Aca3001SaveResponse> result = service.save(payload);
+        return ResponseEntity.ok(result);
+    }
+
+
 }
