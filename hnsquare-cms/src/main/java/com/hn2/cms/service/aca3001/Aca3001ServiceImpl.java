@@ -28,35 +28,32 @@ public class Aca3001ServiceImpl implements Aca3001Service {
     }
 
     /**
-     * 查詢認輔評估畫面需要的所有資料。
-     * <p>
-     * - payload 與其中的 proRecId 必須有效，否則直接回傳錯誤。
-     * - 若查無個案 Profile（代表 ProRec/ACABrd 也不存在或關聯不成立），直接回傳「查無資料」。
-     * - meta/header/profile/direct/eval/summary 由 repository 各自負責查詢與組裝。
-     * - proAdoptId 可能為 null（表示尚未建立認輔評估），其下游 compute* 方法需能處理此情境。
-     *
-     * @param payload
-     * @return DataDto 包含查詢結果 DTO 及回應資訊
+     * Query API - 查詢 ProAdopt 主表與其相關資料
      */
     @Override
     @Transactional(readOnly = true)
     public DataDto<Aca3001QueryDto> query(GeneralPayload<Aca3001QueryPayload> payload) {
 
-        // 1) 基本輸入驗證
+        // 0) 基本檢核：proRecId 必填
         final String proRecId = (payload == null || payload.getData() == null) ? null : payload.getData().getProRecId();
         if (proRecId == null || proRecId.isBlank()) {
             return new DataDto<>(null, new ResponseInfo(0, "proRecId 不可為空"));
         }
 
-        // 2) 驗證個案存在性（Profile 不存在代表 ProRec/ACABrd 關聯也不成立）
+        // 1) 驗證個案存在性
+        //    - Profile 為 null 表示查無此 ProRec
+        //    - 規則：若個案不存在 → ACABrd 關聯也不成立
         Aca3001QueryDto.Profile profile = repo.computeProfile(proRecId);
         if (profile == null) {
             return new DataDto<>(null, new ResponseInfo(0, "查無資料"));
         }
-        // 3) 取得（可能為 null 的）proAdoptId：null 表示尚未建立認輔評估
+
+        // 2) 取得認輔評估主表 ID
+        //    - 若為 null 表示尚未建立過 ProAdopt
         Integer proAdoptId = repo.findProAdoptIdByProRecId(proRecId);
 
-        // 4) 組裝 DTO（各區塊由 repository 專責方法提供）
+        // 3) 組裝完整 DTO
+        //    - 各區塊由 repository 提供，Service 僅負責組合
         Aca3001QueryDto dto = new Aca3001QueryDto();
         dto.setMeta(repo.computeMeta(proRecId, proAdoptId));
         dto.setHeader(repo.computeHeader(proRecId));
@@ -67,18 +64,20 @@ public class Aca3001ServiceImpl implements Aca3001Service {
         return new DataDto<>(dto, new ResponseInfo(1, "查詢成功"));
     }
 
-    //Save API
+    /**
+     * Save API - 新增或更新 ProAdopt 主表與其子表
+     */
     @Override
     @Transactional
     public DataDto<Aca3001SaveResponse> save(GeneralPayload<Aca3001SavePayload> payload) {
-        // --- 0) 基本取值/檢核 ---
+        // 0) 基本檢核：取 proRecId，必填
         final String proRecId = (payload == null || payload.getData() == null) ? null : payload.getData().getProRecId();
         if (proRecId == null || proRecId.isBlank()) {
             return new DataDto<>(null, new ResponseInfo(0, "proRecId 不可為空"));
         }
 
-        // === 先做 isEditable 檢核 ===
-        LocalDate timeLockDate = repo.loadTimeLockDate(); // 方法：查 Lists.TIMELOCK_ACABRD
+        // 1) 鎖定日檢核：若不可編輯則直接返回
+        LocalDate timeLockDate = repo.loadTimeLockDate(); // 來源：Lists.TIMELOCK_ACABRD
         boolean editable = repo.isEditable(proRecId, timeLockDate);
         if (!editable) {
             return new DataDto<>(null, new ResponseInfo(0, "已逾鎖定日，不可編輯"));
@@ -86,56 +85,44 @@ public class Aca3001ServiceImpl implements Aca3001Service {
 
         Aca3001SavePayload p = payload.getData();
 
-        // 狀態 ↔ reason 檢核
-        // --- 0) 取值與規則（不把空字串轉成 null；僅做 trim） ---
+        // 2) 狀態與理由檢核
+        //    - REJECT / ACCEPT / END 三選一
+        //    - NONE → 全部維持預設（false / null）
+        //    - 只有被選到的狀態，其 reason 允許空字串（以 "" 代表有填欄但為空）
         var st = p.getCaseStatus().getState();
         String reasonRaw = p.getCaseStatus().getReason();
-        if (reasonRaw != null) reasonRaw = reasonRaw.trim(); // 可保留空字串
+        String selectedReason = (reasonRaw == null) ? "" : reasonRaw.trim();
 
-        boolean caseReject = (st == Aca3001SavePayload.CaseStatus.State.REJECT);
-        boolean caseAccept = (st == Aca3001SavePayload.CaseStatus.State.ACCEPT);
-        boolean caseEnd = (st == Aca3001SavePayload.CaseStatus.State.END);
-
-        // 對應三個 reason：NONE → 全部 NULL；其他 → 選中的那個用 reasonRaw（null 也補成 "" 以通過 IS NOT NULL）
+        // 預設值：全部不選、理由皆為 null
+        boolean caseReject = false, caseAccept = false, caseEnd = false;
         String reasonReject = null, reasonAccept = null, reasonEnd = null;
+
+        // 只設定「被選到」的那一個
         switch (st) {
-            case NONE:
-                reasonReject = null;
-                reasonAccept = null;
-                reasonEnd = null;
-                caseReject = false;
-                caseAccept = false;
-                caseEnd = false;
-                break;
             case REJECT:
-                reasonReject = (reasonRaw == null ? "" : reasonRaw);
-                reasonAccept = null;
-                reasonEnd = null;
-                caseAccept = false;
-                caseEnd = false;
+                caseReject = true;
+                reasonReject = selectedReason;
                 break;
             case ACCEPT:
-                reasonAccept = (reasonRaw == null ? "" : reasonRaw);
-                reasonReject = null;
-                reasonEnd = null;
-                caseReject = false;
-                caseEnd = false;
+                caseAccept = true;
+                reasonAccept = selectedReason;
                 break;
             case END:
-                reasonEnd = (reasonRaw == null ? "" : reasonRaw);
-                reasonReject = null;
-                reasonAccept = null;
-                caseReject = false;
-                caseAccept = false;
+                caseEnd = true;
+                reasonEnd = selectedReason;
+                break;
+            case NONE:
+            default:
+                // 保持預設即可
                 break;
         }
 
-        // --- 1) 新增或更新 ProAdopt 主表 ---
+        // 3) 新增或更新 ProAdopt 主表
         Integer proAdoptId = p.getProAdoptId();
         String message;
 
         if (proAdoptId == null) {
-            // --- 嚴格遵循：null 就新增，不做存在性查詢 ---
+            // 規則：若 proAdoptId 為 null → 一律新增，不先查存在性
             try {
                 // 回傳新紀錄的 proAdoptId
                 proAdoptId = repo.insertProAdopt(
@@ -146,12 +133,12 @@ public class Aca3001ServiceImpl implements Aca3001Service {
                         p.getAudit() == null ? null : p.getAudit().getCreatedByUserId()
                 );
                 message = "新增成功";
-            } catch (DataIntegrityViolationException ex) { // or DuplicateKeyException
-                // 這裡大多數是 UQ_ProAdopt_ProRecID 違反，代表同 ProRecID 已有一筆
+            } catch (DataIntegrityViolationException ex) {
+                // 常見原因：違反 UQ_ProAdopt_ProRecID → 同一個 ProRecID 已存在紀錄
                 return new DataDto<>(null, new ResponseInfo(0, "此 ProRecID 已存在認輔評估，請改用更新或重新讀取畫面。"));
             }
         } else {
-            // --- 更新前保險檢查：proAdoptID 與 proRecId 是否一致 ---
+            // 更新前保險檢查：確認 proRecId ↔ proAdoptId 是否一致
             Integer chk = repo.findProAdoptIdByProRecId(p.getProRecId());
             if (chk == null || !chk.equals(proAdoptId)) {
                 return new DataDto<>(null, new ResponseInfo(0, "proAdoptId 與 proRecId 不一致"));
@@ -166,12 +153,21 @@ public class Aca3001ServiceImpl implements Aca3001Service {
             message = "更新成功";
         }
 
-        // 覆蓋子表 // 此時 proAdoptId 一定有效
+        // 4) 更新子表 (覆蓋式更新)
         repo.replaceDirectAdoptCriteria(proAdoptId, p.getDirectSelectedEntryIds());
         repo.replaceEvalAdoptCriteria(proAdoptId, p.getEvalSelectedEntryIds());
 
-        // === 建立回傳 DTO ===
-        int total = calcScoreTotal(p.getScores()); // 若 DB 有計算欄位想拿 DB 值，可改成查 DB
+        // 5) 建立回傳 DTO
+        int total = p.getScores().getEconomy()
+                + p.getScores().getEmployment()
+                + p.getScores().getFamily()
+                + p.getScores().getSocial()
+                + p.getScores().getPhysical()
+                + p.getScores().getPsych()
+                + p.getScores().getParenting()
+                + p.getScores().getLegal()
+                + p.getScores().getResidence();
+
         String finalReason;
         switch (st) {
             case REJECT:
@@ -195,53 +191,42 @@ public class Aca3001ServiceImpl implements Aca3001Service {
                 .scoreTotal(total)
                 .state(st)
                 .reason(finalReason)
-                .message(message)   // "新增成功" / "更新成功"
+                .message(message) // "新增成功" / "更新成功"
                 .build();
 
         return new DataDto<>(resp, new ResponseInfo(1, message));
     }
 
-    // 小工具：用 payload 內的九項分數計總分
-    private static int calcScoreTotal(Aca3001SavePayload.Scores s) {
-        return s.getEconomy()
-                + s.getEmployment()
-                + s.getFamily()
-                + s.getSocial()
-                + s.getPhysical()
-                + s.getPsych()
-                + s.getParenting()
-                + s.getLegal()
-                + s.getResidence();
-    }
-
-    //Delete API
+    /**
+     * Delete API - 刪除 ProAdopt 主表及其子表
+     */
     @Override
     @Transactional
     public DataDto<Void> delete(GeneralPayload<Aca3001DeletePayload> payload) {
-        final String proRecId = (payload == null || payload.getData() == null)
-                ? null : payload.getData().getProRecId();
+        // 0) 基本檢核：proRecId 必填
+        final String proRecId = (payload == null || payload.getData() == null) ? null : payload.getData().getProRecId();
         if (proRecId == null || proRecId.isBlank()) {
             return new DataDto<>(null, new ResponseInfo(0, "proRecId 不可為空"));
         }
 
-        // 1) 找出對應的 ProAdoptID（代表是否曾「儲存過此表」）
+        // 1) 確認是否已存在 ProAdopt 資料，若找不到代表從未儲存過
         Integer proAdoptId = repo.findProAdoptIdByProRecId(proRecId);
         if (proAdoptId == null) {
-            // 依規格：未儲存過則按鈕應該隱藏；若仍打到 API，就友善回覆
+            // 規格上此時按鈕應該隱藏，但若仍呼叫 API，則回傳友善訊息
             return new DataDto<>(null, new ResponseInfo(0, "尚未儲存過此表，無可刪除資料"));
         }
 
-        // 2) 鎖定日檢核（與 save 同規則）
-        LocalDate timeLockDate = repo.loadTimeLockDate(); // Lists.TIMELOCK_ACABRD
+        // 2) 鎖定日檢核　- 規則同 save()：若已逾鎖定日則禁止刪除
+        LocalDate timeLockDate = repo.loadTimeLockDate(); // 來源：Lists.TIMELOCK_ACABRD
         boolean editable = repo.isEditable(proRecId, timeLockDate);
         if (!editable) {
             return new DataDto<>(null, new ResponseInfo(0, "已逾鎖定日，不可刪除"));
         }
 
-        // 3) 進行實體刪除（先子表後主表）
+        // 3) 執行實體刪除，先刪子表，再刪主表（由 repo.deleteProAdoptCascade 處理）
         repo.deleteProAdoptCascade(proAdoptId);
 
-        // 4) 成功
+        // 4) 成功回覆
         return new DataDto<>(null, new ResponseInfo(1, "刪除成功"));
     }
 }

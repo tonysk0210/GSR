@@ -33,15 +33,22 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
 
     private final JdbcTemplate jdbcTemplate;
 
-    // Query API
     @Autowired
     public Aca3001RepositoryImpl(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    // Query API ------------------------------------------------------------------------------
+
     /**
-     * 依 proRecId 取得對應的認輔評估表 ID (ProAdopt.ID)。
-     * 若尚未建立則回傳 null；若有多筆僅取第一筆。
+     * 依 ProRecID 查詢對應的 ProAdopt 主鍵 ID。
+     * <p>
+     * 規則：
+     * - 若查無資料 → 回傳 null
+     * - 若多筆資料（理論上不該發生，因為 ProRecID 應該具唯一性） → 取第一筆
+     *
+     * @param proRecId 個案紀錄 ID (FK → ProRec.ID)
+     * @return 對應的 ProAdopt.ID；查無資料時回傳 null
      */
     @Override
     public Integer findProAdoptIdByProRecId(String proRecId) {
@@ -53,31 +60,49 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
     }
 
     /**
-     * 計算 Meta 區塊：
-     * - proRecId、proAdoptId 基本資訊
-     * - lockDate：Lists.TIMELOCK_ACABRD 對應的日期（可能為 null）
-     * - editable 規則：
-     * 1. 無 timeLock → 可編輯
-     * 2. proDate 為 null → 可編輯
-     * 3. 其餘：proDate > lockDate 才可編輯
+     * 組裝案件的 Meta 資訊。
+     * <p>
+     * Meta 包含：
+     * - proRecId    ：個案紀錄 ID
+     * - proAdoptId  ：認輔評估 ID（可能為 null，表示尚未建立）
+     * - lockDate     ：系統定義的鎖定日（來源：Lists.TIMELOCK_ACABRD，可能為 null）
+     * - editable     ：是否可編輯（依 proRecId 與 lockDate 判斷）
+     *
+     * @param proRecId   個案紀錄 ID
+     * @param proAdoptId 認輔評估 ID（可為 null）
+     * @return 組裝完成的 Meta DTO
      */
     @Override
     public Aca3001QueryDto.Meta computeMeta(String proRecId, Integer proAdoptId) {
 
-        // 4) 建立 MetaDto
+        // 1) 先查鎖定日（可能為 null）
+        LocalDate lockDate = loadTimeLockDate();
+
+        // 2) 建立並填入 MetaDto
         var meta = new Aca3001QueryDto.Meta();
         meta.setProRecId(proRecId);
         meta.setProAdoptId(proAdoptId);
-        meta.setLockDate(loadTimeLockDate()); // 可能為 null
-        meta.setEditable(isEditable(proRecId, loadTimeLockDate()));
+        meta.setLockDate(lockDate); // 可能為 null
+        meta.setEditable(isEditable(proRecId, loadTimeLockDate())); // 判斷是否允許編輯
+
         return meta;
     }
 
     /**
-     * 查詢表頭資訊 (Header)：
-     * - BranchName：由 ACABrd.CreatedByBranchID 對應 Lists.Text
-     * - ProNoticeDate / ProDate：轉換為民國日期字串
-     * 查無資料時回傳 null。
+     * 查詢並組裝案件的 Header 資訊。
+     * <p>
+     * Header 包含：
+     * - BranchName     ：承辦分會名稱（Lists.Text）
+     * - ProNoticeDate  ：通知日期（轉換為民國日期格式）
+     * - ProDate        ：立案日期（轉換為民國日期格式）
+     * <p>
+     * 資料來源：
+     * - ProRec (案件主表)
+     * - ACABrd (分會對應表，透過 ID 與 ProRec.ID 關聯)
+     * - Lists (代碼表，ParentID=26，對應分會名稱)
+     *
+     * @param proRecId 個案紀錄 ID
+     * @return Header DTO；若查無資料則回傳 null
      */
     @Override
     public Aca3001QueryDto.Header computeHeader(String proRecId) {
@@ -89,7 +114,9 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                         "WHERE r.ID = ?";
 
         return jdbcTemplate.query(SQL_HEADER, ps -> ps.setString(1, proRecId), rs -> {
+            // 1) 若查無資料 → 回傳 null
             if (!rs.next()) return null;
+            // 2) 組裝 Header DTO
             var header = new Aca3001QueryDto.Header();
             header.setBranchName(rs.getString("BranchName"));
             header.setProNoticeDate(getLocalDateToROC(rs, "ProNoticeDate"));
@@ -99,9 +126,19 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
     }
 
     /**
-     * 查詢個案基本資料 (Profile)：
-     * - 姓名、身分證號、案號
-     * 查無資料時回傳 null。
+     * 查詢並組裝案件的 Profile 資訊。
+     * <p>
+     * Profile 包含：
+     * - acaName   ：個案姓名
+     * - acaIdNo   ：身分證字號
+     * - acaCardNo ：保護卡號
+     * <p>
+     * 資料來源：
+     * - ProRec (案件主表) → 提供 proRecId 與 ACACardNo
+     * - ACABrd (個案基本資料表) → 透過 ACACardNo 與 ProRec.ACACardNo 連結
+     *
+     * @param proRecId 個案紀錄 ID
+     * @return Profile DTO；若查無資料則回傳 null
      */
     @Override
     public Aca3001QueryDto.Profile computeProfile(String proRecId) {
@@ -112,7 +149,9 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                         "WHERE r.ID = ?";
 
         return jdbcTemplate.query(SQL_PROFILE, ps -> ps.setString(1, proRecId), rs -> {
+            // 1) 查無資料 → 回傳 null
             if (!rs.next()) return null;
+            // 2) 組裝 Profile DTO
             var p = new Aca3001QueryDto.Profile();
             p.setAcaName(rs.getString("ACAName"));
             p.setAcaIdNo(rs.getString("ACAIDNo"));
@@ -122,10 +161,19 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
     }
 
     /**
-     * 載入直接認輔條件 (DirectAdoptCriteria)：
-     * - options：所有有效 Lists (PROADOPT_DAC, IsDisabled=0)
-     * - selected：若 proAdoptId != null，則載入該案件已勾選條件（含已失效標示）
-     * 新建情境 selected 為空集合。
+     * 查詢並組裝 DirectAdoptCriteria 區塊 (直接認輔條件)。
+     * <p>
+     * 區塊包含：
+     * - options ：所有可供選擇的條件清單（來源：Lists，僅取 IsDisabled=0）
+     * - selected：此 ProAdopt 已勾選的條件（來源：DirectAdoptCriteria）
+     * <p>
+     * 規則：
+     * - options 一律撈取完整清單 (固定 ListName='PROADOPT_DAC')
+     * - selected 若 proAdoptId 為 null → 空清單（表示尚未建立 ProAdopt）
+     * - selected 否則撈實際勾選紀錄
+     *
+     * @param proAdoptId ProAdopt 主鍵 ID（可為 null，代表尚未建立）
+     * @return DirectAdoptCriteria DTO
      */
     @Override
     public Aca3001QueryDto.DirectAdoptCriteria computeDirectAdoptCriteria(Integer proAdoptId) {
@@ -142,10 +190,10 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                         "  AND l.ListName = 'PROADOPT_DAC' " +
                         "ORDER BY l.SortOrder ASC, l.EntryID ASC";
 
-        // 1) 組 DTO
+        // 1) 建立 DTO
         var dto = new Aca3001QueryDto.DirectAdoptCriteria();
 
-        // 2) options：一律來自 Lists（僅取 IsDisabled=0）
+        // 2) options：所有可選條件（固定從 Lists 撈，僅取 IsDisabled=0）
         List<Aca3001QueryDto.DirectAdoptCriteria.Option> listOptions =
                 jdbcTemplate.query(SQL_OPTIONS, (rs, i) -> {
                     var o = new Aca3001QueryDto.DirectAdoptCriteria.Option();
@@ -157,7 +205,9 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                 });
         dto.setOptions(listOptions);
 
-        // 3) selected：若 proAdoptId 為 null → 空清單；否則撈實際勾選
+        // 3) selected：實際已勾選條件
+        // - 若 proAdoptId 為 null → 尚未建立 → 回傳空清單
+        // - 否則撈取 DirectAdoptCriteria 中的紀錄
         List<Aca3001QueryDto.DirectAdoptCriteria.Selected> listSelected;
         if (proAdoptId == null) {
             listSelected = List.of();
@@ -177,11 +227,20 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
     }
 
     /**
-     * 載入評估認輔條件 (EvalAdoptCriteria)：
-     * - options：所有有效 Lists (PROADOPT_EAC)
-     * - selected：案件已勾選條件（含已失效標示）
-     * - evalScores：各面向分數 + 總分
-     * 若 proAdoptId = null，則 selected 為空、evalScores 為預設值。
+     * 查詢並組裝 EvalAdoptCriteria 區塊 (評估認輔條件)。
+     * <p>
+     * 區塊包含：
+     * - options    ：所有可供選擇的條件清單（來源：Lists，僅取 IsDisabled=0）
+     * - selected   ：此 ProAdopt 已勾選的條件（來源：EvalAdoptCriteria）
+     * - evalScores ：分數與評語（來源：ProAdopt，含 ScoreTotal）
+     * <p>
+     * 規則：
+     * - options 一律撈取完整清單 (固定 ListName='PROADOPT_EAC')
+     * - 若 proAdoptId == null → 表示尚未建立 ProAdopt → selected 空清單、scores 給預設值
+     * - 若 proAdoptId != null → 撈取已勾選條件與 ProAdopt 分數
+     *
+     * @param proAdoptId ProAdopt 主鍵 ID（可為 null，代表尚未建立）
+     * @return EvalAdoptCriteria DTO
      */
     @Override
     public Aca3001QueryDto.EvalAdoptCriteria computeEvalAdoptCriteria(Integer proAdoptId) {
@@ -203,9 +262,10 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                         "   ScoreTotal, Comment " +
                         "FROM dbo.ProAdopt WHERE ID = ?";
 
+        // 1) 建立 DTO
         var dto = new Aca3001QueryDto.EvalAdoptCriteria();
 
-        // 1) options：一律載入有效選項
+        // 2) options：一律載入 Lists 的有效選項
         List<Aca3001QueryDto.EvalAdoptCriteria.Option> listOptions =
                 jdbcTemplate.query(SQL_OPTIONS, (rs, i) -> {
                     var o = new Aca3001QueryDto.EvalAdoptCriteria.Option();
@@ -217,13 +277,13 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                 });
         dto.setOptions(listOptions);
 
-        // 2) selected + scores：依 proAdoptId 是否為 null 決定
+        // 3) selected + scores：依 proAdoptId 是否存在決定
         if (proAdoptId == null) {
-            // 新建情境：selected 空、scores 預設 0
+            // 新建情境：尚未建立 ProAdopt → selected 空、scores 預設值
             dto.setSelected(List.of());
             dto.setEvalScores(new Aca3001QueryDto.EvalAdoptCriteria.EvalScore());
         } else {
-            // 2-1 selected：載入此個案勾選過的評估條件（保留 IsDisabled 以便前端標示「已失效」）
+            // 3-1) selected：撈取實際勾選的條件（保留 IsDisabled 讓前端可標示失效選項）
             List<Aca3001QueryDto.EvalAdoptCriteria.Selected> selected =
                     jdbcTemplate.query(SQL_SELECTED, (rs, i) -> {
                         var scores = new Aca3001QueryDto.EvalAdoptCriteria.Selected();
@@ -235,7 +295,7 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                     }, proAdoptId);
             dto.setSelected(selected);
 
-            // 2-2 scores：從 ProAdopt 載入；若查無資料則給預設值（保險）
+            // 3-2) scores：從 ProAdopt 載入分數與評語
             Aca3001QueryDto.EvalAdoptCriteria.EvalScore scores =
                     jdbcTemplate.query(SQL_SCORES, rs -> {
                         if (rs.next()) {
@@ -262,11 +322,21 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
     }
 
     /**
-     * 整合 Summary 區塊：
-     * - 服務類型選擇：遞迴展開 ACA_PROTECT 路徑，並判斷是否含失效/刪除節點
-     * - ProEmploymentStatus / ProStatus：來源 ProRec
-     * - CaseStatus：來源 ProAdopt (Reject / Accept / End 任一，否則 NONE)
-     * 若 proAdoptId = null，CaseStatus 回傳預設 NONE。
+     * 查詢並組裝案件的 Summary 區塊。
+     * <p>
+     * Summary 包含：
+     * 1. serviceTypeSelected：服務類型選擇 (從 ACA_PROTECT 階層代碼表遞迴撈路徑)
+     * 2. proEmploymentStatus / proStatus：來自 ProRec
+     * 3. caseStatus：案件處理狀態 (REJECT / ACCEPT / END / NONE) 及理由，來自 ProAdopt
+     * <p>
+     * 規則：
+     * - serviceTypeSelected：透過 ProDtl.ProItem → 解析個案勾選的葉子節點 → 遞迴回溯父節點，直到根節點 (Parent=37)
+     * - proEmploymentStatus / proStatus：若 ProRec 存在則取值，否則為 null
+     * - caseStatus：若 proAdoptId 為 null 或查無資料 → 回傳預設 CaseStatus
+     *
+     * @param proRecId   ProRec 主鍵 ID
+     * @param proAdoptId ProAdopt 主鍵 ID (可為 null)
+     * @return Summary DTO
      */
     @Override
     public Aca3001QueryDto.Summary computeSummary(String proRecId, Integer proAdoptId) {
@@ -295,7 +365,7 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                         "  FROM dbo.Lists p " +
                         "  JOIN cte c ON p.EntryID = c.ParentID " +
                         "  WHERE p.ListName = 'ACA_PROTECT' " +
-                        "    AND c.ParentID <> 37 " + //每個 葉子 (LeafEntryID) 對應的一條向上路徑（直到遇到 Parent=37）
+                        "    AND c.ParentID <> 37 " + // 遇到根節點 (Parent=37) 停止
                         ") " +
                         "SELECT LeafEntryID, EntryID, [Text], [Level], IsDisabled, IsDeleted " +
                         "FROM cte " +
@@ -313,15 +383,20 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                         "ReasonEnd " +
                         "FROM dbo.ProAdopt " +
                         "WHERE ID = ?";
+        // 1) 建立 Summary DTO
         var summary = new Aca3001QueryDto.Summary();
+
+        // 2) 服務類型選擇 (serviceTypeSelected)
+        // - 對每個 LeafEntryId，回溯完整路徑直到根節點
+        // - 收集「是否禁用/刪除」旗標，供前端顯示
         List<Aca3001QueryDto.Summary.ServiceTypeSelected> listService = jdbcTemplate.query(SQL_SERVICE, rs -> {
 
-            // 以 LeafEntryID 分組：同一個「葉節點」只會有一個容器（value），用來累積該葉的整條路徑
+            // 以 LeafEntryID 分組，一個 Leaf 對應一條完整路徑
             Map<Integer, Aca3001QueryDto.Summary.ServiceTypeSelected> byLeaf = new LinkedHashMap<>();
 
             // 每一列 = 路徑上的一個節點（父/祖先...直到葉），SQL 已依 LeafEntryID, Level 升冪排序
             while (rs.next()) {
-                int leaf = rs.getInt("LeafEntryID"); // 此列屬於哪個葉節點
+                int leafId = rs.getInt("LeafEntryID"); // 此列屬於哪個葉節點
                 int entryId = rs.getInt("EntryID"); // 路徑中的某個節點 ID（不一定是葉節點）
                 if (entryId == 37) continue; // 略過根節點（保護類別），不納入路徑
 
@@ -329,8 +404,8 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                 boolean dis = rs.getBoolean("IsDisabled");
                 boolean del = rs.getBoolean("IsDeleted");
 
-                // 取得/建立「此葉節點」的容器：第一次遇到 leaf 會初始化一個空容器，其後重複使用
-                var serviceTypeSelectedDto = byLeaf.computeIfAbsent(leaf, k -> {
+                // 初始化 leaf 容器
+                var leafDto = byLeaf.computeIfAbsent(leafId, k -> {
                     var x = new Aca3001QueryDto.Summary.ServiceTypeSelected();
                     x.setLeafEntryId(k);
                     x.setPathEntryIds(new ArrayList<>());
@@ -340,16 +415,16 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                     return x;
                 });
 
-                // 把目前節點接到路徑尾端（Level ASC 已保證父在前、葉在最後）
-                serviceTypeSelectedDto.getPathEntryIds().add(entryId);
-                serviceTypeSelectedDto.getPathText().add(text);
+                // 加入路徑節點
+                leafDto.getPathEntryIds().add(entryId);
+                leafDto.getPathText().add(text);
 
-                // 任何一個節點被禁用/刪除，都把整條路徑的彙總旗標設為 true
-                if (dis) serviceTypeSelectedDto.setHasDisabled(true);
-                if (del) serviceTypeSelectedDto.setHasDeleted(true);
+                // 設定狀態旗標
+                if (dis) leafDto.setHasDisabled(true);
+                if (del) leafDto.setHasDeleted(true);
 
-                // 收集需標示的節點：此處以「禁用」為歷史依據；若要改成以「已刪除」為準，改這行即可
-                if (dis) serviceTypeSelectedDto.getHistoricalEntryIds().add(entryId);
+                // 收集歷史節點（以 IsDisabled 為準）
+                if (dis) leafDto.getHistoricalEntryIds().add(entryId);
             }
 
             // 將分組結果由 Map 轉為 List；若無資料則回傳空清單（避免回傳 null）
@@ -358,27 +433,27 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                     : new ArrayList<>(byLeaf.values());
         }, proRecId);
 
-        //1. summary 載入「服務類型選擇」ServiceTypeSelected
         summary.setServiceTypeSelected(listService);
 
+        // 3) ProRec 的 ProEmploymentStatus / ProStatus
         jdbcTemplate.query(SQL_EMPLOYMENTSTATUS_AND_PROSTATUS, rs -> {
             if (rs.next()) {
-                //2. summary載入 ProRec 的 Pro_EmploymentStaus 與 ProStatus
                 summary.setProEmploymentStatus(rs.getString("ProEmploymentStatus"));
                 summary.setProStatus(rs.getString("ProStatus"));
             }
-            return null; // ResultSetExtractor 需要回傳值，但我們直接修改外部物件
+            return null;
         }, proRecId);
 
-        // proAdoptId 為 null → 尚未建立 ProAdopt，直接回傳預設值
+        // 4) ProAdopt 的 CaseStatus
+        // - 若 proAdoptId == null → 尚未建立 → 預設 CaseStatus
+        // - 否則撈取 DB 欄位判斷狀態與理由
         if (proAdoptId == null) {
             summary.setCaseStatus(new Aca3001QueryDto.Summary.CaseStatus());
         } else {
             Aca3001QueryDto.Summary.CaseStatus caseStatus = jdbcTemplate.query(SQL_CASESTATUS, rs -> {
 
-                // 找不到資料 → 回傳預設值
                 if (!rs.next()) {
-                    return new Aca3001QueryDto.Summary.CaseStatus();
+                    return new Aca3001QueryDto.Summary.CaseStatus(); // 查無 → 預設值
                 }
 
                 var cs = new Aca3001QueryDto.Summary.CaseStatus();
@@ -405,9 +480,24 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
     }
 
 
-    //Save API
+    //Save API --------------------------------------------------------------------------------
+
+    /**
+     * 新增一筆 ProAdopt 主表資料，並回傳新紀錄的 ID。
+     *
+     * @param proRecId        個案紀錄 ID（FK → ProRec.ID）
+     * @param scores          九項評估分數 + 評語
+     * @param caseReject      狀態：是否「拒絕」
+     * @param reasonReject    拒絕理由（允許空字串，不為 null）
+     * @param caseAccept      狀態：是否「接受」
+     * @param reasonAccept    接受理由
+     * @param caseEnd         狀態：是否「結案」
+     * @param reasonEnd       結案理由
+     * @param createdByUserId 建立者使用者 ID
+     * @return 新增紀錄的自動流水號 ID
+     */
     @Override
-    public Integer insertProAdopt(String proRecId, Aca3001SavePayload.@NotNull @Valid Scores scores, boolean caseReject, String reasonReject, boolean caseAccept, String reasonAccept, boolean caseEnd, String reasonEnd, Integer createdByUserId) {
+    public Integer insertProAdopt(String proRecId, Aca3001SavePayload.Scores scores, boolean caseReject, String reasonReject, boolean caseAccept, String reasonAccept, boolean caseEnd, String reasonEnd, Integer createdByUserId) {
         final String sql = "INSERT INTO dbo.ProAdopt " +
                 "(ProRecID, " +
                 " ScoreEconomy, ScoreEmployment, ScoreFamily, ScoreSocial, " +
@@ -420,7 +510,9 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                 "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, " +
                 " ?, ?, ?, ?, ?, ?, ?, " +
                 " ?, GETDATE())";
-        //回傳新紀錄的 ID
+        // 執行插入並回傳新 ID
+        // - queryForObject(sql, Integer.class, params...)
+        //   → 執行後會直接取 OUTPUT INSERTED.ID 的值並轉為 Integer
         return jdbcTemplate.queryForObject(sql, Integer.class, // 希望回傳的型別
                 proRecId,
                 scores.getEconomy(), scores.getEmployment(), scores.getFamily(), scores.getSocial(),
@@ -433,8 +525,21 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
         );
     }
 
+    /**
+     * 更新指定的 ProAdopt 主表資料。
+     *
+     * @param proAdoptId       ProAdopt 主鍵 ID
+     * @param scores           九項評估分數 + 評語
+     * @param caseReject       狀態：是否「拒絕」
+     * @param reasonReject     拒絕理由（允許空字串，不為 null）
+     * @param caseAccept       狀態：是否「接受」
+     * @param reasonAccept     接受理由
+     * @param caseEnd          狀態：是否「結案」
+     * @param reasonEnd        結案理由
+     * @param modifiedByUserId 修改者使用者 ID
+     */
     @Override
-    public void updateProAdopt(Integer proAdoptId, Aca3001SavePayload.@NotNull @Valid Scores scores, boolean caseReject, String reasonReject, boolean caseAccept, String reasonAccept, boolean caseEnd, String reasonEnd, Integer modifiedByUserId) {
+    public void updateProAdopt(Integer proAdoptId, Aca3001SavePayload.Scores scores, boolean caseReject, String reasonReject, boolean caseAccept, String reasonAccept, boolean caseEnd, String reasonEnd, Integer modifiedByUserId) {
         String sql =
                 "UPDATE dbo.ProAdopt " +
                         "   SET ScoreEconomy    = ?, " +
@@ -456,6 +561,9 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                         "       ModifiedByUserID= ?, " +
                         "       ModifiedOnDate  = GETDATE() " +
                         " WHERE ID = ?";
+        // 執行更新
+        // - 使用 jdbcTemplate.update()
+        // - 傳入分數、評論、狀態與理由、修改者 ID 與目標主鍵 ID
         jdbcTemplate.update(sql,
                 scores.getEconomy(), scores.getEmployment(), scores.getFamily(), scores.getSocial(),
                 scores.getPhysical(), scores.getPsych(), scores.getParenting(), scores.getLegal(), scores.getResidence(),
@@ -468,10 +576,26 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
         );
     }
 
+    /**
+     * 替換 DirectAdoptCriteria 子表的選項
+     * <p>
+     * 規則：
+     * 1. 先刪除指定 proAdoptId 下所有舊有的 DirectAdoptCriteria 紀錄
+     * 2. 若傳入的 directSelectedEntryIds 為空 → 不插入任何新資料
+     * 3. 若有新選項 → 使用 batchUpdate 批次插入 (ProAdoptID, ListsEntryID)
+     *
+     * @param proAdoptId             主表 ProAdopt 的 ID (外鍵)
+     * @param directSelectedEntryIds 使用者目前勾選的 DirectAdopt 條件 (可能為空，但不可為 null)
+     */
     @Override
     public void replaceDirectAdoptCriteria(Integer proAdoptId, List<Integer> directSelectedEntryIds) {
+        // 1) 刪除舊有資料 (先清空，避免殘留歷史勾選)
         jdbcTemplate.update("DELETE FROM dbo.DirectAdoptCriteria WHERE ProAdoptID = ?", proAdoptId);
+        // 2) 若沒有任何選項，直接返回
         if (directSelectedEntryIds == null || directSelectedEntryIds.isEmpty()) return;
+        // 3) 批次新增新選項
+        // - 使用 batchUpdate 提升效能
+        // - 每個 entryId 插入一筆 (ProAdoptID, ListsEntryID)
         jdbcTemplate.batchUpdate(
                 "INSERT INTO dbo.DirectAdoptCriteria (ProAdoptID, ListsEntryID) VALUES (?, ?)",
                 directSelectedEntryIds,
@@ -483,10 +607,26 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
         );
     }
 
+    /**
+     * 替換 EvalAdoptCriteria 子表的選項
+     * <p>
+     * 規則：
+     * 1. 先刪除指定 proAdoptId 的所有既有 EvalAdoptCriteria 紀錄
+     * 2. 若傳入的 evalSelectedEntryIds 為空或 null → 不插入任何新資料
+     * 3. 若有選項 → 使用 batchUpdate 批次插入 (ProAdoptID, ListsEntryID)
+     *
+     * @param proAdoptId           主表 ProAdopt 的 ID (外鍵)
+     * @param evalSelectedEntryIds 使用者目前勾選的 EvalAdopt 條件 (可能為空，但不可為 null)
+     */
     @Override
     public void replaceEvalAdoptCriteria(Integer proAdoptId, List<Integer> evalSelectedEntryIds) {
+        // 1) 刪除舊有資料，確保後續只保留新勾選的條件
         jdbcTemplate.update("DELETE FROM dbo.EvalAdoptCriteria WHERE ProAdoptID = ?", proAdoptId);
+        // 2) 若沒有任何新選項，直接返回（維持刪除後的空狀態）
         if (evalSelectedEntryIds == null || evalSelectedEntryIds.isEmpty()) return;
+        // 3) 批次新增新選項
+        // - 使用 batchUpdate 提升效能
+        // - 每個 entryId 插入一筆 (ProAdoptID, ListsEntryID)
         jdbcTemplate.batchUpdate(
                 "INSERT INTO dbo.EvalAdoptCriteria (ProAdoptID, ListsEntryID) VALUES (?, ?)",
                 evalSelectedEntryIds,
@@ -498,51 +638,110 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
         );
     }
 
-    // Delete API
+    // Delete API --------------------------------------------------------------------------------
+
+    /**
+     * 刪除指定的 ProAdopt 主表紀錄（含其相關子表資料）
+     * <p>
+     * 注意：
+     * - 命名為 "Cascade" 表示需同時刪除關聯子表
+     * - 建議在執行此方法前，確保該紀錄可刪除（由 Service 層做時間鎖等檢查）
+     * - 若 DB 已設定外鍵 ON DELETE CASCADE，此方法只需刪主表即可
+     * - 若 DB 無 Cascade，則應在此處先刪子表，再刪主表
+     *
+     * @param proAdoptId ProAdopt 主鍵 ID
+     */
     @Override
     public void deleteProAdoptCascade(Integer proAdoptId) {
+        // 1) 刪除主表自動刪除子表（DB 有設定 ON DELETE CASCADE）
         jdbcTemplate.update("DELETE FROM dbo.ProAdopt WHERE ID = ?", proAdoptId);
     }
 
     // ---------- 私有方法區 ----------
 
     /**
-     * 從當前 {@link ResultSet} 的指定欄位讀取 DATETIME/DATETIME2 值，並轉換為民國日期字串（格式：yyy年M月d日）。
+     * 從 ResultSet 讀取指定欄位的 Timestamp，並轉換為民國日期格式 (ROC)。
+     * <p>
+     * 規則：
+     * - 若資料庫欄位值為 null → 回傳 null
+     * - 若非 null → 轉成 java.util.Date，再呼叫 DateUtil.date2Roc() 格式化
      *
-     * @param rs
-     * @param columnLabel
-     * @return 民國日期字串（yyy年M月d日），若欄位為 NULL 則回傳 {@code null}
-     * @throws SQLException
+     * @param rs          查詢結果集
+     * @param columnLabel 欄位名稱
+     * @return 以「yyy年M月d日」格式表示的民國日期字串；若欄位為 null 則回傳 null
+     * @throws SQLException 若 ResultSet 操作發生錯誤
      */
-    private String getLocalDateToROC(ResultSet rs, String columnLabel) throws SQLException {
+    private static String getLocalDateToROC(ResultSet rs, String columnLabel) throws SQLException {
+        // 1) 讀取 Timestamp 欄位
         Timestamp ts = rs.getTimestamp(columnLabel); // 讀出該欄位的 Timestamp
-        String roc = (ts == null) ? null : DateUtil.date2Roc(new java.util.Date(ts.getTime()), DateUtil.DateFormat.yyy年M月d日);
-        return roc;
+        // 2) 若為 null → 直接回傳 null
+        if (ts == null) {
+            return null;
+        }
+        // 3) 轉換為 java.util.Date，並以民國年格式化
+        return DateUtil.date2Roc(
+                new java.util.Date(ts.getTime()),
+                DateUtil.DateFormat.yyy年M月d日
+        );
     }
 
+    /**
+     * 若字串為 null → 回傳 null；否則回傳去除前後空白後的字串。
+     *
+     * @param s 原始字串
+     * @return null 或去除前後空白的字串
+     */
     private static String nullOrTrim(String s) {
         return (s == null) ? null : s.trim();
     }
 
+    /**
+     * 載入系統設定的「時間鎖定日」(TIMELOCK_ACABRD)。
+     * <p>
+     * 資料來源：
+     * - Lists 表中，ListName = 'TIMELOCK_ACABRD'，取第一筆 Value
+     * <p>
+     * 規則：
+     * - 若 Value 為 null 或空白 → 回傳 null
+     * - 若可解析成 yyyy/M/d 格式 → 轉為 LocalDate
+     * - 若解析失敗 → 回傳 null (建議 log.warn)
+     *
+     * @return LocalDate 鎖定日；若不存在或格式錯誤則回傳 null
+     */
     public LocalDate loadTimeLockDate() {
         final String SQL_TIMELOCK = "SELECT TOP 1 Value FROM Lists WHERE ListName = 'TIMELOCK_ACABRD'";
+
+        // 1) 查詢設定值 (可能為 null)
         String timeLockStr = jdbcTemplate.query(SQL_TIMELOCK, rs -> rs.next() ? rs.getString(1) : null);
 
+        // 2) 若空白/無設定 → 回傳 null
         if (timeLockStr == null || timeLockStr.isBlank()) {
             return null;
         }
+        // 3) 嘗試解析 yyyy/M/d 格式
         try {
             return LocalDate.parse(timeLockStr.trim(), DateTimeFormatter.ofPattern("yyyy/M/d"));
         } catch (Exception e) {
-            // 建議 log.warn("Invalid TIMELOCK_ACABRD: {}", timeLockStr, e);
             return null;
         }
     }
 
+    /**
+     * 判斷指定案件是否可編輯。
+     * <p>
+     * 規則：
+     * - 若 timeLockDate 為 null → 可編輯
+     * - 若 proDate (案件日期) 為 null → 可編輯
+     * - 否則：若 proDate > timeLockDate → 可編輯；否則不可編輯
+     *
+     * @param proRecId     ProRec 主鍵 ID
+     * @param timeLockDate 系統鎖定日（可為 null）
+     * @return true = 可編輯；false = 不可編輯
+     */
     public boolean isEditable(String proRecId, LocalDate timeLockDate) {
         final String SQL_PRODATE = "SELECT ProDate FROM ProRec WHERE ID = ?";
 
-        // 取得 proDate（可為 null）
+        // 1) 查詢 ProDate (可能為 null)
         LocalDate proDate = jdbcTemplate.query(SQL_PRODATE, ps -> ps.setString(1, proRecId), rs -> {
             if (rs.next()) {
                 Timestamp ts = rs.getTimestamp("ProDate");
@@ -551,7 +750,7 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
             return null;
         });
 
-        // 規則判斷
+        // 2) 套用規則判斷
         return (timeLockDate == null) || (proDate == null) || proDate.isAfter(timeLockDate);
     }
 }

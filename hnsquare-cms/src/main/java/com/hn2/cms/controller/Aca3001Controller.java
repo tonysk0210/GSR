@@ -46,6 +46,4 @@ public class Aca3001Controller {
         DataDto<Void> result = service.delete(payload);
         return ResponseEntity.ok(result);
     }
-
-
 }
