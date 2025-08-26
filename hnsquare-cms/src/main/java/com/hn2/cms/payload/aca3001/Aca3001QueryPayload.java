@@ -6,6 +6,6 @@ import javax.validation.constraints.NotBlank;
 
 @Data
 public class Aca3001QueryPayload {
-    @NotBlank
+    @NotBlank(message = "proRecId 不可為空!!")
     private String proRecId;
 }
