@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 
+// 認輔資料表建檔
 @RestController
 @RequestMapping("/aca/aca3001")
 public class Aca3001Controller {
@@ -25,6 +26,7 @@ public class Aca3001Controller {
         this.service = service;
     }
 
+    //Query API
     @PostMapping("/query")
     public ResponseEntity<DataDto<Aca3001QueryDto>> query(@Valid @RequestBody GeneralPayload<Aca3001QueryPayload> payload) {
         DataDto<Aca3001QueryDto> result = service.query(payload);

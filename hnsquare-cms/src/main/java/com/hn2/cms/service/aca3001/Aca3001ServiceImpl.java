@@ -130,7 +130,7 @@ public class Aca3001ServiceImpl implements Aca3001Service {
                         caseReject, reasonReject,
                         caseAccept, reasonAccept,
                         caseEnd, reasonEnd,
-                        p.getAudit() == null ? null : p.getAudit().getCreatedByUserId()
+                        p.getAudit() == null ? null : p.getAudit().getUserId()
                 );
                 message = "新增成功";
             } catch (DataIntegrityViolationException ex) {
@@ -148,7 +148,7 @@ public class Aca3001ServiceImpl implements Aca3001Service {
                     caseReject, reasonReject,
                     caseAccept, reasonAccept,
                     caseEnd, reasonEnd,
-                    p.getAudit() == null ? null : p.getAudit().getModifiedByUserId()
+                    p.getAudit() == null ? null : p.getAudit().getUserId()
             );
             message = "更新成功";
         }

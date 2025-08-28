@@ -53,7 +53,6 @@ public class Aca3001SavePayload {
 
     @Data
     public static class Audit {
-        private Integer createdByUserId;
-        private Integer modifiedByUserId;
+        private Integer userId;
     }
 }

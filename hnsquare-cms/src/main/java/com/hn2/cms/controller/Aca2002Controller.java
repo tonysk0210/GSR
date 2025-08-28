@@ -26,6 +26,7 @@ public class Aca2002Controller {
     Aca2002Service aca2002Service;
 
 
+    // 犯罪紀錄查詢
     @PostMapping("/query")
     public ResponseEntity<DataDto<Aca2002CrmRecQueryDto>> query(
             @Valid @RequestBody GeneralPayload<Aca2002QueryPayload> payload) {
