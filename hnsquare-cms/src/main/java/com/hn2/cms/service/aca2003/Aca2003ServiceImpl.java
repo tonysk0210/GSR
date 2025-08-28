@@ -1,7 +1,10 @@
 package com.hn2.cms.service.aca2003;
 
+import com.hn2.cms.dto.aca2003.Aca2003DetailView;
+import com.hn2.cms.dto.aca2003.Aca2003QueryDto;
 import com.hn2.cms.dto.aca2003.Aca2003SaveResponse;
 import com.hn2.cms.model.aca2003.AcaDrugUseEntity;
+import com.hn2.cms.payload.aca2003.Aca2003QueryPayload;
 import com.hn2.cms.payload.aca2003.Aca2003SavePayload;
 import com.hn2.cms.repository.aca2003.Aca2003Repository;
 import com.hn2.core.dto.DataDto;
@@ -25,6 +28,7 @@ public class Aca2003ServiceImpl implements Aca2003Service {
         this.repo = repo;
     }
 
+    // === save API ===
     @Override
     @Transactional
     public DataDto<Aca2003SaveResponse> save(GeneralPayload<Aca2003SavePayload> payload) {
@@ -70,7 +74,7 @@ public class Aca2003ServiceImpl implements Aca2003Service {
             // 前端帶的 ID 與 (ACACardNo, ProRecId) 必須一致
             if (!card.equals(exist.getAcaCardNo()) || !rec.equals(exist.getProRecId())) {
                 // 指定訊息格式：「個案編號ACACardNo, 無此保護紀錄資料(ProRecId)」
-                return fail("ID 與指定的個案編號(" + card + ")、保護紀錄(" + rec + ")不一致");
+                return fail("「個案編號」(" + card + ")、無此「保護紀錄」資料(" + rec + ")");
             }
 
             // 僅覆寫非鍵值欄位
@@ -88,6 +92,40 @@ public class Aca2003ServiceImpl implements Aca2003Service {
             throw ex;
         }
     }
+
+    // === query API ===
+    @Override
+    public DataDto<Aca2003QueryDto> queryById(GeneralPayload<Aca2003QueryPayload> payload) {
+        if (payload == null || payload.getData() == null || payload.getData().getId() == null) {
+            return new DataDto<>(null, new ResponseInfo(0, "id 不可為空"));
+        }
+        Integer id = payload.getData().getId();
+
+        return repo.findDetailById(id)
+                .map(this::toDto)
+                .map(dto -> new DataDto<>(dto, new ResponseInfo(1, "查詢成功")))
+                .orElseGet(() -> new DataDto<>(null, new ResponseInfo(0, "查無資料")));
+    }
+
+    private Aca2003QueryDto toDto(Aca2003DetailView v) {
+        return new Aca2003QueryDto(
+                v.getId(),
+                v.getCreatedOnDate(),
+                v.getCreatedByBranchId(),
+                v.getDrgUserText(),
+                v.getOprFamilyText(),
+                v.getOprFamilyCareText(),
+                v.getOprSupportText(),
+                v.getOprContactText(),
+                v.getOprReferText(),
+                v.getAddr(),
+                v.getOprAddr(),
+                v.getAcaCardNo(),
+                v.getAcaName(),
+                v.getAcaIdNo()
+        );
+    }
+
 
     // ---- helpers ----
     private static DataDto<Aca2003SaveResponse> ok(Integer id, String msg) {

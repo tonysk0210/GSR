@@ -135,13 +135,13 @@ public class Aca3001ServiceImpl implements Aca3001Service {
                 message = "新增成功";
             } catch (DataIntegrityViolationException ex) {
                 // 常見原因：違反 UQ_ProAdopt_ProRecID → 同一個 ProRecID 已存在紀錄
-                return new DataDto<>(null, new ResponseInfo(0, "此 ProRecID 已存在認輔評估，請改用更新或重新讀取畫面。"));
+                return new DataDto<>(null, new ResponseInfo(0, "此「保護紀錄」之「認輔評估表」已存在，無法進行新增"));
             }
         } else {
             // 更新前保險檢查：確認 proRecId ↔ proAdoptId 是否一致
             Integer chk = repo.findProAdoptIdByProRecId(p.getProRecId());
             if (chk == null || !chk.equals(proAdoptId)) {
-                return new DataDto<>(null, new ResponseInfo(0, "proAdoptId 與 proRecId 不一致"));
+                return new DataDto<>(null, new ResponseInfo(0, "此「保護紀錄」無此「認輔評估表」，無法更新"));
             }
             repo.updateProAdopt(
                     proAdoptId, p.getScores(),
