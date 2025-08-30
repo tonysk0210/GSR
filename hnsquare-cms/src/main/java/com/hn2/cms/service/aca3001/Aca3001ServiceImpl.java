@@ -153,9 +153,12 @@ public class Aca3001ServiceImpl implements Aca3001Service {
             message = "更新成功";
         }
 
-        // 4) 更新子表 (覆蓋式更新)
-        repo.replaceDirectAdoptCriteria(proAdoptId, p.getDirectSelectedEntryIds());
-        repo.replaceEvalAdoptCriteria(proAdoptId, p.getEvalSelectedEntryIds());
+        // 4) 更新子表：Upsert（保留歷史 & 補齊未選為 0）
+        // 若 refreshSnapshot 為 null 視為 false
+        boolean refresh = Boolean.TRUE.equals(p.getRefreshSnapshot());
+
+        repo.upsertDirectAdoptCriteria(proAdoptId, p.getDirectSelectedEntryIds(), refresh);
+        repo.upsertEvalAdoptCriteria(proAdoptId, p.getEvalSelectedEntryIds(), refresh);
 
         // 5) 建立回傳 DTO
         int total = p.getScores().getEconomy()

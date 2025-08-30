@@ -7,15 +7,15 @@ import com.hn2.util.DateUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Aca3001 認輔評估查詢 Repository（JdbcTemplate 版本）
@@ -161,19 +161,28 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
     }
 
     /**
-     * 查詢並組裝 DirectAdoptCriteria 區塊 (直接認輔條件)。
-     * <p>
-     * 區塊包含：
-     * - options ：所有可供選擇的條件清單（來源：Lists，僅取 IsDisabled=0）
-     * - selected：此 ProAdopt 已勾選的條件（來源：DirectAdoptCriteria）
-     * <p>
-     * 規則：
-     * - options 一律撈取完整清單 (固定 ListName='PROADOPT_DAC')
-     * - selected 若 proAdoptId 為 null → 空清單（表示尚未建立 ProAdopt）
-     * - selected 否則撈實際勾選紀錄
+     * 組裝「直接認輔條件 (DirectAdoptCriteria)」區塊。
+     *
+     * <p>輸出內容：
+     * <ul>
+     *   <li><b>options</b>：目前可供選擇的條件（來源 Lists，ListName='PROADOPT_DAC'，僅取 IsDisabled=0）。</li>
+     *   <li><b>records</b>：此 ProAdopt 的「歷史＋現行」勾選狀態：
+     *     <ul>
+     *       <li>歷史：DirectAdoptCriteria 中曾出現過的項目（即使該 Lists 項目已被停用亦保留）。</li>
+     *       <li>現行補齊：Lists 中現行有效但未入庫的項目 → 以未勾選補齊（isSelected=false、text=Lists.Text）。</li>
+     *     </ul>
+     *   </li>
+     *   <li><b>hasDiff</b>：用於提示是否存在「records 與現行 options 的差異」（例如 records 含已停用項）。</li>
+     * </ul>
+     *
+     * <p>情境規則：
+     * <ul>
+     *   <li>proAdoptId == null：尚未建立紀錄 → records 依現行 options 產生全未勾選清單；hasDiff 依 compare 邏輯判定。</li>
+     *   <li>proAdoptId != null：records 以「歷史 ∪ 現行補齊」一次查出。</li>
+     * </ul>
      *
      * @param proAdoptId ProAdopt 主鍵 ID（可為 null，代表尚未建立）
-     * @return DirectAdoptCriteria DTO
+     * @return DirectAdoptCriteria DTO（含 options、records、hasDiff）
      */
     @Override
     public Aca3001QueryDto.DirectAdoptCriteria computeDirectAdoptCriteria(Integer proAdoptId) {
@@ -181,14 +190,33 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                 "SELECT EntryID, Value, [Text], SortOrder FROM dbo.Lists " +
                         "WHERE ListName = 'PROADOPT_DAC' AND IsDisabled = 0 " +
                         "ORDER BY SortOrder ASC, EntryID ASC";
-        final String SQL_SELECTED =
-                "SELECT l.EntryID, l.Value, l.[Text], l.IsDisabled " +
-                        "FROM dbo.Lists AS l " +
-                        "JOIN dbo.DirectAdoptCriteria AS c " +
-                        "  ON c.ListsEntryID = l.EntryID " +
-                        "WHERE c.ProAdoptID = ? " +
-                        "  AND l.ListName = 'PROADOPT_DAC' " +
-                        "ORDER BY l.SortOrder ASC, l.EntryID ASC";
+        // 新版：records = 歷史 ∪ 現行（補齊）
+        final String SQL_RECORDS_UNION =
+                "WITH current_opts AS ( " +
+                        "  SELECT EntryID, [Text], SortOrder " +
+                        "  FROM dbo.Lists " +
+                        "  WHERE ListName = 'PROADOPT_DAC' AND IsDisabled = 0 " +
+                        "), hist_ids AS ( " +
+                        "  SELECT DISTINCT c.ListsEntryID AS EntryID " +
+                        "  FROM dbo.DirectAdoptCriteria c " +
+                        "  WHERE c.ProAdoptID = ? " +
+                        "), union_ids AS ( " +
+                        "  SELECT EntryID FROM current_opts " +
+                        "  UNION " +
+                        "  SELECT EntryID FROM hist_ids " +
+                        ") " +
+                        "SELECT " +
+                        "  u.EntryID, " +
+                        "  COALESCE(c.EntryText, l.[Text])        AS RecordText, " + //會回傳第一個非 NULL 的值。
+                        "  COALESCE(c.IsSelected, CAST(0 AS bit)) AS IsSelected, " +
+                        "  COALESCE(l.SortOrder, 2147483647)      AS SortOrder, " +
+                        "  CASE WHEN l.IsDisabled = 0 THEN 0 ELSE 1 END AS DisabledRank " +
+                        "FROM union_ids u " +
+                        "LEFT JOIN dbo.DirectAdoptCriteria c " +
+                        "       ON c.ProAdoptID = ? AND c.ListsEntryID = u.EntryID " +
+                        "LEFT JOIN dbo.Lists l " +
+                        "       ON l.EntryID = u.EntryID AND l.ListName = 'PROADOPT_DAC' " +
+                        "ORDER BY DisabledRank ASC, SortOrder ASC, u.EntryID ASC";
 
         // 1) 建立 DTO
         var dto = new Aca3001QueryDto.DirectAdoptCriteria();
@@ -205,42 +233,48 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                 });
         dto.setOptions(listOptions);
 
-        // 3) selected：實際已勾選條件
-        // - 若 proAdoptId 為 null → 尚未建立 → 回傳空清單
-        // - 否則撈取 DirectAdoptCriteria 中的紀錄
-        List<Aca3001QueryDto.DirectAdoptCriteria.Selected> listSelected;
+        // 3) records：歷史＋現行（補齊）
+        List<Aca3001QueryDto.DirectAdoptCriteria.Record> listRecord;
         if (proAdoptId == null) {
-            listSelected = List.of();
+            listRecord = listOptions.stream()
+                    .map(opt -> {
+                        var r = new Aca3001QueryDto.DirectAdoptCriteria.Record();
+                        r.setEntryId(opt.getEntryId());
+                        r.setText(opt.getText());
+                        r.setSelected(false);  // 預設未勾選
+                        return r;
+                    })
+                    .collect(Collectors.toList());
         } else {
-            listSelected = jdbcTemplate.query(SQL_SELECTED, (rs, i) -> {
-                var scores = new Aca3001QueryDto.DirectAdoptCriteria.Selected();
-                scores.setEntryId(rs.getInt("EntryID"));
-                scores.setValue(rs.getString("Value"));
-                scores.setText(rs.getString("Text"));
-                scores.setDisabled(rs.getBoolean("IsDisabled")); // bit -> boolean
-                return scores;
-            }, proAdoptId);
+            listRecord = jdbcTemplate.query(
+                    SQL_RECORDS_UNION,
+                    ps -> {
+                        ps.setInt(1, proAdoptId);
+                        ps.setInt(2, proAdoptId);
+                    },
+                    (rs, i) -> {
+                        var r = new Aca3001QueryDto.DirectAdoptCriteria.Record();
+                        r.setEntryId(rs.getInt("EntryID"));
+                        r.setText(rs.getString("RecordText"));     // 歷史快照優先，否則用 Lists.Text
+                        r.setSelected(rs.getBoolean("IsSelected")); // 無紀錄時預設 0
+                        return r;
+                    }
+            );
         }
-        dto.setSelected(listSelected);
+        dto.setRecords(listRecord);
+        dto.setHasDiff(computeHasDiffDirect(listOptions, listRecord));
 
         return dto;
     }
 
     /**
-     * 查詢並組裝 EvalAdoptCriteria 區塊 (評估認輔條件)。
+     * 查詢並組裝「評估認輔條件 (EvalAdoptCriteria)」區塊。
      * <p>
      * 區塊包含：
-     * - options    ：所有可供選擇的條件清單（來源：Lists，僅取 IsDisabled=0）
-     * - selected   ：此 ProAdopt 已勾選的條件（來源：EvalAdoptCriteria）
-     * - evalScores ：分數與評語（來源：ProAdopt，含 ScoreTotal）
-     * <p>
-     * 規則：
-     * - options 一律撈取完整清單 (固定 ListName='PROADOPT_EAC')
-     * - 若 proAdoptId == null → 表示尚未建立 ProAdopt → selected 空清單、scores 給預設值
-     * - 若 proAdoptId != null → 撈取已勾選條件與 ProAdopt 分數
-     *
-     * @param proAdoptId ProAdopt 主鍵 ID（可為 null，代表尚未建立）
-     * @return EvalAdoptCriteria DTO
+     * - options    ：現行有效選項（Lists，ListName='PROADOPT_EAC'，IsDisabled=0）
+     * - records    ：歷史＋現行（補齊）：歷史保留、現行未入庫補為未勾選，顯示文字優先用歷史快照
+     * - evalScores ：分數與評語（ProAdopt）
+     * - hasDiff    ：records 與現行 options 是否存在差異
      */
     @Override
     public Aca3001QueryDto.EvalAdoptCriteria computeEvalAdoptCriteria(Integer proAdoptId) {
@@ -249,12 +283,33 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                 "SELECT EntryID, Value, [Text], SortOrder FROM dbo.Lists " +
                         "WHERE ListName = 'PROADOPT_EAC' AND IsDisabled = 0 " +
                         "ORDER BY SortOrder ASC, EntryID ASC";
-        final String SQL_SELECTED =
-                "SELECT l.EntryID, l.Value, l.[Text], l.IsDisabled " +
-                        "FROM dbo.Lists AS l " +
-                        "JOIN dbo.EvalAdoptCriteria AS c ON c.ListsEntryID = l.EntryID " +
-                        "WHERE c.ProAdoptID = ? AND l.ListName = 'PROADOPT_EAC' " +
-                        "ORDER BY l.SortOrder ASC, l.EntryID ASC";
+        // records = 歷史 ∪ 現行（補齊）
+        final String SQL_RECORDS_UNION =
+                "WITH current_opts AS ( " +
+                        "  SELECT EntryID, [Text], SortOrder " +
+                        "  FROM dbo.Lists " +
+                        "  WHERE ListName = 'PROADOPT_EAC' AND IsDisabled = 0 " +
+                        "), hist_ids AS ( " +
+                        "  SELECT DISTINCT c.ListsEntryID AS EntryID " +
+                        "  FROM dbo.EvalAdoptCriteria c " +
+                        "  WHERE c.ProAdoptID = ? " +
+                        "), union_ids AS ( " +
+                        "  SELECT EntryID FROM current_opts " +
+                        "  UNION " +
+                        "  SELECT EntryID FROM hist_ids " +
+                        ") " +
+                        "SELECT " +
+                        "  u.EntryID, " +
+                        "  COALESCE(c.EntryText, l.[Text])        AS RecordText, " +
+                        "  COALESCE(c.IsSelected, CAST(0 AS bit)) AS IsSelected, " +
+                        "  COALESCE(l.SortOrder, 2147483647)      AS SortOrder, " +
+                        "  CASE WHEN l.IsDisabled = 0 THEN 0 ELSE 1 END AS DisabledRank " +
+                        "FROM union_ids u " +
+                        "LEFT JOIN dbo.EvalAdoptCriteria c " +
+                        "       ON c.ProAdoptID = ? AND c.ListsEntryID = u.EntryID " +
+                        "LEFT JOIN dbo.Lists l " +
+                        "       ON l.EntryID = u.EntryID AND l.ListName = 'PROADOPT_EAC' " +
+                        "ORDER BY DisabledRank ASC, SortOrder ASC, u.EntryID ASC";
         final String SQL_SCORES =
                 "SELECT ScoreEconomy, ScoreEmployment, ScoreFamily, " +
                         "   ScoreSocial, ScorePhysical, ScorePsych, " +
@@ -279,21 +334,36 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
 
         // 3) selected + scores：依 proAdoptId 是否存在決定
         if (proAdoptId == null) {
-            // 新建情境：尚未建立 ProAdopt → selected 空、scores 預設值
-            dto.setSelected(List.of());
+            // 尚未建立 → 依 options 產生「全部未勾選」
+            List<Aca3001QueryDto.EvalAdoptCriteria.Record> listRecord = listOptions.stream()
+                    .map(opt -> {
+                        var r = new Aca3001QueryDto.EvalAdoptCriteria.Record();
+                        r.setEntryId(opt.getEntryId());
+                        r.setText(opt.getText());      // 直接用 Lists.Text 作為預設顯示
+                        r.setSelected(false);
+                        return r;
+                    })
+                    .collect(Collectors.toList());
+            dto.setRecords(listRecord);
             dto.setEvalScores(new Aca3001QueryDto.EvalAdoptCriteria.EvalScore());
         } else {
-            // 3-1) selected：撈取實際勾選的條件（保留 IsDisabled 讓前端可標示失效選項）
-            List<Aca3001QueryDto.EvalAdoptCriteria.Selected> selected =
-                    jdbcTemplate.query(SQL_SELECTED, (rs, i) -> {
-                        var scores = new Aca3001QueryDto.EvalAdoptCriteria.Selected();
-                        scores.setEntryId(rs.getInt("EntryID"));
-                        scores.setValue(rs.getString("Value"));
-                        scores.setText(rs.getString("Text"));
-                        scores.setDisabled(rs.getBoolean("IsDisabled"));
-                        return scores;
-                    }, proAdoptId);
-            dto.setSelected(selected);
+            // 3-1) records：歷史 ∪ 現行（補齊）
+            List<Aca3001QueryDto.EvalAdoptCriteria.Record> records =
+                    jdbcTemplate.query(
+                            SQL_RECORDS_UNION,
+                            ps -> {
+                                ps.setInt(1, proAdoptId);
+                                ps.setInt(2, proAdoptId);
+                            },
+                            (rs, i) -> {
+                                var r = new Aca3001QueryDto.EvalAdoptCriteria.Record();
+                                r.setEntryId(rs.getInt("EntryID"));
+                                r.setText(rs.getString("RecordText"));     // 歷史快照優先，否則 Lists.Text
+                                r.setSelected(rs.getBoolean("IsSelected"));// 無歷史則 0（未勾選）
+                                return r;
+                            }
+                    );
+            dto.setRecords(records);
 
             // 3-2) scores：從 ProAdopt 載入分數與評語
             Aca3001QueryDto.EvalAdoptCriteria.EvalScore scores =
@@ -317,6 +387,8 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                     }, proAdoptId);
             dto.setEvalScores(scores);
         }
+        // 4) 差異檢查（若需要）
+        dto.setHasDiff(computeHasDiffEval(listOptions, dto.getRecords()));
 
         return dto;
     }
@@ -638,6 +710,126 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
         );
     }
 
+    @Transactional
+    @Override
+    public void upsertDirectAdoptCriteria(int proAdoptId, List<Integer> selectedEntryIds, boolean refreshSnapshot) {
+        // 1) 全設為未勾選（保留歷史）
+        jdbcTemplate.update(
+                "UPDATE dbo.DirectAdoptCriteria SET IsSelected = 0 WHERE ProAdoptID = ?",
+                proAdoptId
+        );
+
+        // 2) 逐一把「本次勾選」設為 1；若不存在就插入（帶 Lists.Text 快照）
+        if (selectedEntryIds != null && !selectedEntryIds.isEmpty()) {
+            for (Integer entryId : selectedEntryIds) {
+                // 根據 refreshSnapshot 切換 UPDATE SQL
+                final String sqlUpdate = refreshSnapshot
+                        ? // 刷新快照：覆寫 EntryText = Lists.Text
+                        "UPDATE c SET c.IsSelected = 1, c.EntryText = l.[Text] " +
+                                "FROM dbo.DirectAdoptCriteria c " +
+                                "JOIN dbo.Lists l ON l.EntryID = c.ListsEntryID AND l.ListName = 'PROADOPT_DAC' " +
+                                "WHERE c.ProAdoptID = ? AND c.ListsEntryID = ?"
+                        : // 保留快照：不動 EntryText
+                        "UPDATE dbo.DirectAdoptCriteria " +
+                                "SET IsSelected = 1 " +
+                                "WHERE ProAdoptID = ? AND ListsEntryID = ?";
+
+                int updated = jdbcTemplate.update(sqlUpdate, ps -> {
+                    ps.setInt(1, proAdoptId);
+                    ps.setInt(2, entryId);
+                });
+
+                //如果過去從沒存過這個 entryId → UPDATE 找不到任何列可更新 → update==0 → 就會進入 INSERT
+                if (updated == 0) {
+                    jdbcTemplate.update(
+                            "INSERT INTO dbo.DirectAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
+                                    "SELECT ?, ?, l.[Text], 1 " +
+                                    "FROM dbo.Lists l " +
+                                    "WHERE l.EntryID = ? AND l.ListName = 'PROADOPT_DAC' " +
+                                    "  AND l.IsDisabled = 0",               // <── 新增這條件
+                            ps -> {
+                                ps.setInt(1, proAdoptId);
+                                ps.setInt(2, entryId);
+                                ps.setInt(3, entryId);
+                            }
+                    );
+                }
+            }
+        }
+
+        // 3) 補齊「現行 Lists 但 DB 尚無該列」的未選項目（IsSelected=0）
+        //    注意：這段只針對「現行有效」的 options（IsDisabled=0），不會新增已停用的項目
+        jdbcTemplate.update(
+                "INSERT INTO dbo.DirectAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
+                        "SELECT ?, l.EntryID, l.[Text], 0 " +
+                        "FROM dbo.Lists l " +
+                        "LEFT JOIN dbo.DirectAdoptCriteria c " +
+                        "  ON c.ProAdoptID = ? AND c.ListsEntryID = l.EntryID " +
+                        "WHERE l.ListName = 'PROADOPT_DAC' AND l.IsDisabled = 0 " +
+                        "  AND c.ProAdoptID IS NULL",
+                ps -> {
+                    ps.setInt(1, proAdoptId);
+                    ps.setInt(2, proAdoptId);
+                }
+        );
+    }
+
+    @Transactional
+    @Override
+    public void upsertEvalAdoptCriteria(int proAdoptId, List<Integer> selectedEntryIds, boolean refreshSnapshot) {
+        jdbcTemplate.update(
+                "UPDATE dbo.EvalAdoptCriteria SET IsSelected = 0 WHERE ProAdoptID = ?",
+                proAdoptId
+        );
+
+        if (selectedEntryIds != null && !selectedEntryIds.isEmpty()) {
+            for (Integer entryId : selectedEntryIds) {
+                final String sqlUpdate = refreshSnapshot
+                        ? "UPDATE c SET c.IsSelected = 1, c.EntryText = l.[Text] " +
+                        "FROM dbo.EvalAdoptCriteria c " +
+                        "JOIN dbo.Lists l ON l.EntryID = c.ListsEntryID AND l.ListName = 'PROADOPT_EAC' " +
+                        "WHERE c.ProAdoptID = ? AND c.ListsEntryID = ?"
+                        : "UPDATE dbo.EvalAdoptCriteria " +
+                        "SET IsSelected = 1 " +
+                        "WHERE ProAdoptID = ? AND ListsEntryID = ?";
+
+                int updated = jdbcTemplate.update(sqlUpdate, ps -> {
+                    ps.setInt(1, proAdoptId);
+                    ps.setInt(2, entryId);
+                });
+
+                if (updated == 0) {
+                    jdbcTemplate.update(
+                            "INSERT INTO dbo.EvalAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
+                                    "SELECT ?, ?, l.[Text], 1 " +
+                                    "FROM dbo.Lists l " +
+                                    "WHERE l.EntryID = ? AND l.ListName = 'PROADOPT_EAC' " +
+                                    "  AND l.IsDisabled = 0",               // <── 新增這條件
+                            ps -> {
+                                ps.setInt(1, proAdoptId);
+                                ps.setInt(2, entryId);
+                                ps.setInt(3, entryId);
+                            }
+                    );
+                }
+            }
+        }
+
+        jdbcTemplate.update(
+                "INSERT INTO dbo.EvalAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
+                        "SELECT ?, l.EntryID, l.[Text], 0 " +
+                        "FROM dbo.Lists l " +
+                        "LEFT JOIN dbo.EvalAdoptCriteria c " +
+                        "  ON c.ProAdoptID = ? AND c.ListsEntryID = l.EntryID " +
+                        "WHERE l.ListName = 'PROADOPT_EAC' AND l.IsDisabled = 0 " +
+                        "  AND c.ProAdoptID IS NULL",
+                ps -> {
+                    ps.setInt(1, proAdoptId);
+                    ps.setInt(2, proAdoptId);
+                }
+        );
+    }
+
     // Delete API --------------------------------------------------------------------------------
 
     /**
@@ -753,6 +945,81 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
         // 2) 套用規則判斷
         return (timeLockDate == null) || (proDate == null) || proDate.isAfter(timeLockDate);
     }
+
+    /**
+     * 比對 options(現行 Lists) 與 records(快照) 是否有差異：
+     * - 筆數不同 → 有差異
+     * - 任一 entryId 在 records 缺少 → 有差異
+     * - 同 entryId 的 text 不同（trim 後比較）→ 有差異
+     */
+    private boolean computeHasDiffDirect(
+            List<Aca3001QueryDto.DirectAdoptCriteria.Option> options,
+            List<Aca3001QueryDto.DirectAdoptCriteria.Record> records
+    ) {
+        Map<Integer, String> optionMap = options.stream().collect(
+                Collectors.toMap(
+                        Aca3001QueryDto.DirectAdoptCriteria.Option::getEntryId,
+                        o -> nullOrTrim(o.getText()),
+                        (a, b) -> a // 若意外有重複鍵，保留第一個
+                )
+        );
+
+        Map<Integer, String> recordMap = records.stream().collect(
+                Collectors.toMap(
+                        Aca3001QueryDto.DirectAdoptCriteria.Record::getEntryId,
+                        r -> nullOrTrim(r.getText()),
+                        (a, b) -> a
+                )
+        );
+
+        // 1) 筆數不同（新增/缺少）
+        if (optionMap.size() != recordMap.size()) return true;
+
+        // 2) 逐鍵比對存在性與文字
+        for (Map.Entry<Integer, String> e : optionMap.entrySet()) {
+            Integer id = e.getKey();
+            String optText = e.getValue();
+            String recText = recordMap.get(id); // null → records 缺少此 entryId
+            if (recText == null) return true;
+            if (!optText.equals(recText)) return true;
+        }
+        return false; // 完全一致
+    }
+
+    /**
+     * Overloaded 版本：專供 EvalAdoptCriteria 使用
+     */
+    private boolean computeHasDiffEval(
+            List<Aca3001QueryDto.EvalAdoptCriteria.Option> options,
+            List<Aca3001QueryDto.EvalAdoptCriteria.Record> records
+    ) {
+        Map<Integer, String> optionMap = options.stream().collect(
+                Collectors.toMap(
+                        Aca3001QueryDto.EvalAdoptCriteria.Option::getEntryId,
+                        o -> nullOrTrim(o.getText()),
+                        (a, b) -> a
+                )
+        );
+
+        Map<Integer, String> recordMap = records.stream().collect(
+                Collectors.toMap(
+                        Aca3001QueryDto.EvalAdoptCriteria.Record::getEntryId,
+                        r -> nullOrTrim(r.getText()),
+                        (a, b) -> a
+                )
+        );
+
+        if (optionMap.size() != recordMap.size()) return true;
+
+        for (Map.Entry<Integer, String> e : optionMap.entrySet()) {
+            String recText = recordMap.get(e.getKey());
+            if (recText == null) return true;
+            if (!Objects.equals(e.getValue(), recText)) return true;
+        }
+        return false;
+    }
+
+
 }
 
 

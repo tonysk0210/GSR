@@ -2,6 +2,7 @@ package com.hn2.cms.repository.aca3001;
 
 import com.hn2.cms.dto.aca3001.Aca3001QueryDto;
 import com.hn2.cms.payload.aca3001.Aca3001SavePayload;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
@@ -39,6 +40,9 @@ public interface Aca3001Repository {
 
     void replaceEvalAdoptCriteria(Integer proAdoptId, @NotNull List<Integer> evalSelectedEntryIds);
 
+    void upsertDirectAdoptCriteria(int proAdoptId, List<Integer> selectedEntryIds, boolean refreshSnapshot);
+
+    void upsertEvalAdoptCriteria(int proAdoptId, List<Integer> selectedEntryIds, boolean refreshSnapshot);
 
     //Delete API
     void deleteProAdoptCascade(Integer proAdoptId);

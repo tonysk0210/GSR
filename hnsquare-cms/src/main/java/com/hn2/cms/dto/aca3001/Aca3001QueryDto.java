@@ -65,8 +65,9 @@ public class Aca3001QueryDto {
     public static class DirectAdoptCriteria {
         /** 所有可供選擇的直接認輔條件 */
         private List<Option> options = List.of();
-        /** 已被勾選的條件（含可能已失效/禁用的選項） */
-        private List<Selected> selected = List.of();
+        /** 已被勾選的選項（含可能已失效/禁用的選項） */
+        private List<Record> records = List.of();
+        private boolean hasDiff;
 
         @Data
         public static class Option {
@@ -77,12 +78,11 @@ public class Aca3001QueryDto {
         }
 
         @Data
-        public static class Selected {
+        public static class Record {
             private Integer entryId;
-            private String value;
             private String text;
-            /** 是否因法規異動而失效（禁用/刪除） */
-            private boolean isDisabled;
+            /** 是否已選 */
+            private boolean isSelected;
         }
     }
 
@@ -92,7 +92,8 @@ public class Aca3001QueryDto {
         /** 所有可供選擇的認輔評估條件 */
         private List<Option> options = List.of();
         /** 已被勾選的條件（含可能已失效/禁用的選項） */
-        private List<Selected> selected = List.of();
+        private List<Record> records = List.of();
+        private boolean hasDiff;
         /** 各項分數與總分 */
         private EvalScore evalScores;
 
@@ -105,11 +106,11 @@ public class Aca3001QueryDto {
         }
 
         @Data
-        public static class Selected {
+        public static class Record {
             private Integer entryId;
-            private String value;
             private String text;
-            private boolean isDisabled;
+            /** 是否已選 */
+            private boolean isSelected;
         }
 
         /** 認輔評估各面向分數 */

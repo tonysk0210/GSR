@@ -27,6 +27,9 @@ public class Aca3001SavePayload {
     @NotNull
     private List<Integer> evalSelectedEntryIds;   // 可為空陣列，但非null
 
+    // 新增：是否刷新 EntryText 快照（mod 情境）
+    private Boolean refreshSnapshot;  // 可為 null；null 視為 false
+
     private Audit audit;
 
     @Data
