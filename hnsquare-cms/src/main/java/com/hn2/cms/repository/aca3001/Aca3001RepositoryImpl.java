@@ -444,8 +444,13 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                         "ORDER BY LeafEntryID, [Level] ASC " +  //先依葉子 ID，再依層級排序
                         "OPTION (MAXRECURSION 32);"; //限制遞迴最多 32 層，避免無限迴圈
         final String SQL_EMPLOYMENTSTATUS_AND_PROSTATUS =
-                "SELECT r.Pro_EmploymentStaus AS ProEmploymentStatus, r.ProStatus AS ProStatus " +
-                        "FROM dbo.ProRec r WHERE r.ID = ?";
+                "SELECT l.[Text] AS ProEmploymentStatusText, " +
+                        "       r.ProStatus AS ProStatus " +
+                        "FROM dbo.ProRec r " +
+                        "LEFT JOIN dbo.Lists l " +
+                        "  ON l.ListName = 'ACA_EMPLOYMENT_STATUS' " +
+                        " AND l.Value = r.Pro_EmploymentStaus " +
+                        "WHERE r.ID = ?";
         final String SQL_CASESTATUS =
                 "SELECT CaseReject, " +
                         "ReasonReject, " +
@@ -510,7 +515,7 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
         // 3) ProRec 的 ProEmploymentStatus / ProStatus
         jdbcTemplate.query(SQL_EMPLOYMENTSTATUS_AND_PROSTATUS, rs -> {
             if (rs.next()) {
-                summary.setProEmploymentStatus(rs.getString("ProEmploymentStatus"));
+                summary.setProEmploymentStatus(rs.getString("ProEmploymentStatusText"));
                 summary.setProStatus(rs.getString("ProStatus"));
             }
             return null;
