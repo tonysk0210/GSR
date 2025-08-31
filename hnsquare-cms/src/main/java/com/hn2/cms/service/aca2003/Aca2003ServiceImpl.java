@@ -63,7 +63,7 @@ public class Aca2003ServiceImpl implements Aca2003Service {
                 return ok(e.getId(), "新增成功");
             }
 
-            // ---- 2) 更新：只更新那一筆有效資料；鍵值不可變動 ----
+            // ---- 2) 更新：只更新那一筆有效資料；鍵值不可變動 - 「更新只能改欄位內容，不能改主鍵或關鍵欄位」 ----
             Optional<AcaDrugUseEntity> opt = repo.findById(p.getId());
             if (opt.isEmpty()) return fail("指定資料不存在");
             var exist = opt.get();
@@ -91,6 +91,56 @@ public class Aca2003ServiceImpl implements Aca2003Service {
             }
             throw ex;
         }
+    }
+
+    private static void copyFieldsForCreate(Aca2003SavePayload p, AcaDrugUseEntity e) {
+        // 建立時：寫入鍵值 + 其它欄位
+        e.setAcaCardNo(trim(p.getAcaCardNo()));
+        e.setProRecId(trim(p.getProRecId()));
+        e.setDrgUserText(trimToNull(p.getDrgUserText()));
+        e.setOprFamilyText(trimToNull(p.getOprFamilyText()));
+        e.setOprFamilyCareText(trimToNull(p.getOprFamilyCareText()));
+        e.setOprSupportText(trimToNull(p.getOprSupportText()));
+        e.setOprContactText(trimToNull(p.getOprContactText()));
+        e.setOprReferText(trimToNull(p.getOprReferText()));
+        e.setAddr(trimToNull(p.getAddr()));
+        e.setOprAddr(trimToNull(p.getOprAddr()));
+    }
+
+    private static void copyFieldsForUpdate(Aca2003SavePayload p, AcaDrugUseEntity e) {
+        // 更新時：不可改鍵值，只覆寫業務欄位
+        e.setDrgUserText(trimToNull(p.getDrgUserText()));
+        e.setOprFamilyText(trimToNull(p.getOprFamilyText()));
+        e.setOprFamilyCareText(trimToNull(p.getOprFamilyCareText()));
+        e.setOprSupportText(trimToNull(p.getOprSupportText()));
+        e.setOprContactText(trimToNull(p.getOprContactText()));
+        e.setOprReferText(trimToNull(p.getOprReferText()));
+        e.setAddr(trimToNull(p.getAddr()));
+        e.setOprAddr(trimToNull(p.getOprAddr()));
+    }
+
+    // 兜底辨識 SQL Server 唯一衝突（2627 unique constraint；2601 duplicate index）
+    private static boolean isUniqueKeyViolation(DataIntegrityViolationException ex) {
+        Throwable t = ex.getMostSpecificCause();
+        while (t != null) {
+            if (t instanceof java.sql.SQLException) {
+                java.sql.SQLException se = (java.sql.SQLException) t;
+                int code = se.getErrorCode();
+                if (code == 2627 || code == 2601) {
+                    return true;
+                }
+            }
+            t = t.getCause();
+        }
+        return false;
+    }
+
+    private static DataDto<Aca2003SaveResponse> ok(Integer id, String msg) {
+        return new DataDto<>(new Aca2003SaveResponse(id), new ResponseInfo(1, msg));
+    }
+
+    private static DataDto<Aca2003SaveResponse> fail(String msg) {
+        return new DataDto<>(null, new ResponseInfo(0, msg));
     }
 
     // === query API ===
@@ -126,44 +176,9 @@ public class Aca2003ServiceImpl implements Aca2003Service {
         );
     }
 
-
     // ---- helpers ----
-    private static DataDto<Aca2003SaveResponse> ok(Integer id, String msg) {
-        return new DataDto<>(new Aca2003SaveResponse(id), new ResponseInfo(1, msg));
-    }
-
-    private static DataDto<Aca2003SaveResponse> fail(String msg) {
-        return new DataDto<>(null, new ResponseInfo(0, msg));
-    }
-
     private static boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();
-    }
-
-    private static void copyFieldsForCreate(Aca2003SavePayload p, AcaDrugUseEntity e) {
-        // 建立時：寫入鍵值 + 其它欄位
-        e.setAcaCardNo(trim(p.getAcaCardNo()));
-        e.setProRecId(trim(p.getProRecId()));
-        e.setDrgUserText(trimToNull(p.getDrgUserText()));
-        e.setOprFamilyText(trimToNull(p.getOprFamilyText()));
-        e.setOprFamilyCareText(trimToNull(p.getOprFamilyCareText()));
-        e.setOprSupportText(trimToNull(p.getOprSupportText()));
-        e.setOprContactText(trimToNull(p.getOprContactText()));
-        e.setOprReferText(trimToNull(p.getOprReferText()));
-        e.setAddr(trimToNull(p.getAddr()));
-        e.setOprAddr(trimToNull(p.getOprAddr()));
-    }
-
-    private static void copyFieldsForUpdate(Aca2003SavePayload p, AcaDrugUseEntity e) {
-        // 更新時：不可改鍵值，只覆寫業務欄位
-        e.setDrgUserText(trimToNull(p.getDrgUserText()));
-        e.setOprFamilyText(trimToNull(p.getOprFamilyText()));
-        e.setOprFamilyCareText(trimToNull(p.getOprFamilyCareText()));
-        e.setOprSupportText(trimToNull(p.getOprSupportText()));
-        e.setOprContactText(trimToNull(p.getOprContactText()));
-        e.setOprReferText(trimToNull(p.getOprReferText()));
-        e.setAddr(trimToNull(p.getAddr()));
-        e.setOprAddr(trimToNull(p.getOprAddr()));
     }
 
     private static String trim(String s) {
@@ -176,20 +191,5 @@ public class Aca2003ServiceImpl implements Aca2003Service {
         return t.isEmpty() ? null : t;
     }
 
-    // 兜底辨識 SQL Server 唯一衝突（2627 unique constraint；2601 duplicate index）
-    private static boolean isUniqueKeyViolation(DataIntegrityViolationException ex) {
-        Throwable t = ex.getMostSpecificCause();
-        while (t != null) {
-            if (t instanceof java.sql.SQLException) {
-                java.sql.SQLException se = (java.sql.SQLException) t;
-                int code = se.getErrorCode();
-                if (code == 2627 || code == 2601) {
-                    return true;
-                }
-            }
-            t = t.getCause();
-        }
-        return false;
-    }
 
 }

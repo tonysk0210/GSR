@@ -11,6 +11,7 @@ import java.util.Optional;
 
 public interface Aca2003Repository extends JpaRepository<AcaDrugUseEntity, Integer> {
 
+    // save API
     // 依 ACABrd 取分會（新增時用）
     @Query(value = "SELECT TOP 1 CreatedByBranchID FROM dbo.ACABrd WHERE ACACardNo = :cardNo", nativeQuery = true)
     String findCreatedByBranchIdByAcaCardNo(@Param("cardNo") String acaCardNo);
@@ -23,6 +24,8 @@ public interface Aca2003Repository extends JpaRepository<AcaDrugUseEntity, Integ
 
     //query API
     // === 新增：依 ID 查詢詳情（Native SQL + Interface Projection） ===
+    // d.CreatedOnDate → 資料表 AcaDrugUse 的實際欄位。
+    // AS createdOnDate → SQL 結果集欄位別名，用來對應 projection。
     @Query(value =
             "SELECT d.ID                 AS id, " +
                     "       d.CreatedOnDate      AS createdOnDate, " +
@@ -39,10 +42,10 @@ public interface Aca2003Repository extends JpaRepository<AcaDrugUseEntity, Integ
                     "       b.ACAName            AS acaName, " +
                     "       b.ACAIDNo            AS acaIdNo " +
                     "FROM dbo.AcaDrugUse d " +
-                    "JOIN dbo.ACABrd b ON b.ACACardNo = d.ACACardNo " +
+                    "LEFT JOIN dbo.ACABrd b ON b.ACACardNo = d.ACACardNo " + "  AND b.IsDeleted = 0" + //LEFT JOIN（容錯顯示），要保留「右表對不到也要顯示左表列」 → 用 LEFT JOIN，且右表(b.IsDeleted = 0)條件放在 ON
                     "WHERE d.ID = :id " +
-                    "  AND (d.IsDeleted = 0 OR d.IsDeleted IS NULL) " +  // AcaDrugUse：bit/nullable
-                    "  AND b.IsDeleted = 0",                              // ACABrd：int
+                    "  AND (d.IsDeleted = 0 OR d.IsDeleted IS NULL) " // AcaDrugUse：bit/nullable
+            ,                              // ACABrd：int
             nativeQuery = true)
     Optional<Aca2003DetailView> findDetailById(@Param("id") Integer id);
 
