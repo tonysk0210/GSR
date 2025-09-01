@@ -1,8 +1,9 @@
 package com.hn2.cms.controller;
 
-import com.hn2.cms.dto.aca2003.Aca2003DetailView;
 import com.hn2.cms.dto.aca2003.Aca2003QueryDto;
 import com.hn2.cms.dto.aca2003.Aca2003SaveResponse;
+import com.hn2.cms.payload.aca2003.Aca2003DeletePayload;
+import com.hn2.cms.payload.aca2003.Aca2003QueryByCardPayload;
 import com.hn2.cms.payload.aca2003.Aca2003QueryPayload;
 import com.hn2.cms.payload.aca2003.Aca2003SavePayload;
 import com.hn2.cms.service.aca2003.Aca2003Service;
@@ -32,7 +33,20 @@ public class Aca2003Controller {
 
     // 新增：依 ID 查詢詳情
     @PostMapping("/query")
-    public ResponseEntity<DataDto<Aca2003QueryDto>> query(@Valid @RequestBody GeneralPayload<Aca2003QueryPayload> payload) {
+    public ResponseEntity<DataDto<Aca2003QueryDto>> queryById(@Valid @RequestBody GeneralPayload<Aca2003QueryPayload> payload) {
         return ResponseEntity.ok(service.queryById(payload));
+    }
+
+    // 新增：依 ACACardNo 取最新一筆（ID 最大）
+    @PostMapping("/queryByCardNo")
+    public ResponseEntity<DataDto<Aca2003QueryDto>> queryByCardNo(
+            @Valid @RequestBody GeneralPayload<Aca2003QueryByCardPayload> payload) {
+        return ResponseEntity.ok(service.queryLatestByCardNo(payload));
+    }
+
+    @PostMapping("/softDelete")
+    public ResponseEntity<DataDto<Aca2003SaveResponse>> delete(
+            @Valid @RequestBody GeneralPayload<Aca2003DeletePayload> payload) {
+        return ResponseEntity.ok(service.delete(payload));
     }
 }

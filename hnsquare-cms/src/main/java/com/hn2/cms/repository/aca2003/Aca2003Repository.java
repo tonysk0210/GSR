@@ -72,5 +72,30 @@ public interface Aca2003Repository extends JpaRepository<AcaDrugUseEntity, Integ
             nativeQuery = true)
     Optional<Aca2003DetailView> findDetailById(@Param("id") Integer id);
 
+    // 依 ACACardNo 找「最新一筆」（以 ID 最大視為最新），過濾掉刪除資料
+    @Query(value =
+            "SELECT TOP 1 " +
+                    "       d.ID                 AS id, " +
+                    "       d.CreatedOnDate      AS createdOnDate, " +
+                    "       d.CreatedByBranchID  AS createdByBranchId, " +
+                    "       d.DrgUserText        AS drgUserText, " +
+                    "       d.OprFamilyText      AS oprFamilyText, " +
+                    "       d.OprFamilyCareText  AS oprFamilyCareText, " +
+                    "       d.OprSupportText     AS oprSupportText, " +
+                    "       d.OprContactText     AS oprContactText, " +
+                    "       d.OprReferText       AS oprReferText, " +
+                    "       d.Addr               AS addr, " +
+                    "       d.OprAddr            AS oprAddr, " +
+                    "       d.ACACardNo          AS acaCardNo, " +
+                    "       b.ACAName            AS acaName, " +
+                    "       b.ACAIDNo            AS acaIdNo " +
+                    "FROM dbo.AcaDrugUse d " +
+                    "LEFT JOIN dbo.ACABrd b ON b.ACACardNo = d.ACACardNo AND b.IsDeleted = 0 " +
+                    "WHERE d.ACACardNo = :cardNo " +
+                    "  AND (d.IsDeleted = 0 OR d.IsDeleted IS NULL) " +
+                    "ORDER BY d.ID DESC",
+            nativeQuery = true)
+    Optional<Aca2003DetailView> findLatestDetailByCardNo(@Param("cardNo") String cardNo);
+
 }
 

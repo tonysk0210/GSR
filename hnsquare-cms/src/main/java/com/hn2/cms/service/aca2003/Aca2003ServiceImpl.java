@@ -4,6 +4,8 @@ import com.hn2.cms.dto.aca2003.Aca2003DetailView;
 import com.hn2.cms.dto.aca2003.Aca2003QueryDto;
 import com.hn2.cms.dto.aca2003.Aca2003SaveResponse;
 import com.hn2.cms.model.aca2003.AcaDrugUseEntity;
+import com.hn2.cms.payload.aca2003.Aca2003DeletePayload;
+import com.hn2.cms.payload.aca2003.Aca2003QueryByCardPayload;
 import com.hn2.cms.payload.aca2003.Aca2003QueryPayload;
 import com.hn2.cms.payload.aca2003.Aca2003SavePayload;
 import com.hn2.cms.repository.aca2003.Aca2003Repository;
@@ -186,6 +188,49 @@ public class Aca2003ServiceImpl implements Aca2003Service {
         );
     }
 
+    // query by AcArdNo
+    /** 依 ACACardNo 取最新一筆（ID 最大） */
+    public DataDto<Aca2003QueryDto> queryLatestByCardNo(GeneralPayload<Aca2003QueryByCardPayload> payload) {
+        if (payload == null || payload.getData() == null || isBlank(payload.getData().getAcaCardNo())) {
+            return new DataDto<>(null, new ResponseInfo(0, "acaCardNo 不可為空"));
+        }
+        final String card = payload.getData().getAcaCardNo().trim();
+
+        return repo.findLatestDetailByCardNo(card)
+                .map(this::toDto)
+                .map(dto -> new DataDto<>(dto, new ResponseInfo(1, "查詢成功")))
+                .orElseGet(() -> new DataDto<>(null, new ResponseInfo(0, "查無資料")));
+    }
+
+    // === delete API ===
+    @Override
+    @Transactional
+    public DataDto<Aca2003SaveResponse> delete(GeneralPayload<Aca2003DeletePayload> payload) {
+        if (payload == null || payload.getData() == null) {
+            return new DataDto<>(null, new ResponseInfo(0, "payload 不可為空"));
+        }
+
+        var p = payload.getData();
+        if (p.getId() == null) return new DataDto<>(null, new ResponseInfo(0, "id 不可為空"));
+        if (p.getUserId() == null) return new DataDto<>(null, new ResponseInfo(0, "userId 不可為空"));
+
+        Optional<AcaDrugUseEntity> opt = repo.findById(p.getId());
+        if (opt.isEmpty()) {
+            return new DataDto<>(null, new ResponseInfo(0, "指定資料不存在"));
+        }
+
+        var exist = opt.get();
+        if (Boolean.TRUE.equals(exist.getIsDeleted())) {
+            return new DataDto<>(null, new ResponseInfo(0, "指定資料已刪除"));
+        }
+
+        exist.setIsDeleted(Boolean.TRUE);
+        exist.setModifiedByUserId(p.getUserId());
+        exist.setModifiedOnDate(new Timestamp(System.currentTimeMillis()));
+        repo.save(exist);
+
+        return new DataDto<>(new Aca2003SaveResponse(exist.getId()), new ResponseInfo(1, "刪除成功"));
+    }
     // ---- helpers ----
     private static boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();
