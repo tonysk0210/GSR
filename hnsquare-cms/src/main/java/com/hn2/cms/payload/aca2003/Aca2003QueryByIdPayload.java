@@ -5,7 +5,7 @@ import lombok.Data;
 import javax.validation.constraints.NotNull;
 
 @Data
-public class Aca2003QueryPayload {
+public class Aca2003QueryByIdPayload {
     @NotNull
     private Integer id;
 }

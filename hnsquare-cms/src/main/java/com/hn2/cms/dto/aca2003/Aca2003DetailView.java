@@ -2,13 +2,18 @@ package com.hn2.cms.dto.aca2003;
 
 import java.sql.Timestamp;
 
-//SQL alias → Projection getter
-//
-//SQL 裡 AS xxx 的 alias
-//會對應到 Projection 的 getter 方法，轉換規則：
-//getCreatedOnDate() → 去掉 get → 首字母小寫 → createdOnDate
-
-// Aca2003DetailView 跟 Entity 沒有直接關係，它不是從 JPA Entity 的欄位做 mapping，而是從 資料庫查詢結果集 (ResultSet) 映射過來的。
+/**
+ * Aca2003DetailView（介面型投影 / Interface Projection）
+ * <p>
+ * 用途：
+ * - 對應 Repository 中使用 {@code nativeQuery=true} 的 SELECT 結果集；
+ * - 只取需要的欄位，避免 Entity 整體載入，提升查詢效率與鬆耦合。
+ * <p>
+ * 映射規則（關鍵）：
+ * - 每個 getter 名稱（去掉 get、首字母小寫）必須**精準對應** SQL 中的欄位別名（AS）。
+ * 例如：SQL 的 {@code AS createdOnDate} → {@code getCreatedOnDate()}。
+ * - 若調整 SQL 欄位別名，請**同步**調整這裡的 getter 名稱。
+ */
 public interface Aca2003DetailView {
     Integer getId();
 
