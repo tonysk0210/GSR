@@ -190,33 +190,22 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                 "SELECT EntryID, Value, [Text], SortOrder FROM dbo.Lists " +
                         "WHERE ListName = 'PROADOPT_DAC' AND IsDisabled = 0 " +
                         "ORDER BY SortOrder ASC, EntryID ASC";
-        // 新版：records = 歷史 ∪ 現行（補齊）
+        // -- 取出此 ProAdopt 的歷史紀錄（不補齊 Lists 現行未入庫項目）
+        //-- 顯示文字優先用歷史快照 EntryText；若當時沒存快照，退回 Lists.Text
+        //-- DisabledRank：若該 entry 在 Lists 找不到或已停用 → 1，否則 0（讓有效的排前面）
         final String SQL_RECORDS_UNION =
-                "WITH current_opts AS ( " +
-                        "  SELECT EntryID, [Text], SortOrder " +
-                        "  FROM dbo.Lists " +
-                        "  WHERE ListName = 'PROADOPT_DAC' AND IsDisabled = 0 " +
-                        "), hist_ids AS ( " +
-                        "  SELECT DISTINCT c.ListsEntryID AS EntryID " +
-                        "  FROM dbo.DirectAdoptCriteria c " +
-                        "  WHERE c.ProAdoptID = ? " +
-                        "), union_ids AS ( " +
-                        "  SELECT EntryID FROM current_opts " +
-                        "  UNION " +
-                        "  SELECT EntryID FROM hist_ids " +
-                        ") " +
-                        "SELECT " +
-                        "  u.EntryID, " +
-                        "  COALESCE(c.EntryText, l.[Text])        AS RecordText, " + //會回傳第一個非 NULL 的值。
-                        "  COALESCE(c.IsSelected, CAST(0 AS bit)) AS IsSelected, " +
-                        "  COALESCE(l.SortOrder, 2147483647)      AS SortOrder, " +
-                        "  CASE WHEN l.IsDisabled = 0 THEN 0 ELSE 1 END AS DisabledRank " +
-                        "FROM union_ids u " +
-                        "LEFT JOIN dbo.DirectAdoptCriteria c " +
-                        "       ON c.ProAdoptID = ? AND c.ListsEntryID = u.EntryID " +
+                "SELECT " +
+                        "    c.ListsEntryID                     AS EntryID, " +
+                        "    COALESCE(c.EntryText, l.[Text])    AS RecordText, " +
+                        "    COALESCE(c.IsSelected, CAST(0 AS bit)) AS IsSelected, " +
+                        "    COALESCE(l.SortOrder, 2147483647)  AS SortOrder, " +
+                        "    CASE WHEN l.EntryID IS NOT NULL AND l.IsDisabled = 0 THEN 0 ELSE 1 END AS DisabledRank " +
+                        "FROM dbo.DirectAdoptCriteria c " +
                         "LEFT JOIN dbo.Lists l " +
-                        "       ON l.EntryID = u.EntryID AND l.ListName = 'PROADOPT_DAC' " +
-                        "ORDER BY DisabledRank ASC, SortOrder ASC, u.EntryID ASC";
+                        "       ON l.EntryID = c.ListsEntryID " +
+                        "      AND l.ListName = 'PROADOPT_DAC' " +
+                        "WHERE c.ProAdoptID = ? " +
+                        "ORDER BY DisabledRank ASC, SortOrder ASC, EntryID ASC";
 
         // 1) 建立 DTO
         var dto = new Aca3001QueryDto.DirectAdoptCriteria();
@@ -233,24 +222,16 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                 });
         dto.setOptions(listOptions);
 
-        // 3) records：歷史＋現行（補齊）
+        // 3) records：歷史
         List<Aca3001QueryDto.DirectAdoptCriteria.Record> listRecord;
         if (proAdoptId == null) {
-            listRecord = listOptions.stream()
-                    .map(opt -> {
-                        var r = new Aca3001QueryDto.DirectAdoptCriteria.Record();
-                        r.setEntryId(opt.getEntryId());
-                        r.setText(opt.getText());
-                        r.setSelected(false);  // 預設未勾選
-                        return r;
-                    })
-                    .collect(Collectors.toList());
+            listRecord = List.of();
+            dto.setRecords(listRecord);
         } else {
             listRecord = jdbcTemplate.query(
                     SQL_RECORDS_UNION,
                     ps -> {
                         ps.setInt(1, proAdoptId);
-                        ps.setInt(2, proAdoptId);
                     },
                     (rs, i) -> {
                         var r = new Aca3001QueryDto.DirectAdoptCriteria.Record();
@@ -283,33 +264,22 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                 "SELECT EntryID, Value, [Text], SortOrder FROM dbo.Lists " +
                         "WHERE ListName = 'PROADOPT_EAC' AND IsDisabled = 0 " +
                         "ORDER BY SortOrder ASC, EntryID ASC";
-        // records = 歷史 ∪ 現行（補齊）
+        //-- 取出此 ProAdopt 的歷史紀錄（不補齊 Lists 現行未入庫項目）
+        //-- 顯示文字優先用歷史快照 EntryText；若當時沒存快照，退回 Lists.Text
+        //-- DisabledRank：若該 entry 在 Lists 找不到或已停用 → 1，否則 0（讓有效的排前面）
         final String SQL_RECORDS_UNION =
-                "WITH current_opts AS ( " +
-                        "  SELECT EntryID, [Text], SortOrder " +
-                        "  FROM dbo.Lists " +
-                        "  WHERE ListName = 'PROADOPT_EAC' AND IsDisabled = 0 " +
-                        "), hist_ids AS ( " +
-                        "  SELECT DISTINCT c.ListsEntryID AS EntryID " +
-                        "  FROM dbo.EvalAdoptCriteria c " +
-                        "  WHERE c.ProAdoptID = ? " +
-                        "), union_ids AS ( " +
-                        "  SELECT EntryID FROM current_opts " +
-                        "  UNION " +
-                        "  SELECT EntryID FROM hist_ids " +
-                        ") " +
-                        "SELECT " +
-                        "  u.EntryID, " +
-                        "  COALESCE(c.EntryText, l.[Text])        AS RecordText, " +
-                        "  COALESCE(c.IsSelected, CAST(0 AS bit)) AS IsSelected, " +
-                        "  COALESCE(l.SortOrder, 2147483647)      AS SortOrder, " +
-                        "  CASE WHEN l.IsDisabled = 0 THEN 0 ELSE 1 END AS DisabledRank " +
-                        "FROM union_ids u " +
-                        "LEFT JOIN dbo.EvalAdoptCriteria c " +
-                        "       ON c.ProAdoptID = ? AND c.ListsEntryID = u.EntryID " +
+                "SELECT " +
+                        "    c.ListsEntryID                     AS EntryID, " +
+                        "    COALESCE(c.EntryText, l.[Text])    AS RecordText, " +
+                        "    COALESCE(c.IsSelected, CAST(0 AS bit)) AS IsSelected, " +
+                        "    COALESCE(l.SortOrder, 2147483647)  AS SortOrder, " +
+                        "    CASE WHEN l.EntryID IS NOT NULL AND l.IsDisabled = 0 THEN 0 ELSE 1 END AS DisabledRank " +
+                        "FROM dbo.EvalAdoptCriteria c " +
                         "LEFT JOIN dbo.Lists l " +
-                        "       ON l.EntryID = u.EntryID AND l.ListName = 'PROADOPT_EAC' " +
-                        "ORDER BY DisabledRank ASC, SortOrder ASC, u.EntryID ASC";
+                        "       ON l.EntryID = c.ListsEntryID " +
+                        "      AND l.ListName = 'PROADOPT_EAC' " +
+                        "WHERE c.ProAdoptID = ? " +
+                        "ORDER BY DisabledRank ASC, SortOrder ASC, EntryID ASC";
         final String SQL_SCORES =
                 "SELECT ScoreEconomy, ScoreEmployment, ScoreFamily, " +
                         "   ScoreSocial, ScorePhysical, ScorePsych, " +
@@ -334,26 +304,15 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
 
         // 3) selected + scores：依 proAdoptId 是否存在決定
         if (proAdoptId == null) {
-            // 尚未建立 → 依 options 產生「全部未勾選」
-            List<Aca3001QueryDto.EvalAdoptCriteria.Record> listRecord = listOptions.stream()
-                    .map(opt -> {
-                        var r = new Aca3001QueryDto.EvalAdoptCriteria.Record();
-                        r.setEntryId(opt.getEntryId());
-                        r.setText(opt.getText());      // 直接用 Lists.Text 作為預設顯示
-                        r.setSelected(false);
-                        return r;
-                    })
-                    .collect(Collectors.toList());
-            dto.setRecords(listRecord);
+            dto.setRecords(List.of());
             dto.setEvalScores(new Aca3001QueryDto.EvalAdoptCriteria.EvalScore());
         } else {
-            // 3-1) records：歷史 ∪ 現行（補齊）
+            // 3-1) records：歷史
             List<Aca3001QueryDto.EvalAdoptCriteria.Record> records =
                     jdbcTemplate.query(
                             SQL_RECORDS_UNION,
                             ps -> {
                                 ps.setInt(1, proAdoptId);
-                                ps.setInt(2, proAdoptId);
                             },
                             (rs, i) -> {
                                 var r = new Aca3001QueryDto.EvalAdoptCriteria.Record();
@@ -986,7 +945,7 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
             String optText = e.getValue();
             String recText = recordMap.get(id); // null → records 缺少此 entryId
             if (recText == null) return true;
-            if (!optText.equals(recText)) return true;
+            if (!Objects.equals(optText, recText)) return true;
         }
         return false; // 完全一致
     }
