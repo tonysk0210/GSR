@@ -13,7 +13,7 @@ public interface Aca2003Repository extends JpaRepository<AcaDrugUseEntity, Integ
 
     // save API
     // 依 ACABrd 取分會（新增時用）
-    @Query(value = "SELECT TOP 1 CreatedByBranchID FROM dbo.ACABrd WHERE ACACardNo = :cardNo", nativeQuery = true)
+    @Query(value = "SELECT TOP 1 CreatedByBranchID FROM dbo.ACABrd WHERE ACACardNo = :cardNo AND IsDeleted = 0", nativeQuery = true)
     String findCreatedByBranchIdByAcaCardNo(@Param("cardNo") String acaCardNo);
 
     // 回傳有效筆數（isDeleted = 0 or null）
@@ -21,6 +21,29 @@ public interface Aca2003Repository extends JpaRepository<AcaDrugUseEntity, Integ
             "where a.acaCardNo = :cardNo and a.proRecId = :proRecId " +
             "and (a.isDeleted = false or a.isDeleted is null)")
     long countActive(@Param("cardNo") String cardNo, @Param("proRecId") String proRecId);
+
+    // new in 2024-06-10 for save API
+    // ACABrd 是否存在且有效
+    @Query(
+            value = "SELECT CASE WHEN EXISTS (" +
+                    "  SELECT 1 FROM dbo.ACABrd " +
+                    "  WHERE ACACardNo = :cardNo AND IsDeleted = 0" +
+                    ") THEN 1 ELSE 0 END",
+            nativeQuery = true
+    )
+    int existsActiveAcaBrd(@Param("cardNo") String acaCardNo);
+
+    // ProRec(ID, ACACardNo) 是否相符
+    @Query(
+            value = "SELECT CASE WHEN EXISTS (" +
+                    "  SELECT 1 FROM dbo.ProRec " +
+                    "  WHERE ID = :proRecId AND ACACardNo = :cardNo" +
+                    ") THEN 1 ELSE 0 END",
+            nativeQuery = true
+    )
+    int matchProRecWithCard(@Param("proRecId") String proRecId,
+                            @Param("cardNo") String acaCardNo);
+
 
     //query API
     // === 新增：依 ID 查詢詳情（Native SQL + Interface Projection） ===

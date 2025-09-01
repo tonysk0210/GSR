@@ -47,6 +47,16 @@ public class Aca2003ServiceImpl implements Aca2003Service {
         final Timestamp now = new Timestamp(System.currentTimeMillis());
 
         try {
+            // ---- A) 應用層的一致性檢查（無法控 DB schema 時必做）----
+            // 1) ACABrd 必須存在且有效
+            if (repo.existsActiveAcaBrd(card) == 0) {
+                return fail("指定的「個案編號」(ACACardNo) 不存在於有效的 「個案基本資料」ACABrd");
+            }
+            // 2) ProRec(ID, ACACardNo) 必須相符
+            if (repo.matchProRecWithCard(rec, card) == 0) {
+                return fail("指定 「保護紀錄」ProRecId 與 「個案編號」ACACardNo 不一致");
+            }
+
             // ---- 1) 新增：只允許在「沒有有效重複」時新增 ----
             if (p.getId() == null) {
                 // 「是否存在一筆 ACACardNo = ? 且 ProRecId = ?，並且沒有被刪除的紀錄？」
