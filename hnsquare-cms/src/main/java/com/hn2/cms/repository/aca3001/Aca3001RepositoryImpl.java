@@ -677,40 +677,68 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
     @Transactional
     @Override
     public void upsertDirectAdoptCriteria(int proAdoptId, List<Integer> selectedEntryIds, boolean refreshSnapshot, boolean isNew) {
-        // 1) 全設為未勾選（保留歷史）
+        // ====== A) 更版模式：刪除舊關聯 → 依現行 Lists 重建 ======
+        if (refreshSnapshot) {
+            // 0) 全刪
+            jdbcTemplate.update("DELETE FROM dbo.DirectAdoptCriteria WHERE ProAdoptID = ?", proAdoptId);
+
+            // 1) 先插入「本次勾選」(IsSelected=1)，只納入現行有效 Lists（IsDisabled=0）
+            if (selectedEntryIds != null && !selectedEntryIds.isEmpty()) {
+                jdbcTemplate.batchUpdate(
+                        "INSERT INTO dbo.DirectAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
+                                "SELECT ?, l.EntryID, l.[Text], 1 " +
+                                "FROM dbo.Lists l " +
+                                "WHERE l.ListName = 'PROADOPT_DAC' AND l.IsDisabled = 0 AND l.EntryID = ?",
+                        selectedEntryIds,
+                        selectedEntryIds.size(),
+                        (ps, entryId) -> {
+                            ps.setInt(1, proAdoptId);
+                            ps.setInt(2, entryId);
+                        }
+                );
+            }
+
+            // 2) 再補齊「現行有效但尚未入庫」的選項（IsSelected=0）
+            jdbcTemplate.update(
+                    "INSERT INTO dbo.DirectAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
+                            "SELECT ?, l.EntryID, l.[Text], 0 " +
+                            "FROM dbo.Lists l " +
+                            "LEFT JOIN dbo.DirectAdoptCriteria c " +
+                            "  ON c.ProAdoptID = ? AND c.ListsEntryID = l.EntryID " +
+                            "WHERE l.ListName = 'PROADOPT_DAC' AND l.IsDisabled = 0 " +
+                            "  AND c.ProAdoptID IS NULL",
+                    ps -> {
+                        ps.setInt(1, proAdoptId);
+                        ps.setInt(2, proAdoptId);
+                    }
+            );
+
+            return; // 更版完成，結束
+        }
+
+        // ====== B) 一般模式（非更版）：保留歷史，只有新增才補齊 ======
+        // 1) 歸零選取狀態
         jdbcTemplate.update(
                 "UPDATE dbo.DirectAdoptCriteria SET IsSelected = 0 WHERE ProAdoptID = ?",
                 proAdoptId
         );
 
-        // 2) 逐一把「本次勾選」設為 1；若不存在就插入（帶 Lists.Text 快照）
+        // 2) 勾選當次選項；不存在則 INSERT（帶快照）
         if (selectedEntryIds != null && !selectedEntryIds.isEmpty()) {
             for (Integer entryId : selectedEntryIds) {
-                // 根據 refreshSnapshot 切換 UPDATE SQL
-                final String sqlUpdate = refreshSnapshot
-                        ? // 刷新快照：覆寫 EntryText = Lists.Text
-                        "UPDATE c SET c.IsSelected = 1, c.EntryText = l.[Text] " +
-                                "FROM dbo.DirectAdoptCriteria c " +
-                                "JOIN dbo.Lists l ON l.EntryID = c.ListsEntryID AND l.ListName = 'PROADOPT_DAC' " +
-                                "WHERE c.ProAdoptID = ? AND c.ListsEntryID = ?"
-                        : // 保留快照：不動 EntryText
-                        "UPDATE dbo.DirectAdoptCriteria " +
-                                "SET IsSelected = 1 " +
-                                "WHERE ProAdoptID = ? AND ListsEntryID = ?";
+                final String sqlUpdate =
+                        "UPDATE dbo.DirectAdoptCriteria SET IsSelected = 1 WHERE ProAdoptID = ? AND ListsEntryID = ?";
 
                 int updated = jdbcTemplate.update(sqlUpdate, ps -> {
                     ps.setInt(1, proAdoptId);
                     ps.setInt(2, entryId);
                 });
 
-                //如果過去從沒存過這個 entryId → UPDATE 找不到任何列可更新 → update==0 → 就會進入 INSERT
                 if (updated == 0) {
                     jdbcTemplate.update(
                             "INSERT INTO dbo.DirectAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
-                                    "SELECT ?, ?, l.[Text], 1 " +
-                                    "FROM dbo.Lists l " +
-                                    "WHERE l.EntryID = ? AND l.ListName = 'PROADOPT_DAC' " +
-                                    "  AND l.IsDisabled = 0",               // <── 新增這條件
+                                    "SELECT ?, ?, l.[Text], 1 FROM dbo.Lists l " +
+                                    "WHERE l.EntryID = ? AND l.ListName = 'PROADOPT_DAC' AND l.IsDisabled = 0",
                             ps -> {
                                 ps.setInt(1, proAdoptId);
                                 ps.setInt(2, entryId);
@@ -720,8 +748,8 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                 }
             }
         }
-        // 3) 補齊：只有「新增」才做；更新一律不補
-        // 注意：這段只針對「現行有效」的 options（IsDisabled=0），不會新增已停用的項目
+
+        // 3) 只有「新增」才補齊未勾選（IsSelected=0）
         if (isNew) {
             jdbcTemplate.update(
                     "INSERT INTO dbo.DirectAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
@@ -737,6 +765,66 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                     }
             );
         }
+//        // 1) 全設為未勾選（保留歷史）
+//        jdbcTemplate.update(
+//                "UPDATE dbo.DirectAdoptCriteria SET IsSelected = 0 WHERE ProAdoptID = ?",
+//                proAdoptId
+//        );
+//
+//        // 2) 逐一把「本次勾選」設為 1；若不存在就插入（帶 Lists.Text 快照）
+//        if (selectedEntryIds != null && !selectedEntryIds.isEmpty()) {
+//            for (Integer entryId : selectedEntryIds) {
+//                // 根據 refreshSnapshot 切換 UPDATE SQL
+//                final String sqlUpdate = refreshSnapshot
+//                        ? // 刷新快照：覆寫 EntryText = Lists.Text
+//                        "UPDATE c SET c.IsSelected = 1, c.EntryText = l.[Text] " +
+//                                "FROM dbo.DirectAdoptCriteria c " +
+//                                "JOIN dbo.Lists l ON l.EntryID = c.ListsEntryID AND l.ListName = 'PROADOPT_DAC' " +
+//                                "WHERE c.ProAdoptID = ? AND c.ListsEntryID = ?"
+//                        : // 保留快照：不動 EntryText
+//                        "UPDATE dbo.DirectAdoptCriteria " +
+//                                "SET IsSelected = 1 " +
+//                                "WHERE ProAdoptID = ? AND ListsEntryID = ?";
+//
+//                int updated = jdbcTemplate.update(sqlUpdate, ps -> {
+//                    ps.setInt(1, proAdoptId);
+//                    ps.setInt(2, entryId);
+//                });
+//
+//                //如果過去從沒存過這個 entryId → UPDATE 找不到任何列可更新 → update==0 → 就會進入 INSERT
+//                if (updated == 0) {
+//                    jdbcTemplate.update(
+//                            "INSERT INTO dbo.DirectAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
+//                                    "SELECT ?, ?, l.[Text], 1 " +
+//                                    "FROM dbo.Lists l " +
+//                                    "WHERE l.EntryID = ? AND l.ListName = 'PROADOPT_DAC' " +
+//                                    "  AND l.IsDisabled = 0",               // <── 新增這條件
+//                            ps -> {
+//                                ps.setInt(1, proAdoptId);
+//                                ps.setInt(2, entryId);
+//                                ps.setInt(3, entryId);
+//                            }
+//                    );
+//                }
+//            }
+//        }
+//        // 3) 補齊：只有「新增」才做；更新一律不補
+//        // 注意：這段只針對「現行有效」的 options（IsDisabled=0），不會新增已停用的項目
+//        if (isNew) {
+//            jdbcTemplate.update(
+//                    "INSERT INTO dbo.DirectAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
+//                            "SELECT ?, l.EntryID, l.[Text], 0 " +
+//                            "FROM dbo.Lists l " +
+//                            "LEFT JOIN dbo.DirectAdoptCriteria c " +
+//                            "  ON c.ProAdoptID = ? AND c.ListsEntryID = l.EntryID " +
+//                            "WHERE l.ListName = 'PROADOPT_DAC' AND l.IsDisabled = 0 " +
+//                            "  AND c.ProAdoptID IS NULL",
+//                    ps -> {
+//                        ps.setInt(1, proAdoptId);
+//                        ps.setInt(2, proAdoptId);
+//                    }
+//            );
+//        }
 
     }
 
@@ -744,6 +832,43 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
     @Transactional
     @Override
     public void upsertEvalAdoptCriteria(int proAdoptId, List<Integer> selectedEntryIds, boolean refreshSnapshot, boolean isNew) {
+        // ====== A) 更版模式：刪除舊關聯 → 依現行 Lists 重建 ======
+        if (refreshSnapshot) {
+            jdbcTemplate.update("DELETE FROM dbo.EvalAdoptCriteria WHERE ProAdoptID = ?", proAdoptId);
+
+            if (selectedEntryIds != null && !selectedEntryIds.isEmpty()) {
+                jdbcTemplate.batchUpdate(
+                        "INSERT INTO dbo.EvalAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
+                                "SELECT ?, l.EntryID, l.[Text], 1 " +
+                                "FROM dbo.Lists l " +
+                                "WHERE l.ListName = 'PROADOPT_EAC' AND l.IsDisabled = 0 AND l.EntryID = ?",
+                        selectedEntryIds,
+                        selectedEntryIds.size(),
+                        (ps, entryId) -> {
+                            ps.setInt(1, proAdoptId);
+                            ps.setInt(2, entryId);
+                        }
+                );
+            }
+
+            jdbcTemplate.update(
+                    "INSERT INTO dbo.EvalAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
+                            "SELECT ?, l.EntryID, l.[Text], 0 " +
+                            "FROM dbo.Lists l " +
+                            "LEFT JOIN dbo.EvalAdoptCriteria c " +
+                            "  ON c.ProAdoptID = ? AND c.ListsEntryID = l.EntryID " +
+                            "WHERE l.ListName = 'PROADOPT_EAC' AND l.IsDisabled = 0 " +
+                            "  AND c.ProAdoptID IS NULL",
+                    ps -> {
+                        ps.setInt(1, proAdoptId);
+                        ps.setInt(2, proAdoptId);
+                    }
+            );
+
+            return; // 更版完成
+        }
+
+        // ====== B) 一般模式（非更版） ======
         jdbcTemplate.update(
                 "UPDATE dbo.EvalAdoptCriteria SET IsSelected = 0 WHERE ProAdoptID = ?",
                 proAdoptId
@@ -751,14 +876,8 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
 
         if (selectedEntryIds != null && !selectedEntryIds.isEmpty()) {
             for (Integer entryId : selectedEntryIds) {
-                final String sqlUpdate = refreshSnapshot
-                        ? "UPDATE c SET c.IsSelected = 1, c.EntryText = l.[Text] " +
-                        "FROM dbo.EvalAdoptCriteria c " +
-                        "JOIN dbo.Lists l ON l.EntryID = c.ListsEntryID AND l.ListName = 'PROADOPT_EAC' " +
-                        "WHERE c.ProAdoptID = ? AND c.ListsEntryID = ?"
-                        : "UPDATE dbo.EvalAdoptCriteria " +
-                        "SET IsSelected = 1 " +
-                        "WHERE ProAdoptID = ? AND ListsEntryID = ?";
+                final String sqlUpdate =
+                        "UPDATE dbo.EvalAdoptCriteria SET IsSelected = 1 WHERE ProAdoptID = ? AND ListsEntryID = ?";
 
                 int updated = jdbcTemplate.update(sqlUpdate, ps -> {
                     ps.setInt(1, proAdoptId);
@@ -768,10 +887,8 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                 if (updated == 0) {
                     jdbcTemplate.update(
                             "INSERT INTO dbo.EvalAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
-                                    "SELECT ?, ?, l.[Text], 1 " +
-                                    "FROM dbo.Lists l " +
-                                    "WHERE l.EntryID = ? AND l.ListName = 'PROADOPT_EAC' " +
-                                    "  AND l.IsDisabled = 0",               // <── 新增這條件
+                                    "SELECT ?, ?, l.[Text], 1 FROM dbo.Lists l " +
+                                    "WHERE l.EntryID = ? AND l.ListName = 'PROADOPT_EAC' AND l.IsDisabled = 0",
                             ps -> {
                                 ps.setInt(1, proAdoptId);
                                 ps.setInt(2, entryId);
@@ -781,8 +898,7 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                 }
             }
         }
-        // 3) 補齊：只有「新增」才做；更新一律不補
-        // 注意：這段只針對「現行有效」的 options（IsDisabled=0），不會新增已停用的項目
+
         if (isNew) {
             jdbcTemplate.update(
                     "INSERT INTO dbo.EvalAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
@@ -798,6 +914,60 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                     }
             );
         }
+//        jdbcTemplate.update(
+//                "UPDATE dbo.EvalAdoptCriteria SET IsSelected = 0 WHERE ProAdoptID = ?",
+//                proAdoptId
+//        );
+//
+//        if (selectedEntryIds != null && !selectedEntryIds.isEmpty()) {
+//            for (Integer entryId : selectedEntryIds) {
+//                final String sqlUpdate = refreshSnapshot
+//                        ? "UPDATE c SET c.IsSelected = 1, c.EntryText = l.[Text] " +
+//                        "FROM dbo.EvalAdoptCriteria c " +
+//                        "JOIN dbo.Lists l ON l.EntryID = c.ListsEntryID AND l.ListName = 'PROADOPT_EAC' " +
+//                        "WHERE c.ProAdoptID = ? AND c.ListsEntryID = ?"
+//                        : "UPDATE dbo.EvalAdoptCriteria " +
+//                        "SET IsSelected = 1 " +
+//                        "WHERE ProAdoptID = ? AND ListsEntryID = ?";
+//
+//                int updated = jdbcTemplate.update(sqlUpdate, ps -> {
+//                    ps.setInt(1, proAdoptId);
+//                    ps.setInt(2, entryId);
+//                });
+//
+//                if (updated == 0) {
+//                    jdbcTemplate.update(
+//                            "INSERT INTO dbo.EvalAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
+//                                    "SELECT ?, ?, l.[Text], 1 " +
+//                                    "FROM dbo.Lists l " +
+//                                    "WHERE l.EntryID = ? AND l.ListName = 'PROADOPT_EAC' " +
+//                                    "  AND l.IsDisabled = 0",               // <── 新增這條件
+//                            ps -> {
+//                                ps.setInt(1, proAdoptId);
+//                                ps.setInt(2, entryId);
+//                                ps.setInt(3, entryId);
+//                            }
+//                    );
+//                }
+//            }
+//        }
+//        // 3) 補齊：只有「新增」才做；更新一律不補
+//        // 注意：這段只針對「現行有效」的 options（IsDisabled=0），不會新增已停用的項目
+//        if (isNew) {
+//            jdbcTemplate.update(
+//                    "INSERT INTO dbo.EvalAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
+//                            "SELECT ?, l.EntryID, l.[Text], 0 " +
+//                            "FROM dbo.Lists l " +
+//                            "LEFT JOIN dbo.EvalAdoptCriteria c " +
+//                            "  ON c.ProAdoptID = ? AND c.ListsEntryID = l.EntryID " +
+//                            "WHERE l.ListName = 'PROADOPT_EAC' AND l.IsDisabled = 0 " +
+//                            "  AND c.ProAdoptID IS NULL",
+//                    ps -> {
+//                        ps.setInt(1, proAdoptId);
+//                        ps.setInt(2, proAdoptId);
+//                    }
+//            );
+//        }
     }
 
     // Delete API --------------------------------------------------------------------------------
