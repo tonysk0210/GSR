@@ -157,7 +157,7 @@ public class Aca2003ServiceImpl implements Aca2003Service {
         }
         // 前端帶的鍵值需與資料庫一致（不可修改主鍵/關聯鍵）
         if (!card.equals(exist.getAcaCardNo()) || !rec.equals(exist.getProRecId())) {
-            return fail("「個案編號」(" + card + ")、無此「保護紀錄」資料(" + rec + ")");
+            return fail("指定資料(id=" + p.getId() + ") 的 (ACACardNo, ProRecId) 與輸入不一致；不可修改關聯鍵。");
         }
 
         // 僅覆寫非鍵值欄位

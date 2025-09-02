@@ -109,7 +109,7 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
         final String SQL_HEADER =
                 "SELECT l.[Text] AS BranchName, r.ProNoticeDate, r.ProDate " +
                         "FROM dbo.ProRec r " +
-                        "JOIN dbo.ACABrd ab ON ab.ID = r.ID " +
+                        "LEFT JOIN dbo.ACABrd ab ON ab.ID = r.ID " +
                         "LEFT JOIN dbo.Lists l ON l.ParentID = 26 AND l.Value = ab.CreatedByBranchID " +
                         "WHERE r.ID = ?";
 
