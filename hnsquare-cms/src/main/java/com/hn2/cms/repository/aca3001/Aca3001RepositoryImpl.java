@@ -676,7 +676,7 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
 
     @Transactional
     @Override
-    public void upsertDirectAdoptCriteria(int proAdoptId, List<Integer> selectedEntryIds, boolean refreshSnapshot) {
+    public void upsertDirectAdoptCriteria(int proAdoptId, List<Integer> selectedEntryIds, boolean refreshSnapshot, boolean isNew) {
         // 1) 全設為未勾選（保留歷史）
         jdbcTemplate.update(
                 "UPDATE dbo.DirectAdoptCriteria SET IsSelected = 0 WHERE ProAdoptID = ?",
@@ -720,27 +720,30 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                 }
             }
         }
+        // 3) 補齊：只有「新增」才做；更新一律不補
+        // 注意：這段只針對「現行有效」的 options（IsDisabled=0），不會新增已停用的項目
+        if (isNew) {
+            jdbcTemplate.update(
+                    "INSERT INTO dbo.DirectAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
+                            "SELECT ?, l.EntryID, l.[Text], 0 " +
+                            "FROM dbo.Lists l " +
+                            "LEFT JOIN dbo.DirectAdoptCriteria c " +
+                            "  ON c.ProAdoptID = ? AND c.ListsEntryID = l.EntryID " +
+                            "WHERE l.ListName = 'PROADOPT_DAC' AND l.IsDisabled = 0 " +
+                            "  AND c.ProAdoptID IS NULL",
+                    ps -> {
+                        ps.setInt(1, proAdoptId);
+                        ps.setInt(2, proAdoptId);
+                    }
+            );
+        }
 
-        // 3) 補齊「現行 Lists 但 DB 尚無該列」的未選項目（IsSelected=0）
-        //    注意：這段只針對「現行有效」的 options（IsDisabled=0），不會新增已停用的項目
-        jdbcTemplate.update(
-                "INSERT INTO dbo.DirectAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
-                        "SELECT ?, l.EntryID, l.[Text], 0 " +
-                        "FROM dbo.Lists l " +
-                        "LEFT JOIN dbo.DirectAdoptCriteria c " +
-                        "  ON c.ProAdoptID = ? AND c.ListsEntryID = l.EntryID " +
-                        "WHERE l.ListName = 'PROADOPT_DAC' AND l.IsDisabled = 0 " +
-                        "  AND c.ProAdoptID IS NULL",
-                ps -> {
-                    ps.setInt(1, proAdoptId);
-                    ps.setInt(2, proAdoptId);
-                }
-        );
     }
+
 
     @Transactional
     @Override
-    public void upsertEvalAdoptCriteria(int proAdoptId, List<Integer> selectedEntryIds, boolean refreshSnapshot) {
+    public void upsertEvalAdoptCriteria(int proAdoptId, List<Integer> selectedEntryIds, boolean refreshSnapshot, boolean isNew) {
         jdbcTemplate.update(
                 "UPDATE dbo.EvalAdoptCriteria SET IsSelected = 0 WHERE ProAdoptID = ?",
                 proAdoptId
@@ -778,20 +781,23 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                 }
             }
         }
-
-        jdbcTemplate.update(
-                "INSERT INTO dbo.EvalAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
-                        "SELECT ?, l.EntryID, l.[Text], 0 " +
-                        "FROM dbo.Lists l " +
-                        "LEFT JOIN dbo.EvalAdoptCriteria c " +
-                        "  ON c.ProAdoptID = ? AND c.ListsEntryID = l.EntryID " +
-                        "WHERE l.ListName = 'PROADOPT_EAC' AND l.IsDisabled = 0 " +
-                        "  AND c.ProAdoptID IS NULL",
-                ps -> {
-                    ps.setInt(1, proAdoptId);
-                    ps.setInt(2, proAdoptId);
-                }
-        );
+        // 3) 補齊：只有「新增」才做；更新一律不補
+        // 注意：這段只針對「現行有效」的 options（IsDisabled=0），不會新增已停用的項目
+        if (isNew) {
+            jdbcTemplate.update(
+                    "INSERT INTO dbo.EvalAdoptCriteria (ProAdoptID, ListsEntryID, EntryText, IsSelected) " +
+                            "SELECT ?, l.EntryID, l.[Text], 0 " +
+                            "FROM dbo.Lists l " +
+                            "LEFT JOIN dbo.EvalAdoptCriteria c " +
+                            "  ON c.ProAdoptID = ? AND c.ListsEntryID = l.EntryID " +
+                            "WHERE l.ListName = 'PROADOPT_EAC' AND l.IsDisabled = 0 " +
+                            "  AND c.ProAdoptID IS NULL",
+                    ps -> {
+                        ps.setInt(1, proAdoptId);
+                        ps.setInt(2, proAdoptId);
+                    }
+            );
+        }
     }
 
     // Delete API --------------------------------------------------------------------------------

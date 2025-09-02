@@ -119,9 +119,10 @@ public class Aca3001ServiceImpl implements Aca3001Service {
 
         // 3) 新增或更新 ProAdopt 主表
         Integer proAdoptId = p.getProAdoptId();
+        boolean isNew = (proAdoptId == null);
         String message;
 
-        if (proAdoptId == null) {
+        if (isNew) {
             // 規則：若 proAdoptId 為 null → 一律新增，不先查存在性
             try {
                 // 回傳新紀錄的 proAdoptId
@@ -157,8 +158,8 @@ public class Aca3001ServiceImpl implements Aca3001Service {
         // 若 refreshSnapshot 為 null 視為 false
         boolean refresh = Boolean.TRUE.equals(p.getRefreshSnapshot());
 
-        repo.upsertDirectAdoptCriteria(proAdoptId, p.getDirectSelectedEntryIds(), refresh);
-        repo.upsertEvalAdoptCriteria(proAdoptId, p.getEvalSelectedEntryIds(), refresh);
+        repo.upsertDirectAdoptCriteria(proAdoptId, p.getDirectSelectedEntryIds(), refresh, isNew);
+        repo.upsertEvalAdoptCriteria(proAdoptId, p.getEvalSelectedEntryIds(), refresh, isNew);
 
         // 5) 建立回傳 DTO
         int total = p.getScores().getEconomy()

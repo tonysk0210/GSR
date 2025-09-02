@@ -40,9 +40,9 @@ public interface Aca3001Repository {
 
     void replaceEvalAdoptCriteria(Integer proAdoptId, @NotNull List<Integer> evalSelectedEntryIds);
 
-    void upsertDirectAdoptCriteria(int proAdoptId, List<Integer> selectedEntryIds, boolean refreshSnapshot);
+    void upsertDirectAdoptCriteria(int proAdoptId, List<Integer> selectedEntryIds, boolean refreshSnapshot, boolean isNew);
 
-    void upsertEvalAdoptCriteria(int proAdoptId, List<Integer> selectedEntryIds, boolean refreshSnapshot);
+    void upsertEvalAdoptCriteria(int proAdoptId, List<Integer> selectedEntryIds, boolean refreshSnapshot, boolean isNew);
 
     //Delete API
     void deleteProAdoptCascade(Integer proAdoptId);
