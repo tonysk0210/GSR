@@ -2,7 +2,6 @@ package com.hn2.cms.repository.aca3001;
 
 import com.hn2.cms.dto.aca3001.Aca3001QueryDto;
 import com.hn2.cms.payload.aca3001.Aca3001SavePayload;
-import org.springframework.transaction.annotation.Transactional;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
@@ -35,10 +34,6 @@ public interface Aca3001Repository {
     Integer insertProAdopt(@NotBlank String proRecId, Aca3001SavePayload.@NotNull @Valid Scores scores, boolean caseReject, String reasonReject, boolean caseAccept, String reasonAccept, boolean caseEnd, String reasonEnd, Integer integer);
 
     void updateProAdopt(Integer proAdoptId, Aca3001SavePayload.@NotNull @Valid Scores scores, boolean caseReject, String reasonReject, boolean caseAccept, String reasonAccept, boolean caseEnd, String reasonEnd, Integer integer);
-
-    void replaceDirectAdoptCriteria(Integer proAdoptId, @NotNull List<Integer> directSelectedEntryIds);
-
-    void replaceEvalAdoptCriteria(Integer proAdoptId, @NotNull List<Integer> evalSelectedEntryIds);
 
     void upsertDirectAdoptCriteria(int proAdoptId, List<Integer> selectedEntryIds, boolean refreshSnapshot, boolean isNew);
 

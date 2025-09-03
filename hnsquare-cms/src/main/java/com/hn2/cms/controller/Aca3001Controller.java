@@ -37,7 +37,7 @@ public class Aca3001Controller {
     @PostMapping("/save")
     public ResponseEntity<DataDto<Aca3001SaveResponse>> save(
             @Valid @RequestBody GeneralPayload<Aca3001SavePayload> payload) {
-        DataDto<Aca3001SaveResponse> result = service.save(payload);
+        DataDto<Aca3001SaveResponse> result = service.savejpa(payload);
         return ResponseEntity.ok(result);
     }
 

@@ -2,11 +2,13 @@ package com.hn2.cms.service.aca3001;
 
 import com.hn2.cms.dto.aca3001.Aca3001QueryDto;
 import com.hn2.cms.dto.aca3001.Aca3001SaveResponse;
+import com.hn2.cms.model.aca3001.ProAdoptEntity;
 import com.hn2.cms.payload.aca3001.Aca3001DeletePayload;
 import com.hn2.cms.payload.aca3001.Aca3001QueryPayload;
 import com.hn2.cms.payload.aca3001.Aca3001SavePayload;
 import com.hn2.cms.repository.aca3001.Aca3001Repository;
 
+import com.hn2.cms.repository.aca3001.ProAdoptRepository;
 import com.hn2.core.dto.DataDto;
 import com.hn2.core.dto.ResponseInfo;
 import com.hn2.core.payload.GeneralPayload;
@@ -21,10 +23,13 @@ import java.time.LocalDate;
 public class Aca3001ServiceImpl implements Aca3001Service {
 
     private final Aca3001Repository repo;
+    private final ProAdoptRepository proAdoptRepo; // 新增：JPA Repo
+
 
     @Autowired
-    public Aca3001ServiceImpl(Aca3001Repository repo) {
+    public Aca3001ServiceImpl(Aca3001Repository repo, ProAdoptRepository proAdoptRepo) {
         this.repo = repo;
+        this.proAdoptRepo = proAdoptRepo;
     }
 
     /**
@@ -199,6 +204,148 @@ public class Aca3001ServiceImpl implements Aca3001Service {
                 .build();
 
         return new DataDto<>(resp, new ResponseInfo(1, message));
+    }
+
+    @Override
+    @Transactional
+    public DataDto<Aca3001SaveResponse> savejpa(GeneralPayload<Aca3001SavePayload> payload) {
+        // --- 0)～2) 全保留（你的原碼） ---
+        final String proRecId = (payload == null || payload.getData() == null) ? null : payload.getData().getProRecId();
+        if (proRecId == null || proRecId.isBlank()) {
+            return new DataDto<>(null, new ResponseInfo(0, "proRecId 不可為空"));
+        }
+        LocalDate timeLockDate = repo.loadTimeLockDate();
+        boolean editable = repo.isEditable(proRecId, timeLockDate);
+        if (!editable) {
+            return new DataDto<>(null, new ResponseInfo(0, "已逾鎖定日，不可編輯"));
+        }
+
+        Aca3001SavePayload p = payload.getData();
+
+        var st = p.getCaseStatus().getState();
+        String selectedReason = (p.getCaseStatus().getReason() == null) ? "" : p.getCaseStatus().getReason().trim();
+        boolean caseReject = false, caseAccept = false, caseEnd = false;
+        String reasonReject = null, reasonAccept = null, reasonEnd = null;
+        switch (st) {
+            case REJECT:
+                caseReject = true;
+                reasonReject = selectedReason;
+                break;
+            case ACCEPT:
+                caseAccept = true;
+                reasonAccept = selectedReason;
+                break;
+            case END:
+                caseEnd = true;
+                reasonEnd = selectedReason;
+                break;
+            case NONE:
+            default:
+                // 保持預設
+                break;
+        }
+
+        // --- 3) 主表：改為 JPA ---
+        Integer proAdoptId = p.getProAdoptId();
+        boolean isNew = (proAdoptId == null);
+        String message;
+
+        try {
+            if (isNew) {
+                // 直接 new + save
+                ProAdoptEntity e = new ProAdoptEntity();
+                e.setProRecId(p.getProRecId());
+                applyScoresAndComment(e, p);
+                e.setCaseReject(caseReject);
+                e.setReasonReject(reasonReject);
+                e.setCaseAccept(caseAccept);
+                e.setReasonAccept(reasonAccept);
+                e.setCaseEnd(caseEnd);
+                e.setReasonEnd(reasonEnd);
+                e.setCreatedByUserId(p.getAudit() == null ? null : p.getAudit().getUserId());
+                e = proAdoptRepo.saveAndFlush(e); // 需要拿到新 ID
+                proAdoptId = e.getId();
+                message = "新增成功";
+            } else {
+                // 更新前檢查：proRecId ↔ proAdoptId
+                Integer chk = proAdoptRepo.findIdByProRecId(p.getProRecId()).orElse(null);
+                if (chk == null || !chk.equals(proAdoptId)) {
+                    return new DataDto<>(null, new ResponseInfo(0, "此「保護紀錄」無此「認輔評估表」，無法更新"));
+                }
+                ProAdoptEntity e = proAdoptRepo.findById(proAdoptId).orElseThrow();
+                applyScoresAndComment(e, p);
+                e.setCaseReject(caseReject);
+                e.setReasonReject(reasonReject);
+                e.setCaseAccept(caseAccept);
+                e.setReasonAccept(reasonAccept);
+                e.setCaseEnd(caseEnd);
+                e.setReasonEnd(reasonEnd);
+                e.setModifiedByUserId(p.getAudit() == null ? null : p.getAudit().getUserId());
+                proAdoptRepo.save(e);
+                message = "更新成功";
+            }
+        } catch (DataIntegrityViolationException ex) {
+            // 多半是 UQ_ProAdopt_ProRecID 衝突
+            return new DataDto<>(null, new ResponseInfo(0, "此「保護紀錄」之「認輔評估表」已存在，無法進行新增"));
+        }
+
+        // --- 4) 子表 upsert（保留你原本 JDBC 呼叫） ---
+        boolean refresh = Boolean.TRUE.equals(p.getRefreshSnapshot());
+        repo.upsertDirectAdoptCriteria(proAdoptId, p.getDirectSelectedEntryIds(), refresh, isNew);
+        repo.upsertEvalAdoptCriteria(proAdoptId, p.getEvalSelectedEntryIds(), refresh, isNew);
+
+        // --- 5) 回傳（保持不變） ---
+        int total = p.getScores().getEconomy()
+                + p.getScores().getEmployment()
+                + p.getScores().getFamily()
+                + p.getScores().getSocial()
+                + p.getScores().getPhysical()
+                + p.getScores().getPsych()
+                + p.getScores().getParenting()
+                + p.getScores().getLegal()
+                + p.getScores().getResidence();
+
+        String finalReason;
+        switch (st) {
+            case REJECT:
+                finalReason = reasonReject;
+                break;
+            case ACCEPT:
+                finalReason = reasonAccept;
+                break;
+            case END:
+                finalReason = reasonEnd;
+                break;
+            default:
+                finalReason = null;
+                break;
+        }
+
+        Aca3001SaveResponse resp = Aca3001SaveResponse.builder()
+                .proAdoptId(proAdoptId)
+                .proRecId(proRecId)
+                .editable(editable)
+                .scoreTotal(total)
+                .state(st)
+                .reason(finalReason)
+                .message(message)
+                .build();
+        return new DataDto<>(resp, new ResponseInfo(1, message));
+    }
+
+    // --- 小工具（只給 Save 用；其餘不動） ---
+    private static void applyScoresAndComment(ProAdoptEntity e, Aca3001SavePayload p) {
+        var s = p.getScores();
+        e.setScoreEconomy((short) s.getEconomy());
+        e.setScoreEmployment((short) s.getEmployment());
+        e.setScoreFamily((short) s.getFamily());
+        e.setScoreSocial((short) s.getSocial());
+        e.setScorePhysical((short) s.getPhysical());
+        e.setScorePsych((short) s.getPsych());
+        e.setScoreParenting((short) s.getParenting());
+        e.setScoreLegal((short) s.getLegal());
+        e.setScoreResidence((short) s.getResidence());
+        e.setComment(s.getComment() == null ? null : s.getComment().trim());
     }
 
     /**

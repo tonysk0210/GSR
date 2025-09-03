@@ -15,5 +15,7 @@ public interface Aca3001Service {
 
     DataDto<Aca3001SaveResponse> save(GeneralPayload<Aca3001SavePayload> payload);
 
+    DataDto<Aca3001SaveResponse> savejpa(GeneralPayload<Aca3001SavePayload> payload);
+
     DataDto<Void> delete(GeneralPayload<Aca3001DeletePayload> payload);
 }

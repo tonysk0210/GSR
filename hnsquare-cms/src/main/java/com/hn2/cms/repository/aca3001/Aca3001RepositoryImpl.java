@@ -612,68 +612,6 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
         );
     }
 
-    /**
-     * 替換 DirectAdoptCriteria 子表的選項
-     * <p>
-     * 規則：
-     * 1. 先刪除指定 proAdoptId 下所有舊有的 DirectAdoptCriteria 紀錄
-     * 2. 若傳入的 directSelectedEntryIds 為空 → 不插入任何新資料
-     * 3. 若有新選項 → 使用 batchUpdate 批次插入 (ProAdoptID, ListsEntryID)
-     *
-     * @param proAdoptId             主表 ProAdopt 的 ID (外鍵)
-     * @param directSelectedEntryIds 使用者目前勾選的 DirectAdopt 條件 (可能為空，但不可為 null)
-     */
-    @Override
-    public void replaceDirectAdoptCriteria(Integer proAdoptId, List<Integer> directSelectedEntryIds) {
-        // 1) 刪除舊有資料 (先清空，避免殘留歷史勾選)
-        jdbcTemplate.update("DELETE FROM dbo.DirectAdoptCriteria WHERE ProAdoptID = ?", proAdoptId);
-        // 2) 若沒有任何選項，直接返回
-        if (directSelectedEntryIds == null || directSelectedEntryIds.isEmpty()) return;
-        // 3) 批次新增新選項
-        // - 使用 batchUpdate 提升效能
-        // - 每個 entryId 插入一筆 (ProAdoptID, ListsEntryID)
-        jdbcTemplate.batchUpdate(
-                "INSERT INTO dbo.DirectAdoptCriteria (ProAdoptID, ListsEntryID) VALUES (?, ?)",
-                directSelectedEntryIds,
-                directSelectedEntryIds.size(),
-                (ps, entryId) -> {
-                    ps.setInt(1, proAdoptId);
-                    ps.setInt(2, entryId);
-                }
-        );
-    }
-
-    /**
-     * 替換 EvalAdoptCriteria 子表的選項
-     * <p>
-     * 規則：
-     * 1. 先刪除指定 proAdoptId 的所有既有 EvalAdoptCriteria 紀錄
-     * 2. 若傳入的 evalSelectedEntryIds 為空或 null → 不插入任何新資料
-     * 3. 若有選項 → 使用 batchUpdate 批次插入 (ProAdoptID, ListsEntryID)
-     *
-     * @param proAdoptId           主表 ProAdopt 的 ID (外鍵)
-     * @param evalSelectedEntryIds 使用者目前勾選的 EvalAdopt 條件 (可能為空，但不可為 null)
-     */
-    @Override
-    public void replaceEvalAdoptCriteria(Integer proAdoptId, List<Integer> evalSelectedEntryIds) {
-        // 1) 刪除舊有資料，確保後續只保留新勾選的條件
-        jdbcTemplate.update("DELETE FROM dbo.EvalAdoptCriteria WHERE ProAdoptID = ?", proAdoptId);
-        // 2) 若沒有任何新選項，直接返回（維持刪除後的空狀態）
-        if (evalSelectedEntryIds == null || evalSelectedEntryIds.isEmpty()) return;
-        // 3) 批次新增新選項
-        // - 使用 batchUpdate 提升效能
-        // - 每個 entryId 插入一筆 (ProAdoptID, ListsEntryID)
-        jdbcTemplate.batchUpdate(
-                "INSERT INTO dbo.EvalAdoptCriteria (ProAdoptID, ListsEntryID) VALUES (?, ?)",
-                evalSelectedEntryIds,
-                evalSelectedEntryIds.size(),
-                (ps, entryId) -> {
-                    ps.setInt(1, proAdoptId);
-                    ps.setInt(2, entryId);
-                }
-        );
-    }
-
     @Transactional
     @Override
     public void upsertDirectAdoptCriteria(int proAdoptId, List<Integer> selectedEntryIds, boolean refreshSnapshot, boolean isNew) {
@@ -827,7 +765,6 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
 //        }
 
     }
-
 
     @Transactional
     @Override
