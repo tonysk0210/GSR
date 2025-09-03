@@ -6,13 +6,13 @@ import lombok.Setter;
 import javax.persistence.*;
 
 @Entity
-@Table(name = "DirectAdoptCriteria")
+@Table(name = "EvalAdoptCriteria")
 @Getter
 @Setter
-public class DirectAdoptCriteriaEntity {
+public class EvalAdoptCriteriaEntity {
 
     @EmbeddedId
-    private DirectAdoptCriteriaId id;
+    private EvalAdoptCriteriaId id;
 
     @MapsId("proAdoptId")
     @ManyToOne(fetch = FetchType.LAZY)
