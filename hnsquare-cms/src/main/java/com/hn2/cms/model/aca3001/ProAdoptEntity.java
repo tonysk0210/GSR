@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.persistence.*;
+import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -60,10 +61,15 @@ public class ProAdoptEntity {
     @Column(name = "ReasonEnd")
     private String reasonEnd;
 
-    @Column(name = "CreatedByUserID")
+    // ==== 審計欄位 ====
+    @Column(name = "CreatedByUserID", updatable = false)
     private Integer createdByUserId;
     @Column(name = "ModifiedByUserID")
     private Integer modifiedByUserId;
+    @Column(name = "CreatedOnDate", updatable = false)
+    private LocalDateTime createdOnDate;
+    @Column(name = "ModifiedOnDate")
+    private LocalDateTime modifiedOnDate;
 
     // === 重要：與子表的關聯（級聯 + 需 orphanRemoval） ===
     @OneToMany(mappedBy = "proAdopt",
@@ -97,5 +103,21 @@ public class ProAdoptEntity {
     public void removeEval(EvalAdoptCriteriaEntity e) {
         evalCriteria.remove(e);
         e.setProAdopt(null);
+    }
+
+    // ==== 自動審計（不依賴 Spring Security）====
+    @PrePersist
+    protected void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        this.createdOnDate = (this.createdOnDate == null) ? now : this.createdOnDate;
+        this.modifiedOnDate = now;
+        if (this.modifiedByUserId == null) {
+            this.modifiedByUserId = this.createdByUserId; // 新增時同步
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.modifiedOnDate = LocalDateTime.now();
     }
 }
