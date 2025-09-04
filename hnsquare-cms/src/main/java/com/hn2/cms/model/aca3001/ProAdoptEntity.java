@@ -120,4 +120,10 @@ public class ProAdoptEntity {
     protected void onUpdate() {
         this.modifiedOnDate = LocalDateTime.now();
     }
+
+    /** 明確「觸碰」父實體，保證變髒並更新時間 */
+    public void touchModified(Integer userId) {
+        this.modifiedByUserId = userId;          // 即便同值，也算指派一次
+        this.modifiedOnDate = LocalDateTime.now();
+    }
 }

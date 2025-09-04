@@ -429,9 +429,11 @@ public class Aca3001ServiceImpl implements Aca3001Service {
                 e.setCaseAccept(caseAccept);
                 e.setReasonAccept(reasonAccept);
                 e.setCaseEnd(caseEnd);
-                e.setReasonEnd(reasonEnd);
-                e.setModifiedByUserId(p.getAudit() == null ? null : p.getAudit().getUserId());
-                proAdoptRepo.save(e);
+
+                Integer uid = (p.getAudit() == null) ? null : p.getAudit().getUserId();
+                e.setModifiedByUserId(uid);
+                e.touchModified(uid); // <<< 關鍵：無論子表怎麼變，最後都「touch」一次父表 >>>
+                proAdoptRepo.saveAndFlush(e);
                 message = "更新成功";
             }
         } catch (DataIntegrityViolationException ex) {
