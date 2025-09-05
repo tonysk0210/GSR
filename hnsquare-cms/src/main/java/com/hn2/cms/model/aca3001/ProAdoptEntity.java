@@ -23,24 +23,24 @@ public class ProAdoptEntity {
     @Column(name = "ProRecID", nullable = false, length = 12)
     private String proRecId;
 
-    @Column(name = "ScoreEconomy", nullable = false)
-    private short scoreEconomy;
-    @Column(name = "ScoreEmployment", nullable = false)
-    private short scoreEmployment;
-    @Column(name = "ScoreFamily", nullable = false)
-    private short scoreFamily;
-    @Column(name = "ScoreSocial", nullable = false)
-    private short scoreSocial;
-    @Column(name = "ScorePhysical", nullable = false)
-    private short scorePhysical;
-    @Column(name = "ScorePsych", nullable = false)
-    private short scorePsych;
-    @Column(name = "ScoreParenting", nullable = false)
-    private short scoreParenting;
-    @Column(name = "ScoreLegal", nullable = false)
-    private short scoreLegal;
-    @Column(name = "ScoreResidence", nullable = false)
-    private short scoreResidence;
+    @Column(name = "ScoreEconomy", columnDefinition = "TINYINT", nullable = true)
+    private Byte scoreEconomy;
+    @Column(name = "ScoreEmployment", columnDefinition = "TINYINT", nullable = true)
+    private Byte scoreEmployment;
+    @Column(name = "ScoreFamily", columnDefinition = "TINYINT", nullable = true)
+    private Byte scoreFamily;
+    @Column(name = "ScoreSocial", columnDefinition = "TINYINT", nullable = true)
+    private Byte scoreSocial;
+    @Column(name = "ScorePhysical", columnDefinition = "TINYINT", nullable = true)
+    private Byte scorePhysical;
+    @Column(name = "ScorePsych", columnDefinition = "TINYINT", nullable = true)
+    private Byte scorePsych;
+    @Column(name = "ScoreParenting", columnDefinition = "TINYINT", nullable = true)
+    private Byte scoreParenting;
+    @Column(name = "ScoreLegal", columnDefinition = "TINYINT", nullable = true)
+    private Byte scoreLegal;
+    @Column(name = "ScoreResidence", columnDefinition = "TINYINT", nullable = true)
+    private Byte scoreResidence;
 
     @Column(name = "ScoreTotal", insertable = false, updatable = false)
     private Short scoreTotal;
@@ -121,7 +121,9 @@ public class ProAdoptEntity {
         this.modifiedOnDate = LocalDateTime.now();
     }
 
-    /** 明確「觸碰」父實體，保證變髒並更新時間 */
+    /**
+     * 明確「觸碰」父實體，保證變髒並更新時間
+     */
     public void touchModified(Integer userId) {
         this.modifiedByUserId = userId;          // 即便同值，也算指派一次
         this.modifiedOnDate = LocalDateTime.now();

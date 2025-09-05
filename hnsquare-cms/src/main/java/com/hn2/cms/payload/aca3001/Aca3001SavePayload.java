@@ -34,15 +34,15 @@ public class Aca3001SavePayload {
 
     @Data
     public static class Scores {
-        @Min(0) @Max(4) private int economy;
-        @Min(0) @Max(4) private int employment;
-        @Min(0) @Max(4) private int family;
-        @Min(0) @Max(4) private int social;
-        @Min(0) @Max(4) private int physical;
-        @Min(0) @Max(4) private int psych;
-        @Min(0) @Max(4) private int parenting;
-        @Min(0) @Max(4) private int legal;
-        @Min(0) @Max(4) private int residence;
+        @Min(0) @Max(4) private Integer  economy;
+        @Min(0) @Max(4) private Integer  employment;
+        @Min(0) @Max(4) private Integer  family;
+        @Min(0) @Max(4) private Integer  social;
+        @Min(0) @Max(4) private Integer  physical;
+        @Min(0) @Max(4) private Integer  psych;
+        @Min(0) @Max(4) private Integer  parenting;
+        @Min(0) @Max(4) private Integer  legal;
+        @Min(0) @Max(4) private Integer  residence;
         @Size(max = 300) private String comment;
     }
 

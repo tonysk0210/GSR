@@ -524,15 +524,11 @@ public class Aca3001ServiceImpl implements Aca3001Service {
 
         // ---------- 5) 回傳（與 save 一致） ----------
         // 總分 = 9 類分數相加（null 視為 0；此處假設前端皆傳齊）
-        int total = p.getScores().getEconomy()
-                + p.getScores().getEmployment()
-                + p.getScores().getFamily()
-                + p.getScores().getSocial()
-                + p.getScores().getPhysical()
-                + p.getScores().getPsych()
-                + p.getScores().getParenting()
-                + p.getScores().getLegal()
-                + p.getScores().getResidence();
+        Short dbTotal = proAdoptRepo.findById(proAdoptId)
+                .map(ProAdoptEntity::getScoreTotal)
+                .orElse(null);
+
+        Integer total = (dbTotal == null ? null : dbTotal.intValue());
 
         // finalReason：依狀態帶回對應理由（其餘為 null）
         String finalReason;
@@ -567,15 +563,15 @@ public class Aca3001ServiceImpl implements Aca3001Service {
     // --- 小工具（只給 Save 用；其餘不動） ---
     private static void applyScoresAndComment(ProAdoptEntity e, Aca3001SavePayload p) {
         var s = p.getScores();
-        e.setScoreEconomy((short) s.getEconomy());
-        e.setScoreEmployment((short) s.getEmployment());
-        e.setScoreFamily((short) s.getFamily());
-        e.setScoreSocial((short) s.getSocial());
-        e.setScorePhysical((short) s.getPhysical());
-        e.setScorePsych((short) s.getPsych());
-        e.setScoreParenting((short) s.getParenting());
-        e.setScoreLegal((short) s.getLegal());
-        e.setScoreResidence((short) s.getResidence());
+        e.setScoreEconomy(s.getEconomy() == null ? null : s.getEconomy().byteValue());
+        e.setScoreEmployment(s.getEmployment() == null ? null : s.getEmployment().byteValue());
+        e.setScoreFamily(s.getFamily() == null ? null : s.getFamily().byteValue());
+        e.setScoreSocial(s.getSocial() == null ? null : s.getSocial().byteValue());
+        e.setScorePhysical(s.getPhysical() == null ? null : s.getPhysical().byteValue());
+        e.setScorePsych(s.getPsych() == null ? null : s.getPsych().byteValue());
+        e.setScoreParenting(s.getParenting() == null ? null : s.getParenting().byteValue());
+        e.setScoreLegal(s.getLegal() == null ? null : s.getLegal().byteValue());
+        e.setScoreResidence(s.getResidence() == null ? null : s.getResidence().byteValue());
         e.setComment(s.getComment() == null ? null : s.getComment().trim());
     }
 

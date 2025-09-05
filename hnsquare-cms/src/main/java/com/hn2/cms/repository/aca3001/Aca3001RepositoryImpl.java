@@ -329,16 +329,16 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
                     jdbcTemplate.query(SQL_SCORES, rs -> {
                         if (rs.next()) {
                             var sc = new Aca3001QueryDto.EvalAdoptCriteria.EvalScore();
-                            sc.setScoreEconomy(rs.getInt("ScoreEconomy"));
-                            sc.setScoreEmployment(rs.getInt("ScoreEmployment"));
-                            sc.setScoreFamily(rs.getInt("ScoreFamily"));
-                            sc.setScoreSocial(rs.getInt("ScoreSocial"));
-                            sc.setScorePhysical(rs.getInt("ScorePhysical"));
-                            sc.setScorePsych(rs.getInt("ScorePsych"));
-                            sc.setScoreParenting(rs.getInt("ScoreParenting"));
-                            sc.setScoreLegal(rs.getInt("ScoreLegal"));
-                            sc.setScoreResidence(rs.getInt("ScoreResidence"));
-                            sc.setTotalScore(rs.getInt("ScoreTotal"));
+                            sc.setScoreEconomy(getNullableInt(rs, "ScoreEconomy"));
+                            sc.setScoreEmployment(getNullableInt(rs, "ScoreEmployment"));
+                            sc.setScoreFamily(getNullableInt(rs, "ScoreFamily"));
+                            sc.setScoreSocial(getNullableInt(rs, "ScoreSocial"));
+                            sc.setScorePhysical(getNullableInt(rs, "ScorePhysical"));
+                            sc.setScorePsych(getNullableInt(rs, "ScorePsych"));
+                            sc.setScoreParenting(getNullableInt(rs, "ScoreParenting"));
+                            sc.setScoreLegal(getNullableInt(rs, "ScoreLegal"));
+                            sc.setScoreResidence(getNullableInt(rs, "ScoreResidence"));
+                            sc.setTotalScore(getNullableInt(rs, "ScoreTotal"));
                             sc.setComment(rs.getString("Comment"));
                             return sc;
                         }
@@ -1096,6 +1096,10 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
         return false;
     }
 
+    private static Integer getNullableInt(ResultSet rs, String col) throws SQLException {
+        int v = rs.getInt(col);
+        return rs.wasNull() ? null : v;
+    }
 
 }
 

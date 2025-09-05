@@ -116,17 +116,17 @@ public class Aca3001QueryDto {
         /** 認輔評估各面向分數 */
         @Data
         public static class EvalScore {
-            private Integer scoreEconomy = 0;
-            private Integer scoreEmployment = 0;
-            private Integer scoreFamily = 0;
-            private Integer scoreSocial = 0;
-            private Integer scorePhysical = 0;
-            private Integer scorePsych = 0;
-            private Integer scoreParenting = 0;
-            private Integer scoreLegal = 0;
-            private Integer scoreResidence = 0;
+            private Integer scoreEconomy;
+            private Integer scoreEmployment;
+            private Integer scoreFamily;
+            private Integer scoreSocial;
+            private Integer scorePhysical;
+            private Integer scorePsych;
+            private Integer scoreParenting;
+            private Integer scoreLegal;
+            private Integer scoreResidence;
             /** 總分（由後端計算，不由前端輸入） */
-            private Integer totalScore = 0;
+            private Integer totalScore;
             private String comment;
         }
     }

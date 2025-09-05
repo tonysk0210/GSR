@@ -10,7 +10,7 @@ public class Aca3001SaveResponse {
     private Integer proAdoptId;
     private String proRecId;
     private boolean editable;
-    private int scoreTotal;
+    private Integer scoreTotal;
     private Aca3001SavePayload.CaseStatus.State state;
     private String reason;
     private String message; // inserted / updated
