@@ -32,6 +32,7 @@ public interface Aca4001Repository {
                                        LocalDateTime startTs,
                                        LocalDateTime endExclusive);
 
+    public List<Aca4001EraseQueryDto.ProRec> findProRecsByIds(List<String> ids);
 
     public Boolean findLatestProRecClosed(String acaCardNo);
 

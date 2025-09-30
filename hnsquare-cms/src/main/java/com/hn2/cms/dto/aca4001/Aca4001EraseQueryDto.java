@@ -20,19 +20,19 @@ public class Aca4001EraseQueryDto {
     @Data
     public static class CrmRec {
         private String id;                 // CrmRec.ID
-        private String recordDate;      // CreatedOnDate -> 民國 yyy/MM/dd
+        private String recordDate;         // CreatedOnDate -> 民國 yyy/MM/dd
         private String branchName;         // CreatedByBranchID
         private String jailAgency;         // ProNoticeDep
         private String crimeName1;         // CrmCrime1
         private String crimeName2;         // CrmCrime2
         private String crimeName3;         // CrmCrime3
         private String noJailReason;       // Crm_NoJail
-        private String verdictDate;     // Crm_VerdictDate -> 民國 yyy/MM/dd
+        private String verdictDate;        // Crm_VerdictDate -> 民國 yyy/MM/dd
         private String sentenceType;       // Crm_Sentence
         private String termText;           // CrmTerm
-        private String prisonInDate;    // CrmChaDate -> 民國 yyy/MM/dd
-        private String releasePlanDate; // Crm_ReleaseDate -> 民國 yyy/MM/dd
-        private String prisonOutDate;   // CrmDisDate -> 民國 yyy/MM/dd
+        private String prisonInDate;       // CrmChaDate -> 民國 yyy/MM/dd
+        private String releasePlanDate;    // Crm_ReleaseDate -> 民國 yyy/MM/dd
+        private String prisonOutDate;      // CrmDisDate -> 民國 yyy/MM/dd
         private String prisonOutReason;    // CrmDischarge
         private String remission;          // CrmRemission
         private String trainType;          // CrmTrain
@@ -41,8 +41,34 @@ public class Aca4001EraseQueryDto {
 
     @Data
     public static class ProRec {
-        private String id;             // ProRec.ID
-        // 之後可加：private LocalDate proDate; ...
+        private String id;                 // ProRec.ID
+        // 分會（Lists.ParentID=26）
+        private String branchName;         // Lists.Text(ParentID=26, Value=ProRec.createdByBranchID)
+        // 受案來源
+        private String sourceText;         // Lists.Text(ListName='ACA_SOURCE', Value=ProRec.ProSource)
+        // 體能狀況（A001~A006 -> 中文）
+        private String proHealthText;      // 依 ProRec.ProHealth 對應中文
+        // 重點保護項目（ProDtl 依 level 匯總；可能多筆，用頓號"、"串）
+        private String protectLevel1;      // ProDtl.ProItem -> Lists.Text('ACA_PROTECT')
+        private String protectLevel2;      // ProDtl.Interview -> Lists.Text('ACA_PROTECT')（可為 null）
+        private String protectLevel3;      // ProDtl.ProPlace -> Lists.Text('ACA_PROTECT')（可為 null）
+        // 申請(通知)日期、保護日期（民國 yyy/MM/dd）
+        private String proNoticeDate;      // ProRec.ProNoticeDate -> 民國
+        private String proDate;            // ProRec.ProDate -> 民國
+        // 認輔狀況
+        private Boolean adopt;             // ProRec.isAdopt（用 Boolean 以容許 null）
+        // 家支狀況（有符合條件即回 "家支"，否則 ""）
+        private String homeSupportTag;
+        // 毒品專案
+        private String drugProjectText;    // Lists.Text('PROJ_DRUG', Value=ProRec.DrugForm)
+        // 結案狀態
+        private Boolean closed;            // ProRec.IsClosed（或 ProCloseDate != null）
+        // 工作人員（建立者顯示名）
+        private String staffDisplayName;   // join CaseManagementDnn.dbo.Users by CreatedByUserID
+        // 輔導員（機構區域文字 + 機構名稱 + (實習)）
+        private String counselorInstDisplay; // ex: "北區 臺北OO(實習)"
+        private String counselorWorkerId;     // （除錯用，可視需求保留/拿掉）
+        private String archiveName;         // 歸檔名稱（ProRec.ProFile)
     }
 
 

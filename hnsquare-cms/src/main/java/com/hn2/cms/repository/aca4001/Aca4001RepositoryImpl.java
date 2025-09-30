@@ -6,6 +6,8 @@ import com.hn2.cms.dto.aca4001.Aca4001EraseQueryDto.PersonBirth;
 import com.hn2.util.DateUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.sql.ResultSet;
@@ -22,6 +24,7 @@ import static com.hn2.util.DateUtil.DateFormat.yyyMMdd_slash;
 public class Aca4001RepositoryImpl implements Aca4001Repository {
 
     private final JdbcTemplate jdbc;
+    private final NamedParameterJdbcTemplate npJdbc;
 
     @Override
     public PersonBirth findPersonBirth(String acaCardNo) {
@@ -183,6 +186,166 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
 
         return rows;
     }
+
+    @Override
+    public List<Aca4001EraseQueryDto.ProRec> findProRecsByIds(List<String> ids) {
+        if (ids == null || ids.isEmpty()) return List.of();
+
+        // 用命名參數 IN (:ids)；SQL 第一字元加分號，避免 driver/代理在上一個語句沒分號時影響這一個
+        String sql =
+                ";SELECT " +
+                        "    PR.ID, " +
+                        "    L_BR.[Text]                           AS BranchName, " +
+                        "    L_SRC.[Text]                          AS SourceText, " +
+                        "    CASE PR.ProHealth " +
+                        "         WHEN 'A001' THEN N'良好' " +
+                        "         WHEN 'A002' THEN N'普通' " +
+                        "         WHEN 'A003' THEN N'舊制身心障礙(16類)' " +
+                        "         WHEN 'A004' THEN N'欠佳' " +
+                        "         WHEN 'A005' THEN N'具精神異常傾向' " +
+                        "         WHEN 'A006' THEN N'新制身心障礙(8類)' " +
+                        "         ELSE NULL END                    AS ProHealthText, " +
+
+                        // 各 level 取該 ProRec 最新一筆
+                        "    OA1.L1Text                            AS ProtectLevel1, " +
+                        "    OA2.L2Text                            AS ProtectLevel2, " +
+                        "    OA3.L3Text                            AS ProtectLevel3, " +
+
+                        "    CAST(PR.ProNoticeDate AS date)        AS ProNoticeDate, " +
+                        "    CAST(PR.ProDate       AS date)        AS ProDate, " +
+                        "    PR.IsAdopt                              AS Adopt, " +
+                        "    CASE WHEN EXISTS ( " +
+                        "        SELECT 1 FROM dbo.ProjectRec P " +
+                        "        WHERE P.LinkTableID = PR.ID AND P.LinkTableType = 'P' " +
+                        "          AND P.ProjectID = 'A20130400094' AND P.IsDeleted = 0 " +
+                        "    ) THEN N'家支' ELSE N'' END           AS HomeSupportTag, " +
+                        "    L_DRUG.[Text]                         AS DrugProjectText, " +
+                        "    CASE WHEN PR.ProCloseDate IS NULL THEN 0 ELSE 1 END AS Closed, " +
+                        "    U.DisplayName                         AS StaffDisplayName, " +  //-- 建檔者顯示名稱（DNN Users）
+                        // -- CounselorInstDisplay：區域 +（必要時空白）+ 機構名稱 +（實習/正式尾註）
+                        "    COALESCE( " +
+                        "      NULLIF( " +
+                        "        CONCAT( " +
+                        "          ISNULL(LA.[Text], N''), " + //-- 區域文字（Lists: ACA_INSTAREA）
+                        "          CASE WHEN NULLIF(LA.[Text], N'') IS NOT NULL AND NULLIF(IB.InstName, N'') IS NOT NULL THEN N' ' ELSE N'' END, " + //-- 區域與機構名皆非空時才加空白
+                        "          ISNULL(IB.InstName, N''), " + //-- 機構名稱（InstBrd.InstName）
+                        "          CASE " +
+                        "            WHEN OM.WorkerID IS NULL " +
+                        "                 OR (NULLIF(LA.[Text], N'') IS NULL AND NULLIF(IB.InstName, N'') IS NULL) THEN N'' " + //-- 沒有輔導員或兩者皆空：不加尾註（避免只顯示「(正式)」）
+                        "            WHEN COALESCE(IB.IsUnofficial, 0) = 1 THEN N'(實習)' " +
+                        "            ELSE N'(正式)' " +
+                        "          END " +
+                        "        ), N'' " + // -- CONCAT 結果是空字串時 => 轉為 NULL
+                        "      ), N'' " + // -- 最終把 NULL 轉回空字串
+                        "    ) AS CounselorInstDisplay, " +
+                        "    OM.WorkerID AS CounselorWorkerId, " + //-- 由 OUTER APPLY 取得的輔導員卡號
+                        "    PR.ProFile AS ArchiveName " +                          // ← ★ 新增：歸檔名稱
+                        "FROM dbo.ProRec PR " +
+                        "LEFT JOIN dbo.Lists L_BR  " +
+                        "       ON L_BR.ParentID = 26 " +
+                        "      AND L_BR.Value = CAST(PR.CreatedByBranchID AS NVARCHAR(50)) " +
+                        "LEFT JOIN dbo.Lists L_SRC " +
+                        "       ON L_SRC.ListName = 'ACA_SOURCE' " +
+                        "      AND L_SRC.Value    = PR.ProSource " +
+                        "LEFT JOIN dbo.Lists L_DRUG " +
+                        "       ON L_DRUG.ListName = 'PROJ_DRUG' " +
+                        "      AND L_DRUG.Value    = PR.DrugForm " +
+                        "LEFT JOIN [CaseManagementDnnDB].dbo.Users U " +
+                        "       ON U.UserID = PR.CreatedByUserID " +
+
+                        // L1：ProItem 最新一筆
+                        "OUTER APPLY ( " +
+                        "    SELECT TOP (1) L1.[Text] AS L1Text " +
+                        "    FROM dbo.ProDtl PD " +
+                        "    LEFT JOIN dbo.Lists L1 ON L1.ListName = 'ACA_PROTECT' AND L1.Value = PD.ProItem " +
+                        "    WHERE PD.IsDeleted = 0 AND PD.ProRecID = PR.ID AND PD.ProItem IS NOT NULL " +
+                        "    ORDER BY PD.ID DESC " +       //最新一筆
+                        ") OA1 " +
+
+                        // L2：Interview 最新一筆
+                        "OUTER APPLY ( " +
+                        "    SELECT TOP (1) L2.[Text] AS L2Text " +
+                        "    FROM dbo.ProDtl PD " +
+                        "    LEFT JOIN dbo.Lists L2 ON L2.ListName = 'ACA_PROTECT' AND L2.Value = PD.Interview " +
+                        "    WHERE PD.IsDeleted = 0 AND PD.ProRecID = PR.ID AND PD.Interview IS NOT NULL " +
+                        "    ORDER BY PD.ID DESC " +       //最新一筆
+                        ") OA2 " +
+
+                        // L3：ProPlace 最新一筆
+                        "OUTER APPLY ( " +
+                        "    SELECT TOP (1) L3.[Text] AS L3Text " +
+                        "    FROM dbo.ProDtl PD " +
+                        "    LEFT JOIN dbo.Lists L3 ON L3.ListName = 'ACA_PROTECT' AND L3.Value = PD.ProPlace " +
+                        "    WHERE PD.IsDeleted = 0 AND PD.ProRecID = PR.ID AND PD.ProPlace IS NOT NULL " +
+                        "    ORDER BY PD.ID DESC " +       //最新一筆
+                        ") OA3 " +
+
+                        // 輔導員 OneMember：對每筆 PR 逐列找「第一位」非 EP 的成員
+                        // -- OUTER APPLY ≈ LEFT JOIN LATERAL：就算找不到也保留左表列（欄位為 NULL）
+                        "OUTER APPLY ( " +
+                        "    SELECT TOP (1) PRM.WorkerID " +
+                        "    FROM dbo.ProRecMember PRM " +
+                        "    WHERE PRM.ProRecID = PR.ID " +
+                        "      AND PRM.MemberType <> 'EP' " +
+                        "      AND PRM.IsDeleted = 0 " +
+                        "    ORDER BY PRM.ID " +
+                        ") OM " +
+                        "LEFT JOIN dbo.InstBrd IB " +
+                        "       ON IB.InstCardNo = OM.WorkerID " +
+                        "      AND IB.IsDeleted = 0 " +
+                        "LEFT JOIN dbo.Lists LA " +
+                        "       ON LA.ListName = 'ACA_INSTAREA' " +
+                        "      AND LA.Value    = IB.InstArea " +
+                        "WHERE PR.IsDeleted = 0 " +
+                        "  AND PR.ID IN (:ids)";
+
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("ids", ids); // 直接丟 List<String> / List<Integer> 都可
+
+        List<Aca4001EraseQueryDto.ProRec> rows = npJdbc.query(sql, params, (rs, i) -> {
+            var p = new Aca4001EraseQueryDto.ProRec();
+            p.setId(rs.getString("ID"));
+            p.setBranchName(rs.getString("BranchName"));
+            p.setSourceText(rs.getString("SourceText"));
+            p.setProHealthText(rs.getString("ProHealthText"));
+
+            p.setProtectLevel1(rs.getString("ProtectLevel1"));
+            p.setProtectLevel2(rs.getString("ProtectLevel2"));
+            p.setProtectLevel3(rs.getString("ProtectLevel3"));
+
+            var d1 = rs.getDate("ProNoticeDate");
+            p.setProNoticeDate(d1 == null ? null
+                    : DateUtil.date2Roc(DateUtil.date2LocalDate(d1), yyyMMdd_slash));
+
+            var d2 = rs.getDate("ProDate");
+            p.setProDate(d2 == null ? null
+                    : DateUtil.date2Roc(DateUtil.date2LocalDate(d2), yyyMMdd_slash));
+
+            // 包 Boolean 允許 null
+            Object adoptObj = rs.getObject("Adopt");
+            p.setAdopt(adoptObj == null ? null : (Boolean) adoptObj);
+
+            p.setHomeSupportTag(rs.getString("HomeSupportTag"));
+            p.setDrugProjectText(rs.getString("DrugProjectText"));
+
+            Object closedObj = rs.getObject("Closed");
+            p.setClosed(closedObj == null ? null : ((Integer) closedObj) == 1);
+
+            p.setStaffDisplayName(rs.getString("StaffDisplayName"));
+            p.setCounselorInstDisplay(rs.getString("CounselorInstDisplay"));
+            p.setCounselorWorkerId(rs.getString("CounselorWorkerId"));
+            p.setArchiveName(rs.getString("ArchiveName"));
+            return p;
+        });
+
+        // 照呼叫方給的 ID 還原順序（避免 IN 造成亂序）
+        Map<String, Integer> order = new HashMap<>();
+        for (int i = 0; i < ids.size(); i++) order.put(ids.get(i), i);
+        rows.sort(Comparator.comparingInt(r -> order.getOrDefault(r.getId(), Integer.MAX_VALUE)));
+
+        return rows;
+    }
+
 
     @Override
     public Boolean findLatestProRecClosed(String acaCardNo) {
