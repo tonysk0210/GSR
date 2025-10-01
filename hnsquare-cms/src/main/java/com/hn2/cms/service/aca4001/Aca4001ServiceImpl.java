@@ -2,8 +2,11 @@ package com.hn2.cms.service.aca4001;
 
 import com.hn2.cms.dto.aca4001.Aca4001EraseQueryDto;
 import com.hn2.cms.dto.aca4001.Aca4001EraseQueryDto.*;
+import com.hn2.cms.payload.aca4001.Aca4001ErasePayload;
 import com.hn2.cms.payload.aca4001.Aca4001EraseQueryPayload;
+import com.hn2.cms.payload.aca4001.Aca4001RestorePayload;
 import com.hn2.cms.repository.aca4001.Aca4001Repository;
+import com.hn2.cms.service.aca4001.erase.CrmRecEraseService;
 import com.hn2.core.dto.DataDto;
 import com.hn2.core.dto.ResponseInfo;
 import com.hn2.core.payload.GeneralPayload;
@@ -15,13 +18,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static java.util.stream.Collectors.toList;
-
 @Service
 @RequiredArgsConstructor
 public class Aca4001ServiceImpl implements Aca4001Service {
 
     private final Aca4001Repository repo;
+    private final CrmRecEraseService crmEraseService; // ★ 注入
 
     @Override
     @Transactional(readOnly = true)
@@ -115,4 +117,45 @@ public class Aca4001ServiceImpl implements Aca4001Service {
         if (s == null || s.isBlank()) return null;
         return LocalDate.parse(s); // 預期 yyyy-MM-dd
     }
+
+    @Override
+    @Transactional
+    public DataDto<Void> erase(GeneralPayload<Aca4001ErasePayload> payload, String userId, String userName, String userIp, String branchId) {
+        if (payload == null || payload.getData() == null) {
+            throw new IllegalArgumentException("data 不可為空");
+        }
+        Aca4001ErasePayload req = payload.getData();
+        if (req.getAcaCardNo() == null || req.getAcaCardNo().isBlank()) {
+            throw new IllegalArgumentException("acaCardNo 不可為空");
+        }
+
+        // 目前先處理 CrmRec（ProRec 之後再接）
+        crmEraseService.eraseCrm(req, userId, userName, userIp, branchId);
+
+        return new DataDto<>(null, new ResponseInfo(1, "CrmRec erase completed"));
+    }
+
+    // ★ 新增 restore 實作
+    @Override
+    @Transactional
+    public DataDto<Void> restore(GeneralPayload<Aca4001RestorePayload> payload, String userId, String userName, String userIp, String branchId) {
+        if (payload == null || payload.getData() == null) {
+            throw new IllegalArgumentException("data 不可為空");
+        }
+        var req = payload.getData();
+        if (req.getAcaCardNo() == null || req.getAcaCardNo().isBlank()) {
+            throw new IllegalArgumentException("acaCardNo 不可為空");
+        }
+
+        // 目前先復原 CrmRec（之後要擴充 ProRec、其他表就依序呼叫）
+        crmEraseService.restoreByAcaCardNo(
+                req.getAcaCardNo(),
+                req.getRestoreReason(),
+                userId, userName, userIp, branchId
+        );
+
+        return new DataDto<>(null, new ResponseInfo(1, "Restore completed for ACACardNo=" + req.getAcaCardNo()));
+    }
+
+    // 你原來的私有方法 parseDateOrNull(...) 保留在 eraseQuery 實作內即可
 }
