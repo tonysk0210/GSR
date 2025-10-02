@@ -10,8 +10,8 @@ import com.hn2.core.payload.GeneralPayload;
 public interface Aca4001Service {
     DataDto<Aca4001EraseQueryDto> eraseQuery(GeneralPayload<Aca4001EraseQueryPayload> payload);
 
-    // ★ 新增：統一由門面服務處理塗銷請求
-    DataDto<Void> erase(GeneralPayload<Aca4001ErasePayload> payload, String userId, String userName, String userIp, String branchId);
+    // 刪掉 userName、branchId
+    DataDto<Void> erase(GeneralPayload<Aca4001ErasePayload> payload, String userId, String userIp);
 
-    DataDto<Void> restore(GeneralPayload<Aca4001RestorePayload> payload, String userId, String userName, String userIp, String branchId);
+    DataDto<Void> restore(GeneralPayload<Aca4001RestorePayload> payload, String userId, String userIp);
 }

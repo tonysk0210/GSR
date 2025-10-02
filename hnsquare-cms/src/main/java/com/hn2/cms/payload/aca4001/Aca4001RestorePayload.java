@@ -7,7 +7,4 @@ public class Aca4001RestorePayload {
     private String acaCardNo;
     private String restoreReason;
     private String operatorUserId;
-    private String operatorUserName;
-    private String operatorBranchId; // 與 erase 對齊，方便審計
-
 }

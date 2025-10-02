@@ -120,25 +120,29 @@ public class Aca4001ServiceImpl implements Aca4001Service {
 
     @Override
     @Transactional
-    public DataDto<Void> erase(GeneralPayload<Aca4001ErasePayload> payload, String userId, String userName, String userIp, String branchId) {
+    public DataDto<Void> erase(GeneralPayload<Aca4001ErasePayload> payload, String userId, String userIp) {
         if (payload == null || payload.getData() == null) {
             throw new IllegalArgumentException("data 不可為空");
         }
+
+        // 取出實際的業務請求資料
         Aca4001ErasePayload req = payload.getData();
+
         if (req.getAcaCardNo() == null || req.getAcaCardNo().isBlank()) {
             throw new IllegalArgumentException("acaCardNo 不可為空");
         }
 
-        // 目前先處理 CrmRec（ProRec 之後再接）
-        crmEraseService.eraseCrm(req, userId, userName, userIp, branchId);
+        // TODO: 目前僅處理 CrmRec（犯罪紀錄）的塗銷邏輯
+        // 之後還會加上 ProRec（保護紀錄）的塗銷
+        crmEraseService.eraseCrm(req, userId, userIp);
 
-        return new DataDto<>(null, new ResponseInfo(1, "CrmRec erase completed"));
+        return new DataDto<>(null, new ResponseInfo(1, "成功塗銷"));
     }
 
     // ★ 新增 restore 實作
     @Override
     @Transactional
-    public DataDto<Void> restore(GeneralPayload<Aca4001RestorePayload> payload, String userId, String userName, String userIp, String branchId) {
+    public DataDto<Void> restore(GeneralPayload<Aca4001RestorePayload> payload, String userId, String userIp) {
         if (payload == null || payload.getData() == null) {
             throw new IllegalArgumentException("data 不可為空");
         }
@@ -148,11 +152,7 @@ public class Aca4001ServiceImpl implements Aca4001Service {
         }
 
         // 目前先復原 CrmRec（之後要擴充 ProRec、其他表就依序呼叫）
-        crmEraseService.restoreByAcaCardNo(
-                req.getAcaCardNo(),
-                req.getRestoreReason(),
-                userId, userName, userIp, branchId
-        );
+        crmEraseService.restoreByAcaCardNo(req.getAcaCardNo(), req.getRestoreReason(), userId, userIp);
 
         return new DataDto<>(null, new ResponseInfo(1, "Restore completed for ACACardNo=" + req.getAcaCardNo()));
     }

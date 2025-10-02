@@ -14,9 +14,5 @@ public class Aca4001ErasePayload {
     private List<String> selectedProRecIds;
     private List<String> selectedCrmRecIds;
     private Boolean isOver18;
-
-    // 新增
     private String operatorUserId;
-    private String operatorUserName;
-    private String operatorBranchId;
 }

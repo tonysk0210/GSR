@@ -11,6 +11,10 @@ import java.util.Map;
 public class CrmRecRepo {
     private final org.sql2o.Sql2o sql2o;
 
+    /**
+     * 依 ACACardNo 查出已被塗銷 (isERASE=1) 的 CrmRec.ID 清單。
+     * - ISNULL(isERASE,0)=1：避免 null 值造成判斷問題。
+     */
     public List<String> findErasedIdsByAcaCardNo(String acaCardNo) {
         String sql = "SELECT ID FROM dbo.CrmRec WHERE ACACardNo=:aca AND ISNULL(isERASE,0)=1";
         try (var con = sql2o.open()) {
@@ -24,7 +28,6 @@ public class CrmRecRepo {
      */
     public int restoreFieldsAndUnmarkErased(String id, Map<String, Object> fields, String operatorUserId) {
         if (fields == null || fields.isEmpty()) {
-            // 只把狀態改回，更新修改者與時間
             String onlySys = "UPDATE dbo.CrmRec " +
                     "SET [isERASE]=0, [ModifiedByUserID]=:uid, [ModifiedOnDate]=SYSUTCDATETIME() " +
                     "WHERE [ID]=:id AND ISNULL([isERASE],0)=1";
@@ -37,45 +40,41 @@ public class CrmRecRepo {
             }
         }
 
-        // 忽略大小寫與空白的系統欄位過濾
+        // 1) 將 ModifiedByUserID 視為系統控管欄位，禁止 mirror 覆寫
         java.util.Set<String> systemColsUpper = java.util.Set.of(
-                "MODIFIEDBYUSERID", "CREATEDBYUSERID", "MODIFIEDONDATE", "CREATEDONDATE",
-                "ISERASE", "ID"
+                "MODIFIEDONDATE", "CREATEDONDATE", "ISERASE", "ID",
+                "MODIFIEDBYUSERID" // ★ 新增：禁止 mirror 設定
         );
 
-        // 清理：移除系統欄位、修剪空白、保留原值
         var cleaned = new java.util.LinkedHashMap<String, Object>();
         for (var e : fields.entrySet()) {
             String rawCol = e.getKey();
             if (rawCol == null) continue;
             String col = rawCol.trim();
             String colUpper = col.toUpperCase(java.util.Locale.ROOT);
-            if (systemColsUpper.contains(colUpper)) continue; // 這些欄位不從 mirror 還原
+            if (systemColsUpper.contains(colUpper)) continue; // ★ 過濾掉 ModifiedByUserID
             cleaned.put(col, e.getValue());
         }
 
-        // 動態組 SET 子句
+        // 2) 動態 SET：mirror 欄位
         StringBuilder set = new StringBuilder();
         int i = 0;
         for (String col : cleaned.keySet()) {
             if (i++ > 0) set.append(", ");
-            // 用 [] 包住欄位名；參數名用去掉非字母數字的安全版本
             String param = col.replaceAll("[^A-Za-z0-9_]", "_");
             set.append('[').append(col).append(']').append(" = :").append(param);
         }
 
-        // 系統控管欄位（一定要加）——避免重複逗號
+        // 3) 固定控管欄位：一律覆寫 ModifiedByUserID 與 ModifiedOnDate 與 isERASE
         if (set.length() > 0) set.append(", ");
-        set.append("[isERASE] = 0, [ModifiedByUserID] = :uid, [ModifiedOnDate] = SYSUTCDATETIME()");
+        set.append("[isERASE] = 0, [ModifiedOnDate] = SYSUTCDATETIME(), [ModifiedByUserID] = :uid");
 
         String sql = "UPDATE dbo.CrmRec SET " + set + " WHERE [ID] = :id AND ISNULL([isERASE],0)=1";
 
         try (var con = sql2o.open()) {
-            var q = con.createQuery(sql)
-                    .addParameter("id", id)
-                    .addParameter("uid", operatorUserId);
+            var q = con.createQuery(sql).addParameter("id", id).addParameter("uid", operatorUserId);
 
-            // 綁定參數（用剛才產生的安全參數名）
+            // 綁定 mirror 動態欄位參數
             for (var e : cleaned.entrySet()) {
                 String col = e.getKey();
                 Object val = e.getValue();
@@ -87,19 +86,24 @@ public class CrmRecRepo {
         }
     }
 
-    // 驗證所選 IDs 是否屬於該 ACACardNo
+    /**
+     * 驗證 IDs 是否都屬於同一個 ACACardNo；
+     * 回傳「不屬於」的 ID 清單（若清單為空代表都屬於同一個案）。
+     */
     public List<String> findNotBelong(String acaCardNo, List<String> ids) {
         if (ids == null || ids.isEmpty()) return List.of();
         String sql = "SELECT ID FROM CrmRec WHERE ID IN (:ids) AND ACACardNo <> :aca";
         try (var con = sql2o.open()) {
             return con.createQuery(sql)
-                    .addParameter("ids", ids)
+                    .addParameter("ids", ids) // sql2o 支援集合展開
                     .addParameter("aca", acaCardNo)
                     .executeAndFetch(String.class);
         }
     }
 
-    // 是否已被塗銷
+    /**
+     * 檢查單筆是否已被塗銷（轉 BIT 再回傳 Boolean）。
+     */
     public boolean isErased(String id) {
         String sql = "SELECT CAST(ISNULL(isERASE,0) AS BIT) FROM CrmRec WHERE ID=:id";
         try (var con = sql2o.open()) {
@@ -108,7 +112,10 @@ public class CrmRecRepo {
         }
     }
 
-    // 讀白名單欄位 → Map（方便組 JSON）
+    /**
+     * 讀取「白名單欄位」的當前值，轉成 Map 以利序列化成 JSON 保存到 mirror。
+     * 這裡同時把 CreatedByUserID、ModifiedByUserID 也讀進來，讓 mirror 有完整還原資訊。
+     */
     public Map<String, Object> loadSensitiveFields(String id) {
         String sql = "SELECT ProSource1, ProNoticeDep, " +
                 "CrmCrime1, CrmCrime2, CrmCrime3, " +
@@ -124,7 +131,15 @@ public class CrmRecRepo {
         }
     }
 
-    // 清空白名單欄位 + 標記 isERASE=1
+    /**
+     * 將白名單欄位清空並標記 isERASE=1。
+     * - 這裡把 CreatedByUserID、ModifiedByUserID 都設為 -2（代表「被塗銷」的占位值）。
+     * - ModifiedOnDate 使用 SYSUTCDATETIME() 做為系統時間戳記。
+     * <p>
+     * 注意：
+     * - mask 變數目前未使用（僅保留示意）。你現在是直接設 NULL，而不是設置 "[ERASED]" 字樣。
+     * - 若欄位為 int/日期等非 nvarchar，不適合改成字串，改 NULL 是正確做法。
+     */
     public void nullifyAndMarkErased(String id) {
 
         String mask = "[ERASED]"; // 或 "[ERASED]"
