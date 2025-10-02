@@ -8,6 +8,8 @@ import com.hn2.cms.payload.aca4001.Aca4001RestorePayload;
 import com.hn2.cms.repository.aca4001.Aca4001Repository;
 import com.hn2.cms.service.aca4001.erase.CrmRecEraseService;
 import com.hn2.cms.service.aca4001.erase.GenericEraseService;
+import com.hn2.cms.service.aca4001.erase.model.EraseCommand;
+import com.hn2.cms.service.aca4001.erase.model.RestoreCommand;
 import com.hn2.core.dto.DataDto;
 import com.hn2.core.dto.ResponseInfo;
 import com.hn2.core.payload.GeneralPayload;
@@ -140,7 +142,7 @@ public class Aca4001ServiceImpl implements Aca4001Service {
 
         return new DataDto<>(null, new ResponseInfo(1, "成功塗銷"));
     }*/
-    @Override
+    /*@Override
     @Transactional
     public DataDto<Void> erase(GeneralPayload<Aca4001ErasePayload> payload, String userId, String userIp) {
         var req = payload.getData();
@@ -156,9 +158,32 @@ public class Aca4001ServiceImpl implements Aca4001Service {
 
         genericEraseService.eraseRows(req.getAcaCardNo(), tableToIds, userId, userIp);
         return new DataDto<>(null, new ResponseInfo(1, "成功塗銷"));
+    }*/
+    @Override
+    @Transactional
+    public DataDto<Void> erase(GeneralPayload<Aca4001ErasePayload> payload, String userId, String userIp) {
+        var req = payload.getData();
+        if (req == null || req.getAcaCardNo() == null || req.getAcaCardNo().isBlank())
+            throw new IllegalArgumentException("acaCardNo 不可為空");
+
+        var tableToIds = new java.util.HashMap<String, List<String>>();
+        tableToIds.put("CrmRec", java.util.Optional.ofNullable(req.getSelectedCrmRecIds()).orElse(List.of()));
+        // 未來：
+        // tableToIds.put("ProRec", Optional.ofNullable(req.getSelectedProRecIds()).orElse(List.of()));
+
+        EraseCommand cmd = EraseCommand.builder()
+                .acaCardNo(req.getAcaCardNo())
+                .tableToIds(tableToIds)
+                .operatorUserId(userId)
+                .operatorIp(userIp)
+                .docNum(req.getDocNum())           // 若無此欄可移除
+                .eraseReason(req.getEraseReason()) // 若無此欄可移除
+                .build();
+
+        genericEraseService.eraseRows(cmd);
+        return new DataDto<>(null, new ResponseInfo(1, "成功塗銷"));
     }
 
-    // ★ 新增 restore 實作
     /*@Override
     @Transactional
     public DataDto<Void> restore(GeneralPayload<Aca4001RestorePayload> payload, String userId, String userIp) {
@@ -175,7 +200,7 @@ public class Aca4001ServiceImpl implements Aca4001Service {
 
         return new DataDto<>(null, new ResponseInfo(1, "Restore completed for ACACardNo=" + req.getAcaCardNo()));
     }*/
-    @Override
+    /*@Override
     @Transactional
     public DataDto<Void> restore(GeneralPayload<Aca4001RestorePayload> payload, String userId, String userIp) {
         var req = payload.getData();
@@ -183,6 +208,24 @@ public class Aca4001ServiceImpl implements Aca4001Service {
             throw new IllegalArgumentException("acaCardNo 不可為空");
 
         genericEraseService.restoreAllByAcaCardNo(req.getAcaCardNo(), userId, userIp, req.getRestoreReason());
+        return new DataDto<>(null, new ResponseInfo(1, "還原成功 for ACACardNo=" + req.getAcaCardNo()));
+    }*/
+
+    @Override
+    @Transactional
+    public DataDto<Void> restore(GeneralPayload<Aca4001RestorePayload> payload, String userId, String userIp) {
+        var req = payload.getData();
+        if (req == null || req.getAcaCardNo() == null || req.getAcaCardNo().isBlank())
+            throw new IllegalArgumentException("acaCardNo 不可為空");
+
+        RestoreCommand cmd = RestoreCommand.builder()
+                .acaCardNo(req.getAcaCardNo())
+                .operatorUserId(userId)
+                .operatorIp(userIp)
+                .restoreReason(req.getRestoreReason())
+                .build();
+
+        genericEraseService.restoreAllByAcaCardNo(cmd);
         return new DataDto<>(null, new ResponseInfo(1, "還原成功 for ACACardNo=" + req.getAcaCardNo()));
     }
 

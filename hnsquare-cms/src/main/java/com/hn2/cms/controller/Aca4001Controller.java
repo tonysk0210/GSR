@@ -54,9 +54,7 @@ public class Aca4001Controller {
     }
 
     @PostMapping("/restore")
-    public ResponseEntity<DataDto<Void>> restore(
-            @Valid @RequestBody GeneralPayload<Aca4001RestorePayload> payload,
-            HttpServletRequest request) {
+    public ResponseEntity<DataDto<Void>> restore(@Valid @RequestBody GeneralPayload<Aca4001RestorePayload> payload, HttpServletRequest request) {
         var req = payload.getData();
         String userIp = request.getRemoteAddr();
 
