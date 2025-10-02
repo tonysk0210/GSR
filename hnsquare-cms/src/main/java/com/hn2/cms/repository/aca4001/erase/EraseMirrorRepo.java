@@ -3,10 +3,12 @@ package com.hn2.cms.repository.aca4001.erase;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+@Slf4j
 @Repository
 @RequiredArgsConstructor
 public class EraseMirrorRepo {
@@ -71,7 +73,7 @@ public class EraseMirrorRepo {
      * @param sha256Hex  明文 JSON 的 SHA-256
      * @param schema     Schema 名稱（允許 null）
      */
-    public void upsert(String table, String id, String acaCardNo, String payloadB64, String ivB64, String sha256Hex, String schema) {
+    /*public void upsert(String table, String id, String acaCardNo, String payloadB64, String ivB64, String sha256Hex, String schema) {
         // SQL Server MERGE 語法
         // - s(...) 是臨時資料來源 (VALUES)
         // - ON 比對條件：TargetSchema + TargetTable + TargetID
@@ -98,5 +100,38 @@ public class EraseMirrorRepo {
                     .addParameter("sha", sha256Hex)
                     .executeUpdate();
         }
+    }*/
+    public void upsert(String table, String id, String acaCardNo,
+                       String payloadB64, String ivB64, String sha256Hex, String schema) {
+
+        if (id == null || id.isBlank() || "null".equalsIgnoreCase(id)) {
+            throw new IllegalArgumentException("EraseMirror.upsert: TargetID 不可為空/不可為 'null' 字串, table=" + table + ", aca=" + acaCardNo);
+        }
+        // 可加：log 參數
+        log.info("[MirrorUpsert] sch={}, tbl={}, id={}, aca={}, sha256={}",
+                schema, table, id, acaCardNo, sha256Hex);
+
+        String sql = "MERGE INTO dbo.ACA_EraseMirror AS t "
+                + "USING (VALUES(:sch,:tbl,:tid,:aca,:pl,:iv,:sha)) AS s("
+                + "  TargetSchema,TargetTable,TargetID,ACACardNo,EncodedPayload,AesIvBase64,PayloadSha256Hex) "
+                + "  ON t.TargetSchema=s.TargetSchema AND t.TargetTable=s.TargetTable AND t.TargetID=s.TargetID "
+                + "WHEN MATCHED THEN "
+                + "  UPDATE SET EncodedPayload=s.EncodedPayload, AesIvBase64=s.AesIvBase64, "
+                + "             PayloadSha256Hex=s.PayloadSha256Hex, ACACardNo=s.ACACardNo " // ★ 更新 ACACardNo
+                + "WHEN NOT MATCHED THEN "
+                + "  INSERT (TargetSchema,TargetTable,TargetID,ACACardNo,EncodedPayload,AesIvBase64,PayloadSha256Hex) "
+                + "  VALUES (s.TargetSchema,s.TargetTable,s.TargetID,s.ACACardNo,s.EncodedPayload,s.AesIvBase64,s.PayloadSha256Hex);";
+        try (var con = sql2o.open()) {
+            con.createQuery(sql)
+                    .addParameter("sch", (schema == null || schema.isBlank()) ? "dbo" : schema)
+                    .addParameter("tbl", table)
+                    .addParameter("tid", id.trim())        // ★ 保險：trim
+                    .addParameter("aca", acaCardNo)
+                    .addParameter("pl", payloadB64)
+                    .addParameter("iv", ivB64)
+                    .addParameter("sha", sha256Hex)
+                    .executeUpdate();
+        }
     }
+
 }

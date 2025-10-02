@@ -7,6 +7,7 @@ import com.hn2.cms.payload.aca4001.Aca4001EraseQueryPayload;
 import com.hn2.cms.payload.aca4001.Aca4001RestorePayload;
 import com.hn2.cms.repository.aca4001.Aca4001Repository;
 import com.hn2.cms.service.aca4001.erase.CrmRecEraseService;
+import com.hn2.cms.service.aca4001.erase.GenericEraseService;
 import com.hn2.core.dto.DataDto;
 import com.hn2.core.dto.ResponseInfo;
 import com.hn2.core.payload.GeneralPayload;
@@ -24,6 +25,7 @@ public class Aca4001ServiceImpl implements Aca4001Service {
 
     private final Aca4001Repository repo;
     private final CrmRecEraseService crmEraseService; // ★ 注入
+    private final GenericEraseService genericEraseService; // ★ 新的通用服務
 
     @Override
     @Transactional(readOnly = true)
@@ -118,7 +120,7 @@ public class Aca4001ServiceImpl implements Aca4001Service {
         return LocalDate.parse(s); // 預期 yyyy-MM-dd
     }
 
-    @Override
+    /*@Override
     @Transactional
     public DataDto<Void> erase(GeneralPayload<Aca4001ErasePayload> payload, String userId, String userIp) {
         if (payload == null || payload.getData() == null) {
@@ -137,10 +139,27 @@ public class Aca4001ServiceImpl implements Aca4001Service {
         crmEraseService.eraseCrm(req, userId, userIp);
 
         return new DataDto<>(null, new ResponseInfo(1, "成功塗銷"));
+    }*/
+    @Override
+    @Transactional
+    public DataDto<Void> erase(GeneralPayload<Aca4001ErasePayload> payload, String userId, String userIp) {
+        var req = payload.getData();
+        if (req == null || req.getAcaCardNo() == null || req.getAcaCardNo().isBlank())
+            throw new IllegalArgumentException("acaCardNo 不可為空");
+
+        // 準備「表 → 主鍵ID清單」
+        var tableToIds = new java.util.HashMap<String, List<String>>();
+        tableToIds.put("CrmRec", java.util.Optional.ofNullable(req.getSelectedCrmRecIds()).orElse(List.of()));
+
+        // 之後要加 ProRec 再 put 一個 "ProRec" -> selectedProRecIds
+        // 依附表不用在這裡個別列 ID，會用父鍵處理（下一步會示範）
+
+        genericEraseService.eraseRows(req.getAcaCardNo(), tableToIds, userId, userIp);
+        return new DataDto<>(null, new ResponseInfo(1, "成功塗銷"));
     }
 
     // ★ 新增 restore 實作
-    @Override
+    /*@Override
     @Transactional
     public DataDto<Void> restore(GeneralPayload<Aca4001RestorePayload> payload, String userId, String userIp) {
         if (payload == null || payload.getData() == null) {
@@ -155,6 +174,16 @@ public class Aca4001ServiceImpl implements Aca4001Service {
         crmEraseService.restoreByAcaCardNo(req.getAcaCardNo(), req.getRestoreReason(), userId, userIp);
 
         return new DataDto<>(null, new ResponseInfo(1, "Restore completed for ACACardNo=" + req.getAcaCardNo()));
+    }*/
+    @Override
+    @Transactional
+    public DataDto<Void> restore(GeneralPayload<Aca4001RestorePayload> payload, String userId, String userIp) {
+        var req = payload.getData();
+        if (req == null || req.getAcaCardNo() == null || req.getAcaCardNo().isBlank())
+            throw new IllegalArgumentException("acaCardNo 不可為空");
+
+        genericEraseService.restoreAllByAcaCardNo(req.getAcaCardNo(), userId, userIp, req.getRestoreReason());
+        return new DataDto<>(null, new ResponseInfo(1, "還原成功 for ACACardNo=" + req.getAcaCardNo()));
     }
 
     // 你原來的私有方法 parseDateOrNull(...) 保留在 eraseQuery 實作內即可
