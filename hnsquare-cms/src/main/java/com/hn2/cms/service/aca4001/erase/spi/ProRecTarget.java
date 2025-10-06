@@ -10,37 +10,44 @@ import java.util.Map;
 import java.util.Set;
 
 @Component
-public class CrmRecTarget extends AbstractSql2oTarget {
+public class ProRecTarget extends AbstractSql2oTarget {
 
     @Autowired
-    public CrmRecTarget(org.sql2o.Sql2o sql2o) {
+    public ProRecTarget(org.sql2o.Sql2o sql2o) {
         super(sql2o);
     }
 
     @Override
     public String table() {
-        return "CrmRec";
+        return "ProRec";
     }
 
     @Override
     public List<String> whitelistColumns() {
-        return List.of("ProSource1", "ProNoticeDep",
-                "CrmCrime1", "CrmCrime2", "CrmCrime3",
-                "CrmTerm", "CrmChaDate", "CrmDischarge", "CrmDisDate",
-                "CrmTrain", "CrmCert", "CrmMemo",
-                "CrmRemission", "Crm_ReleaseDate", "Crm_Release",
-                "Crm_NoJail", "Crm_Sentence", "Crm_VerdictDate",
-                "CreatedByUserID", "ModifiedByUserID");
+        // ★ 僅列入需要鏡像/塗銷/還原的欄位
+        return java.util.Arrays.asList(
+                "ProPlight",
+                "HasPreviousPlight",
+                "PreviousPlightChangedDesc",
+                "ProStatus",
+                "ProFile",
+                "ProMemo",
+                "ProWorkerBackup",
+                "CreatedByUserID",
+                "ModifiedByUserID"
+        );
     }
 
     @Override
     public Set<String> dateColsNorm() {
-        return Set.of("CRMCHADATE", "CRMDISDATE", "CRMRELEASEDATE", "CRMVERDICTDATE");
+        // 若白名單內沒有日期欄，可回傳空集合
+        return java.util.Collections.emptySet();
     }
 
     @Override
     public Set<String> intColsNorm() {
-        return Set.of("CREATEDBYUSERID", "MODIFIEDBYUSERID", "CRMSENTENCE", "CRMTERM");
+        // HasPreviousPlight（若為 bit）、CreatedByUserID、ModifiedByUserID 可能是數字型
+        return java.util.Set.of("HASPREVIOUSPLIGHT", "CREATEDBYUSERID", "MODIFIEDBYUSERID");
     }
 
     @Override
@@ -50,7 +57,8 @@ public class CrmRecTarget extends AbstractSql2oTarget {
 
     @Override
     public int nullifyAndMarkErased(List<String> ids) {
-        StringBuilder sb = new StringBuilder("UPDATE dbo.CrmRec SET ");
+        // 照 CrmRecTarget 寫法：ID IN (:ids)，白名單欄位逐一設 NULL，唯 CreatedBy/ModifiedByUserID 設 -2
+        StringBuilder sb = new StringBuilder("UPDATE dbo.ProRec SET ");
         for (int i = 0; i < whitelistColumns().size(); i++) {
             String c = whitelistColumns().get(i);
             if (i > 0) sb.append(", ");
@@ -77,10 +85,11 @@ public class CrmRecTarget extends AbstractSql2oTarget {
         for (var r : rows) {
             String id = RowUtils.toStringCI(r, "__PK__");
             if (id == null || id.isBlank()) {
-                throw new IllegalStateException("CrmRecTarget.restoreFromRows: __PK__ 不可為空, rowKeys=" + r.keySet());
+                throw new IllegalStateException("ProRecTarget.restoreFromRows: __PK__ 不可為空, rowKeys=" + r.keySet());
             }
             var cleaned = new java.util.LinkedHashMap<String, Object>();
             for (String col : whitelistColumns()) {
+                // 和 CrmRec 一樣：還原時 ModifiedByUserID 交由系統寫入目前操作者
                 if ("ModifiedByUserID".equalsIgnoreCase(col)) continue;
                 Object raw = RowUtils.getCI(r, col);
                 Object norm = SqlNorm.normalizeForColumn(col, raw, dateColsNorm(), intColsNorm());
@@ -96,4 +105,3 @@ public class CrmRecTarget extends AbstractSql2oTarget {
         return total;
     }
 }
-

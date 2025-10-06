@@ -69,38 +69,6 @@ public class EraseAuditRepo {
      * @param userIp          操作者 IP
      * @param createdByUserId 操作者使用者 ID
      */
-    /*public void insertErase(String schema, String table, String id, String acaCardNo,
-                            Integer docNum, String eraseReason,
-                            String createdByUserId, String userIp) {
-
-        final String sql =
-                "INSERT INTO dbo.ACA_EraseAudit ("
-                        + " TargetSchema, TargetTable, TargetID, ACACardNo,"
-                        + " ActionType, IsErased,"
-                        + " DocNum, EraseReason, RestoreReason,"
-                        + " CreatedByUserID, UserIP"
-                        + ") VALUES ("
-                        + " :schema, :tbl, :tid, :aca,"
-                        + " 'ERASE', 1,"
-                        + " :doc, :rsn, NULL,"
-                        + " :uid, :uip"
-                        + ")";
-
-        final String s = (schema == null || schema.isBlank()) ? "dbo" : schema;
-
-        try (var con = sql2o.open()) {
-            con.createQuery(sql)
-                    .addParameter("schema", s)
-                    .addParameter("tbl", table)
-                    .addParameter("tid", id)
-                    .addParameter("aca", acaCardNo)
-                    .addParameter("doc", docNum)
-                    .addParameter("rsn", eraseReason)
-                    .addParameter("uid", createdByUserId)
-                    .addParameter("uip", userIp)
-                    .executeUpdate();
-        }
-    }*/
     public void insertErase(String schema, String table, String id, String acaCardNo,
                             Integer docNum, String eraseReason,
                             String createdByUserId, String userIp) {
@@ -136,6 +104,15 @@ public class EraseAuditRepo {
                     .addParameter("rsn", eraseReason)
                     .addParameter("uid", createdByUserId)
                     .addParameter("uip", userIp)
+                    .executeUpdate();
+        }
+    }
+
+    public void deleteByAcaCardNo(String acaCardNo) {
+        final String sql = "DELETE FROM dbo.ACA_EraseMirror WHERE ACACardNo = :aca";
+        try (var con = sql2o.open()) {
+            con.createQuery(sql)
+                    .addParameter("aca", acaCardNo)
                     .executeUpdate();
         }
     }

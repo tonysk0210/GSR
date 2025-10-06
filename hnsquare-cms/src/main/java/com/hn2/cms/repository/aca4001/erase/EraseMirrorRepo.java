@@ -73,34 +73,6 @@ public class EraseMirrorRepo {
      * @param sha256Hex  明文 JSON 的 SHA-256
      * @param schema     Schema 名稱（允許 null）
      */
-    /*public void upsert(String table, String id, String acaCardNo, String payloadB64, String ivB64, String sha256Hex, String schema) {
-        // SQL Server MERGE 語法
-        // - s(...) 是臨時資料來源 (VALUES)
-        // - ON 比對條件：TargetSchema + TargetTable + TargetID
-        // - MATCHED → UPDATE
-        // - NOT MATCHED → INSERT
-        String sql = "MERGE INTO dbo.ACA_EraseMirror AS t " +
-                "USING (VALUES(:sch,:tbl,:tid,:aca,:pl,:iv,:sha)) AS s(" +
-                "  TargetSchema,TargetTable,TargetID,ACACardNo,EncodedPayload,AesIvBase64,PayloadSha256Hex) " +
-                "  ON t.TargetSchema=s.TargetSchema AND t.TargetTable=s.TargetTable AND t.TargetID=s.TargetID " +
-                "WHEN MATCHED THEN " +
-                "  UPDATE SET EncodedPayload=s.EncodedPayload, AesIvBase64=s.AesIvBase64, PayloadSha256Hex=s.PayloadSha256Hex " +
-                "WHEN NOT MATCHED THEN " +
-                "  INSERT (TargetSchema,TargetTable,TargetID,ACACardNo,EncodedPayload,AesIvBase64,PayloadSha256Hex) " +
-                "  VALUES (s.TargetSchema,s.TargetTable,s.TargetID,s.ACACardNo,s.EncodedPayload,s.AesIvBase64,s.PayloadSha256Hex);";
-        ;
-        try (var con = sql2o.open()) {
-            con.createQuery(sql)
-                    .addParameter("sch", schema)  // 允許 null，資料庫會存成 NULL
-                    .addParameter("tbl", table)
-                    .addParameter("tid", id)
-                    .addParameter("aca", acaCardNo)
-                    .addParameter("pl", payloadB64)
-                    .addParameter("iv", ivB64)
-                    .addParameter("sha", sha256Hex)
-                    .executeUpdate();
-        }
-    }*/
     public void upsert(String table, String id, String acaCardNo,
                        String payloadB64, String ivB64, String sha256Hex, String schema) {
 
