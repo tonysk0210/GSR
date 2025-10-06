@@ -24,12 +24,12 @@ public class ProDtlTarget extends AbstractSql2oTarget implements DependentEraseT
 
     @Override
     public String parentTableName() {
-        return "ProRec";
-    } // 與 EraseCommand.tableToIds 的 key 對齊
+        return "ProRec"; // 與 EraseCommand.tableToIds 的 key 對齊（父表名）
+    }
 
     @Override
     public List<String> whitelistColumns() {
-        // 僅鏡像/還原這些欄位（你列出的欄位）
+        // 僅鏡像/還原這些欄位（你指定的欄位）
         return java.util.Arrays.asList(
                 "ProCost",
                 "ProDtlDate",
@@ -58,7 +58,7 @@ public class ProDtlTarget extends AbstractSql2oTarget implements DependentEraseT
         return java.util.Set.of("CREATEDBYUSERID", "MODIFIEDBYUSERID");
     }
 
-    // by-ids 非主要用法，保留以符合介面
+    // by-ids 非主要場景，但為符合介面仍保留
     @Override
     public List<Map<String, Object>> loadRowsByIds(List<String> ids) {
         if (ids == null || ids.isEmpty()) return java.util.Collections.emptyList();
@@ -71,7 +71,7 @@ public class ProDtlTarget extends AbstractSql2oTarget implements DependentEraseT
         }
     }
 
-    // 依父鍵 ProRecID 撈 mirror 用資料
+    // 依父鍵（ProRecID）批次載入所有子列（分片以 1000 筆為一組）
     @Override
     public List<Map<String, Object>> loadRowsByParentIds(List<String> parentProRecIds) {
         if (parentProRecIds == null || parentProRecIds.isEmpty()) return java.util.Collections.emptyList();
@@ -89,7 +89,7 @@ public class ProDtlTarget extends AbstractSql2oTarget implements DependentEraseT
         return all;
     }
 
-    // 依父鍵清空欄位並標記 isERASE=1
+    // 依父鍵清空欄位 + 標記 isERASE=1（批次一次處理）
     @Override
     public int nullifyAndMarkErasedByParent(List<String> parentProRecIds) {
         final String sql =
@@ -117,7 +117,7 @@ public class ProDtlTarget extends AbstractSql2oTarget implements DependentEraseT
         }
     }
 
-    // 非主要用法（保留）
+    // 以 ID 清空（非主要用法，仍保留）
     @Override
     public int nullifyAndMarkErased(List<String> ids) {
         final String sql =
@@ -134,6 +134,7 @@ public class ProDtlTarget extends AbstractSql2oTarget implements DependentEraseT
         }
     }
 
+    // 還原：鏡像 → 欄位正規化 → 動態 UPDATE
     @Override
     public int restoreFromRows(List<Map<String, Object>> rows, String operatorUserId) {
         int total = 0;
@@ -146,7 +147,7 @@ public class ProDtlTarget extends AbstractSql2oTarget implements DependentEraseT
             }
             var cleaned = new java.util.LinkedHashMap<String, Object>();
             for (String col : whitelistColumns()) {
-                if ("ModifiedByUserID".equalsIgnoreCase(col)) continue; // 由系統填寫目前操作者
+                if ("ModifiedByUserID".equalsIgnoreCase(col)) continue; // 還原時由系統寫現在操作者
                 Object raw = RowUtils.getCI(r, col);
                 Object norm = SqlNorm.normalizeForColumn(col, raw, dateColsNorm(), intColsNorm());
                 cleaned.put(col, norm);

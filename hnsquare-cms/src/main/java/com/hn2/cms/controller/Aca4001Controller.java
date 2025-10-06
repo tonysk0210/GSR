@@ -35,20 +35,18 @@ public class Aca4001Controller {
         return ResponseEntity.ok(result);
     }
 
+    /**
+     * 整體用途：
+     * - 定義 POST /erase 端點，用於觸發「塗銷」流程
+     * - 從 HttpServletRequest 取得操作者 IP
+     * - 呼叫 service.erase(...) 交給服務層執行實際塗銷、鏡像與稽核
+     */
     @PostMapping("/erase")
     public ResponseEntity<DataDto<Void>> erase(@Valid @RequestBody GeneralPayload<Aca4001ErasePayload> payload, HttpServletRequest request) {
 
-        Aca4001ErasePayload req = payload.getData();
+        Aca4001ErasePayload req = payload.getData(); // 從 GeneralPayload 取出真正的 data（業務欄位）
+        String userIp = request.getRemoteAddr(); // 從 HttpServletRequest 取得用戶端的 IP 位址
 
-        // 從 HttpServletRequest 取得用戶端的 IP 位址
-        String userIp = request.getRemoteAddr();
-
-        // 呼叫 service 的 erase 方法，傳入所需參數：
-        // - payload (原始的 request payload，可能包含 meta 或其他資訊)
-        // - operatorUserId (操作人員的 ID)
-        // - operatorUserName (操作人員的名稱)
-        // - userIp (操作者的 IP)
-        // - operatorBranchId (操作人員所屬分會/部門代號)
         DataDto<Void> result = service.erase(payload, req.getOperatorUserId(), userIp);
         return ResponseEntity.ok(result);
     }

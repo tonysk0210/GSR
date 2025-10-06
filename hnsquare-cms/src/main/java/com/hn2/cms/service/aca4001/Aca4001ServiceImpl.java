@@ -120,18 +120,25 @@ public class Aca4001ServiceImpl implements Aca4001Service {
         return LocalDate.parse(s); // 預期 yyyy-MM-dd
     }
 
+    /**
+     * 整體用途：
+     * - 驗證請求（如 acaCardNo 不可為空）
+     * - 組成「表名 -> 主鍵清單」的映射（CrmRec / ProRec）
+     * - 封裝為 EraseCommand，傳給 GenericEraseService 統一執行
+     * - 回傳標準的 DataDto 成功訊息
+     */
     @Override
     @Transactional
     public DataDto<Void> erase(GeneralPayload<Aca4001ErasePayload> payload, String userId, String userIp) {
         var req = payload.getData();
         if (req == null || req.getAcaCardNo() == null || req.getAcaCardNo().isBlank())
-            throw new IllegalArgumentException("acaCardNo 不可為空");
+            throw new IllegalArgumentException("acaCardNo 不可為空"); // 基本參數驗證
 
-        var tableToIds = new java.util.HashMap<String, List<String>>();
+        var tableToIds = new java.util.HashMap<String, List<String>>(); // 建立 表名->ids 映射
         tableToIds.put("CrmRec", java.util.Optional.ofNullable(req.getSelectedCrmRecIds()).orElse(List.of()));
-        // ★ 新增：把前端勾選的 ProRecIDs 一起帶入
         tableToIds.put("ProRec", java.util.Optional.ofNullable(req.getSelectedProRecIds()).orElse(java.util.Collections.emptyList()));
 
+        // 封裝指令物件（Command Pattern），便於在 Generic 層使用
         EraseCommand cmd = EraseCommand.builder()
                 .acaCardNo(req.getAcaCardNo())
                 .tableToIds(tableToIds)
