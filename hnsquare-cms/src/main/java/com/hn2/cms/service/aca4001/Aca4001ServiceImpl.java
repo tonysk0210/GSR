@@ -1,10 +1,13 @@
 package com.hn2.cms.service.aca4001;
 
+import com.hn2.cms.dto.aca4001.Aca4001AuditQueryDto;
 import com.hn2.cms.dto.aca4001.Aca4001EraseQueryDto;
 import com.hn2.cms.dto.aca4001.Aca4001EraseQueryDto.*;
+import com.hn2.cms.dto.aca4001.Aca4001RestoreQueryDto;
 import com.hn2.cms.payload.aca4001.Aca4001ErasePayload;
 import com.hn2.cms.payload.aca4001.Aca4001EraseQueryPayload;
 import com.hn2.cms.payload.aca4001.Aca4001RestorePayload;
+import com.hn2.cms.payload.aca4001.Aca4001RestoreQueryPayload;
 import com.hn2.cms.repository.aca4001.Aca4001Repository;
 import com.hn2.cms.service.aca4001.erase.GenericEraseService;
 import com.hn2.cms.service.aca4001.erase.model.EraseCommand;
@@ -127,10 +130,35 @@ public class Aca4001ServiceImpl implements Aca4001Service {
         if (req == null || req.getAcaCardNo() == null || req.getAcaCardNo().isBlank())
             throw new IllegalArgumentException("acaCardNo 不可為空");
 
+        Boolean over18Flag = req.getIsOver18();
+        boolean isOver18;
+        if (over18Flag != null) {
+            isOver18 = over18Flag;
+        } else {
+            isOver18 = true; // fallback to current behavior if client didn't send the flag
+        }
+
         var tableToIds = new java.util.HashMap<String, List<String>>();
-        tableToIds.put("CrmRec", java.util.Optional.ofNullable(req.getSelectedCrmRecIds()).orElse(List.of()));
-        // ★ 新增：把前端勾選的 ProRecIDs 一起帶入
-        tableToIds.put("ProRec", java.util.Optional.ofNullable(req.getSelectedProRecIds()).orElse(java.util.Collections.emptyList()));
+
+        if (isOver18) {
+            // Original behavior: only what the user selected
+            tableToIds.put("CrmRec",
+                    java.util.Optional.ofNullable(req.getSelectedCrmRecIds()).orElse(List.of()));
+            tableToIds.put("ProRec",
+                    java.util.Optional.ofNullable(req.getSelectedProRecIds()).orElse(List.of()));
+        } else {
+            // Under 18: erase EVERYTHING for this ACACardNo
+            List<String> allCrmIds = repo.findAllCrmRecIdsByAcaCardNo(req.getAcaCardNo());
+            List<String> allProIds = repo.findAllProRecIdsByAcaCardNo(req.getAcaCardNo());
+
+            tableToIds.put("CrmRec", allCrmIds);
+            tableToIds.put("ProRec", allProIds);
+
+            // Trigger ACABrd-dependent targets (ACAFamilies, Career, Memo, ACABrd).
+            // Your DependentEraseTarget(s) listen to parentTableName() == "ACABrd"
+            // and will use this ACACardNo list as the parent ids.
+            tableToIds.put("ACABrd", List.of(req.getAcaCardNo()));
+        }
 
         EraseCommand cmd = EraseCommand.builder()
                 .acaCardNo(req.getAcaCardNo())
@@ -142,7 +170,31 @@ public class Aca4001ServiceImpl implements Aca4001Service {
                 .build();
 
         genericEraseService.eraseRows(cmd);
-        return new DataDto<>(null, new ResponseInfo(1, "成功塗銷"));
+        return new DataDto<>(null, new ResponseInfo(1,
+                isOver18 ? "成功塗銷（滿18：依使用者選取）" : "成功塗銷（未滿18：全案＋關聯表）"));
+    }
+
+    @Override
+    public DataDto<Aca4001RestoreQueryDto> restoreQuery(GeneralPayload<Aca4001RestoreQueryPayload> payload) {
+        if (payload == null || payload.getData() == null) {
+            throw new IllegalArgumentException("data 不可為空");
+        }
+
+        var req = payload.getData();
+        String acaCardNo = req.getAcaCardNo() == null ? "" : req.getAcaCardNo().trim();
+        if (acaCardNo.isEmpty()) {
+            throw new IllegalArgumentException("acaCardNo 不可為空");
+        }
+
+        // 直接查 ACABrd.IsERASE
+        Boolean erased = repo.findPersonErased(acaCardNo); // 可能為 null
+
+        var dto = new Aca4001RestoreQueryDto();
+        dto.setErased(erased != null && erased);
+
+        String msg = (erased == null) ? "查無 ACABrd 資料" : (erased ? "此個案目前為已塗銷 (isERASE=1)" : "此個案目前為未塗銷 (isERASE=0)");
+
+        return new DataDto<>(dto, new ResponseInfo(1, msg));
     }
 
     @Override
@@ -163,5 +215,15 @@ public class Aca4001ServiceImpl implements Aca4001Service {
         return new DataDto<>(null, new ResponseInfo(1, "還原成功 for ACACardNo=" + req.getAcaCardNo()));
     }
 
-    // 你原來的私有方法 parseDateOrNull(...) 保留在 eraseQuery 實作內即可
+    //audit
+    @Override
+    public DataDto<Aca4001AuditQueryDto> auditQuery() {
+        var groups = repo.findAuditGroups(null, null, null);
+
+        var dto = new Aca4001AuditQueryDto();
+        dto.setAggregated(true);
+        dto.setGroups(groups);
+
+        return new DataDto<>(dto, new ResponseInfo(1, "查詢成功（彙總）"));
+    }
 }

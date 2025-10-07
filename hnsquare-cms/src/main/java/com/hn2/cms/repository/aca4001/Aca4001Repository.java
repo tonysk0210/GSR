@@ -1,5 +1,6 @@
 package com.hn2.cms.repository.aca4001;
 
+import com.hn2.cms.dto.aca4001.Aca4001AuditQueryDto;
 import com.hn2.cms.dto.aca4001.Aca4001EraseQueryDto;
 import com.hn2.cms.dto.aca4001.Aca4001EraseQueryDto.PersonBirth;
 
@@ -21,7 +22,7 @@ public interface Aca4001Repository {
                                        LocalDateTime startTs,
                                        LocalDateTime endExclusive);
 
-    public List<Aca4001EraseQueryDto.CrmRec> findCrmRecsByIds(List<String> ids);
+    List<Aca4001EraseQueryDto.CrmRec> findCrmRecsByIds(List<String> ids);
 
 
     /**
@@ -37,4 +38,14 @@ public interface Aca4001Repository {
     public Boolean findLatestProRecClosed(String acaCardNo);
 
     public Boolean findPersonErased(String acaCardNo);
+
+    List<String> findAllCrmRecIdsByAcaCardNo(String acaCardNo);
+
+    List<String> findAllProRecIdsByAcaCardNo(String acaCardNo);
+
+    //audit
+    // NEW: aggregated audit groups (no filters now; leave params for future)
+    List<Aca4001AuditQueryDto.Group> findAuditGroups(String acaCardNo,
+                                                     LocalDateTime start,
+                                                     LocalDateTime end);
 }

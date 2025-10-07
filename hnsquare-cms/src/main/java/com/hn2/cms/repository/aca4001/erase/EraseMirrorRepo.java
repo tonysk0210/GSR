@@ -89,10 +89,10 @@ public class EraseMirrorRepo {
                 + "  ON t.TargetSchema=s.TargetSchema AND t.TargetTable=s.TargetTable AND t.TargetID=s.TargetID "
                 + "WHEN MATCHED THEN "
                 + "  UPDATE SET EncodedPayload=s.EncodedPayload, AesIvBase64=s.AesIvBase64, "
-                + "             PayloadSha256Hex=s.PayloadSha256Hex, ACACardNo=s.ACACardNo " // ★ 更新 ACACardNo
+                + "             PayloadSha256Hex=s.PayloadSha256Hex, ACACardNo=s.ACACardNo "
                 + "WHEN NOT MATCHED THEN "
-                + "  INSERT (TargetSchema,TargetTable,TargetID,ACACardNo,EncodedPayload,AesIvBase64,PayloadSha256Hex) "
-                + "  VALUES (s.TargetSchema,s.TargetTable,s.TargetID,s.ACACardNo,s.EncodedPayload,s.AesIvBase64,s.PayloadSha256Hex);";
+                + "  INSERT (TargetSchema,TargetTable,TargetID,ACACardNo,EncodedPayload,AesIvBase64,PayloadSha256Hex,CreatedOnDate) "
+                + "  VALUES (s.TargetSchema,s.TargetTable,s.TargetID,s.ACACardNo,s.EncodedPayload,s.AesIvBase64,s.PayloadSha256Hex,SYSDATETIME());";
         try (var con = sql2o.open()) {
             con.createQuery(sql)
                     .addParameter("sch", (schema == null || schema.isBlank()) ? "dbo" : schema)

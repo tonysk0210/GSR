@@ -1,9 +1,12 @@
 package com.hn2.cms.controller;
 
+import com.hn2.cms.dto.aca4001.Aca4001AuditQueryDto;
 import com.hn2.cms.dto.aca4001.Aca4001EraseQueryDto;
+import com.hn2.cms.dto.aca4001.Aca4001RestoreQueryDto;
 import com.hn2.cms.payload.aca4001.Aca4001ErasePayload;
 import com.hn2.cms.payload.aca4001.Aca4001EraseQueryPayload;
 import com.hn2.cms.payload.aca4001.Aca4001RestorePayload;
+import com.hn2.cms.payload.aca4001.Aca4001RestoreQueryPayload;
 import com.hn2.cms.service.aca4001.Aca4001Service;
 import com.hn2.core.dto.DataDto;
 import com.hn2.core.payload.GeneralPayload;
@@ -53,6 +56,12 @@ public class Aca4001Controller {
         return ResponseEntity.ok(result);
     }
 
+    @PostMapping("/restoreQuery")
+    public ResponseEntity<DataDto<Aca4001RestoreQueryDto>> restoreQuery(@Valid @RequestBody GeneralPayload<Aca4001RestoreQueryPayload> payload) {
+        DataDto<Aca4001RestoreQueryDto> result = service.restoreQuery(payload);
+        return ResponseEntity.ok(result);
+    }
+
     @PostMapping("/restore")
     public ResponseEntity<DataDto<Void>> restore(@Valid @RequestBody GeneralPayload<Aca4001RestorePayload> payload, HttpServletRequest request) {
         var req = payload.getData();
@@ -60,5 +69,10 @@ public class Aca4001Controller {
 
         DataDto<Void> result = service.restore(payload, req.getOperatorUserId(), userIp);
         return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/auditQuery")
+    public ResponseEntity<DataDto<Aca4001AuditQueryDto>> auditQuery() {
+        return ResponseEntity.ok(service.auditQuery());
     }
 }

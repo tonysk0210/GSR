@@ -24,13 +24,26 @@ public class CrmRecTarget extends AbstractSql2oTarget {
 
     @Override
     public List<String> whitelistColumns() {
-        return List.of("ProSource1", "ProNoticeDep",
-                "CrmCrime1", "CrmCrime2", "CrmCrime3",
-                "CrmTerm", "CrmChaDate", "CrmDischarge", "CrmDisDate",
-                "CrmTrain", "CrmCert", "CrmMemo",
-                "CrmRemission", "Crm_ReleaseDate", "Crm_Release",
-                "Crm_NoJail", "Crm_Sentence", "Crm_VerdictDate",
-                "CreatedByUserID", "ModifiedByUserID");
+        return List.of("ProSource1",
+                "ProNoticeDep",
+                "CrmCrime1",
+                "CrmCrime2",
+                "CrmCrime3",
+                "CrmTerm",
+                "CrmChaDate",
+                "CrmDischarge",
+                "CrmDisDate",
+                "CrmTrain",
+                "CrmCert",
+                "CrmMemo",
+                "CrmRemission",
+                "Crm_ReleaseDate",
+                "Crm_Release",
+                "Crm_NoJail",
+                "Crm_Sentence",
+                "Crm_VerdictDate",
+                "CreatedByUserID",
+                "ModifiedByUserID");
     }
 
     @Override

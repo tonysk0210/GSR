@@ -29,17 +29,17 @@ public class EraseAuditRepo {
         }
 
         final String sql =
-                "INSERT INTO dbo.ACA_EraseAudit ("
-                        + " TargetSchema, TargetTable, TargetID, ACACardNo,"
-                        + " ActionType, IsErased,"
-                        + " DocNum, EraseReason, RestoreReason,"
-                        + " CreatedByUserID, UserIP"
-                        + ") VALUES ("
-                        + " :schema, :tbl, :tid, :aca,"
-                        + " 'RESTORE', 0,"
-                        + " NULL, NULL, :rsn,"
-                        + " :uid, :uip"
-                        + ")";
+                "INSERT INTO dbo.ACA_EraseAudit (" +
+                        " TargetSchema, TargetTable, TargetID, ACACardNo," +
+                        " ActionType, IsErased," +
+                        " DocNum, EraseReason, RestoreReason," +
+                        " CreatedByUserID, UserIP, CreatedOnDate" +   // ✅ 新增欄位
+                        ") VALUES (" +
+                        " :schema, :tbl, :tid, :aca," +
+                        " 'RESTORE', 0," +
+                        " NULL, NULL, :rsn," +
+                        " :uid, :uip, SYSDATETIME()" +                // ✅ 本地時間
+                        ")";
 
         final String s = (schema == null || schema.isBlank()) ? "dbo" : schema;
 
@@ -80,18 +80,17 @@ public class EraseAuditRepo {
 
 
         final String sql =
-                "INSERT INTO dbo.ACA_EraseAudit ("
-                        + " TargetSchema, TargetTable, TargetID, ACACardNo,"
-                        + " ActionType, IsErased,"
-                        + " DocNum, EraseReason, RestoreReason,"
-                        + " CreatedByUserID, UserIP"
-                        + ") VALUES ("
-                        + " :schema, :tbl, :tid, :aca,"
-                        + " 'ERASE', 1,"
-                        + " :doc, :rsn, NULL,"
-                        + " :uid, :uip"
-                        + ")";
-
+                "INSERT INTO dbo.ACA_EraseAudit (" +
+                        " TargetSchema, TargetTable, TargetID, ACACardNo," +
+                        " ActionType, IsErased," +
+                        " DocNum, EraseReason, RestoreReason," +
+                        " CreatedByUserID, UserIP, CreatedOnDate" +   // ✅ 新增欄位
+                        ") VALUES (" +
+                        " :schema, :tbl, :tid, :aca," +
+                        " 'ERASE', 1," +
+                        " :doc, :rsn, NULL," +
+                        " :uid, :uip, SYSDATETIME()" +                // ✅ 本地時間
+                        ")";
         final String s = (schema == null || schema.isBlank()) ? "dbo" : schema;
 
         try (var con = sql2o.open()) {

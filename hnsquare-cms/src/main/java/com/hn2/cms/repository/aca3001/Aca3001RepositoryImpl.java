@@ -109,8 +109,7 @@ public class Aca3001RepositoryImpl implements Aca3001Repository {
         final String SQL_HEADER =
                 "SELECT l.[Text] AS BranchName, r.ProNoticeDate, r.ProDate " +
                         "FROM dbo.ProRec r " +
-                        "LEFT JOIN dbo.ACABrd ab ON ab.ID = r.ID " +
-                        "LEFT JOIN dbo.Lists l ON l.ParentID = 26 AND l.Value = ab.CreatedByBranchID " +
+                        "LEFT JOIN dbo.Lists l ON l.ParentID = 26 AND l.Value = r.CreatedByBranchID " +
                         "WHERE r.ID = ?";
 
         return jdbcTemplate.query(SQL_HEADER, ps -> ps.setString(1, proRecId), rs -> {
