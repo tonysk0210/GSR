@@ -1,7 +1,7 @@
 package com.hn2.cms.controller;
 
 import com.hn2.cms.payload.aca2001.Aca2001SavePayload;
-import com.hn2.cms.service.Aca2001Service;
+import com.hn2.cms.service.aca2001.Aca2001Service;
 import com.hn2.core.dto.DataDto;
 import com.hn2.core.payload.GeneralPayload;
 import org.springframework.beans.factory.annotation.Autowired;

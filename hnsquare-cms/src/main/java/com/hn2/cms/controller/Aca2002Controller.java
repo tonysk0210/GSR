@@ -1,11 +1,11 @@
 package com.hn2.cms.controller;
 
 
-import com.hn2.cms.dto.Aca2002CrmRecQueryDto;
+import com.hn2.cms.dto.aca2002.Aca2002CrmRecQueryDto;
 import com.hn2.cms.payload.aca2002.Aca2002QueryListPayload;
 import com.hn2.cms.payload.aca2002.Aca2002QueryPayload;
 import com.hn2.cms.payload.aca2002.Aca2002SavePayload;
-import com.hn2.cms.service.Aca2002Service;
+import com.hn2.cms.service.aca2002.Aca2002Service;
 import com.hn2.core.dto.DataDto;
 import com.hn2.core.payload.GeneralPayload;
 import org.springframework.beans.factory.annotation.Autowired;

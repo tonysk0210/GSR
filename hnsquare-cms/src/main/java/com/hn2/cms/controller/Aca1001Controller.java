@@ -1,11 +1,11 @@
 package com.hn2.cms.controller;
 
-import com.hn2.cms.dto.Aca1001QueryDto;
+import com.hn2.cms.dto.aca1001.Aca1001QueryDto;
 import com.hn2.cms.payload.aca1001.Aca1001AssignPayload;
 import com.hn2.cms.payload.aca1001.Aca1001QueryPayload;
 import com.hn2.cms.payload.aca1001.Aca1001SignPayload;
 import com.hn2.cms.payload.aca1001.Aca1001TransPortPayload;
-import com.hn2.cms.service.Aca1001Service;
+import com.hn2.cms.service.aca1001.Aca1001Service;
 import com.hn2.core.dto.DataDto;
 import com.hn2.core.payload.GeneralPayload;
 import org.springframework.beans.factory.annotation.Autowired;
