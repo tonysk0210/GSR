@@ -1,4 +1,4 @@
-package com.hn2.cms.service.aca4001.erase.model;
+package com.hn2.cms.service.aca4001.erase.command;
 
 import lombok.Builder;
 import lombok.Getter;

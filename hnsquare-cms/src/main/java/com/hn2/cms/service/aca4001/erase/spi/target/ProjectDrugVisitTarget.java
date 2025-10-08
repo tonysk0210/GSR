@@ -28,7 +28,6 @@ public class ProjectDrugVisitTarget extends AbstractSql2oTarget implements Depen
     @Override
     public List<String> whitelistColumns() {
         return java.util.Arrays.asList(
-                "ProjectDrugOpenID",
                 "SocietyMemo",
                 "MarrigeStatus",
                 "FaiStatus",
@@ -101,7 +100,6 @@ public class ProjectDrugVisitTarget extends AbstractSql2oTarget implements Depen
 
         final String sql =
                 "UPDATE dbo.ProjectDrugVisit SET " +
-                        "  [ProjectDrugOpenID]=NULL," +
                         "  [SocietyMemo]=NULL," +
                         "  [MarrigeStatus]=NULL," +
                         "  [FaiStatus]=NULL," +
@@ -140,7 +138,7 @@ public class ProjectDrugVisitTarget extends AbstractSql2oTarget implements Depen
 
         final String sql =
                 "UPDATE dbo.ProjectDrugVisit SET " +
-                        "  [ProjectDrugOpenID]=NULL,[SocietyMemo]=NULL,[MarrigeStatus]=NULL,[FaiStatus]=NULL,[FaiSupport]=NULL,[FaiSupportMemo]=NULL," +
+                        "  [SocietyMemo]=NULL,[MarrigeStatus]=NULL,[FaiStatus]=NULL,[FaiSupport]=NULL,[FaiSupportMemo]=NULL," +
                         "  [SocSupport]=NULL,[SocSupportFriend]=NULL,[SocSupportBoss]=NULL,[SocSupportOther]=NULL," +
                         "  [Live]=NULL,[LiveMemo]=NULL,[LifeMemo]=NULL," +
                         "  [SocStatus]=NULL,[SocStatusMemo]=NULL," +
