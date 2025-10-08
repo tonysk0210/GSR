@@ -111,7 +111,7 @@ public class Aca4001ServiceImpl implements Aca4001Service {
 
     @Override
     @Transactional
-    public DataDto<Void> erase(GeneralPayload<Aca4001ErasePayload> payload, String userId, String userIp) {
+    public DataDto<Void> erase(GeneralPayload<Aca4001ErasePayload> payload, Integer userId, String userIp) {
         var req = payload.getData();
         if (req == null || req.getAcaCardNo() == null || req.getAcaCardNo().isBlank())
             throw new IllegalArgumentException("acaCardNo 不可為空");

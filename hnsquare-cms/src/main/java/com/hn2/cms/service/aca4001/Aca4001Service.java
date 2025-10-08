@@ -14,7 +14,7 @@ public interface Aca4001Service {
     DataDto<Aca4001EraseQueryDto> eraseQuery(GeneralPayload<Aca4001EraseQueryPayload> payload);
 
     // 刪掉 userName、branchId
-    DataDto<Void> erase(GeneralPayload<Aca4001ErasePayload> payload, String userId, String userIp);
+    DataDto<Void> erase(GeneralPayload<Aca4001ErasePayload> payload, Integer userId, String userIp);
 
     DataDto<Aca4001RestoreQueryDto> restoreQuery(GeneralPayload<Aca4001RestoreQueryPayload> payload);
 

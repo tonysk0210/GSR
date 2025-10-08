@@ -14,7 +14,7 @@ import java.util.Map;
 public final class EraseCommand {
     private final String acaCardNo;
     private final Map<String, List<String>> tableToIds;
-    private final String operatorUserId;
+    private final Integer operatorUserId;
     private final String operatorIp;
     private final Integer docNum;       // 可為 null
     private final String eraseReason;   // 可為 null
@@ -23,7 +23,7 @@ public final class EraseCommand {
     public EraseCommand(
             String acaCardNo,
             @Singular("tableIds") Map<String, List<String>> tableToIds,
-            String operatorUserId,
+            Integer operatorUserId,
             String operatorIp,
             Integer docNum,
             String eraseReason

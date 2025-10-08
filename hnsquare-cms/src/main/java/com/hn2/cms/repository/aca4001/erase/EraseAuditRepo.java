@@ -42,7 +42,7 @@ public class EraseAuditRepo {
     public void insertEraseAction(String acaCardNo,
                                   Integer docNum,
                                   String eraseReason,
-                                  String createdByUserId,
+                                  Integer createdByUserId,
                                   String userIp) {
         final String sql =
                 "INSERT INTO dbo.ACA_EraseAudit (" +
