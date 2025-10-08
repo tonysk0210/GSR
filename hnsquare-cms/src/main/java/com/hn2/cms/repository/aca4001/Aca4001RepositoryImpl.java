@@ -395,51 +395,29 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
 
     //audit
     @Override
-    public List<Aca4001AuditQueryDto.Group> findAuditGroups(String acaCardNo,
-                                                            LocalDateTime start,
-                                                            LocalDateTime end) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("WITH Base AS (\n")
-                .append("  SELECT ACACardNo, ActionType, CreatedByUserID, UserIP,\n")
-                .append("         CAST(CreatedOnDate AS DATETIME2(0)) AS CreatedOnSec,\n")
-                .append("         DocNum, EraseReason, RestoreReason\n")
-                .append("  FROM dbo.ACA_EraseAudit\n")
-                .append("  WHERE 1=1\n");
-        if (acaCardNo != null && !acaCardNo.isBlank()) sb.append("    AND ACACardNo = :acaCardNo\n");
-        if (start != null) sb.append("    AND CreatedOnDate >= :start\n");
-        if (end != null) sb.append("    AND CreatedOnDate <= :end\n");
-        sb.append("), G AS (\n")
-                .append("  SELECT ACACardNo, ActionType, CreatedByUserID, UserIP, CreatedOnSec,\n")
-                .append("         CAST(COUNT(*) AS int) AS RecordCount,\n") // 明確 int
-                .append("         MAX(DocNum) AS DocNum,\n")
-                .append("         MAX(EraseReason)   AS EraseReason,\n")
-                .append("         MAX(RestoreReason) AS RestoreReason\n")
-                .append("  FROM Base\n")
-                .append("  GROUP BY ACACardNo, ActionType, CreatedByUserID, UserIP, CreatedOnSec\n")
-                .append(")\n")
-                .append("SELECT\n")
-                .append("  g.ACACardNo  AS acaCardNo,\n")
-                .append("  g.ActionType AS action,\n")
-                .append("  CASE WHEN UPPER(g.ActionType)='ERASE' THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS isErased,\n")
-                .append("  CAST(g.DocNum AS int) AS docNum,\n") // 明確 int
-                .append("  COALESCE(NULLIF(g.EraseReason,''), NULLIF(g.RestoreReason,'')) AS reason,\n")
-                .append("  g.RecordCount AS recordCount,\n")
-                .append("  CAST(g.CreatedOnSec AS DATETIME2(0)) AS createdOn,\n") // 可對映到 java.sql.Timestamp
-                .append("  CAST(g.CreatedByUserID AS nvarchar(50)) AS userId,\n") // 用字串接
-                .append("  u.DisplayName AS userName,\n")
-                .append("  CAST(g.UserIP AS nvarchar(64)) AS userIp\n")
-                .append("FROM G g\n")
-                .append("LEFT JOIN CaseManagementDnnDB.dbo.Users u\n")
-                .append("  ON u.UserID = TRY_CONVERT(int, g.CreatedByUserID)\n")
-                .append("ORDER BY g.CreatedOnSec DESC\n");
+    public List<Aca4001AuditQueryDto.Row> findAuditRows() {
+        // 一筆就是一次動作，不再彙總
+        String sql =
+                "SELECT " +
+                        "  A.AuditID                                  AS auditId, " +
+                        "  CAST(A.CreatedOnDate AS DATETIME2(0))      AS createdOn, " +
+                        "  A.ACACardNo                                AS acaCardNo, " +
+                        "  A.ActionType                               AS action, " +
+                        "  CAST(A.DocNum AS INT)                      AS docNum, " +
+                        "  A.EraseReason                              AS eraseReason, " +
+                        "  A.RestoreReason                            AS restoreReason, " +
+                        "  CAST(A.CreatedByUserID AS NVARCHAR(50))    AS userId, " +
+                        "  CAST(A.UserIP AS NVARCHAR(64))             AS userIp, " +
+                        "  U.DisplayName                              AS userName " +
+                        "FROM dbo.ACA_EraseAudit A " +
+                        "LEFT JOIN CaseManagementDnnDB.dbo.Users U " +
+                        "  ON U.UserID = TRY_CONVERT(INT, A.CreatedByUserID) " +
+                        "ORDER BY A.CreatedOnDate DESC";
 
         try (var con = sql2o.open()) {
-            var q = con.createQuery(sb.toString());
-            if (acaCardNo != null && !acaCardNo.isBlank()) q.addParameter("acaCardNo", acaCardNo);
-            if (start != null) q.addParameter("start", start);
-            if (end != null) q.addParameter("end", end);
-            return q.executeAndFetch(Aca4001AuditQueryDto.Group.class);
+            return con.createQuery(sql).executeAndFetch(Aca4001AuditQueryDto.Row.class);
         }
     }
+
 
 }

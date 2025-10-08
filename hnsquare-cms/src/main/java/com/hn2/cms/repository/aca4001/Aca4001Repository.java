@@ -44,8 +44,5 @@ public interface Aca4001Repository {
     List<String> findAllProRecIdsByAcaCardNo(String acaCardNo);
 
     //audit
-    // NEW: aggregated audit groups (no filters now; leave params for future)
-    List<Aca4001AuditQueryDto.Group> findAuditGroups(String acaCardNo,
-                                                     LocalDateTime start,
-                                                     LocalDateTime end);
+    List<Aca4001AuditQueryDto.Row> findAuditRows();
 }

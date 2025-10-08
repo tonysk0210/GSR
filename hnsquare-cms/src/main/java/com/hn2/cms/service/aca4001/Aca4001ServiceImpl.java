@@ -218,12 +218,11 @@ public class Aca4001ServiceImpl implements Aca4001Service {
     //audit
     @Override
     public DataDto<Aca4001AuditQueryDto> auditQuery() {
-        var groups = repo.findAuditGroups(null, null, null);
+        var rows = repo.findAuditRows();
 
         var dto = new Aca4001AuditQueryDto();
-        dto.setAggregated(true);
-        dto.setGroups(groups);
+        dto.setItems(rows);
 
-        return new DataDto<>(dto, new ResponseInfo(1, "查詢成功（彙總）"));
+        return new DataDto<>(dto, new ResponseInfo(1, "查詢成功"));
     }
 }

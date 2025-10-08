@@ -32,9 +32,9 @@ public class GenericEraseService {
     // ========== 共用：鏡像 + 稽核 + 清空 ==========
     @Transactional
     public void eraseRows(EraseCommand cmd) {
-        // 1) 單表
+        // 1) 針對各 EraseTarget 清空
         for (EraseTarget t : eraseTargets) {
-            var ids = cmd.idsOf(t.table());   // ← 改這裡，從 command 取
+            var ids = cmd.idsOf(t.table());
             if (ids.isEmpty()) continue;
 
             var rows = t.loadRowsByIds(ids);
@@ -47,13 +47,11 @@ public class GenericEraseService {
                 String sha256 = AesGcmCrypto.sha256Hex(json);
 
                 mirrorRepo.upsert(t.table(), id, cmd.getAcaCardNo(), enc.payloadBase64, enc.ivBase64, sha256, t.schema());
-                auditRepo.insertErase(t.schema(), t.table(), id, cmd.getAcaCardNo(),
-                        cmd.getDocNum(), cmd.getEraseReason(), cmd.getOperatorUserId(), cmd.getOperatorIp());
             }
             t.nullifyAndMarkErased(ids);
         }
 
-        // 2) 依附表（讀各自 parentTableName）
+        // 2) 針對 DependentEraseTarget
         for (DependentEraseTarget dt : dependentEraseTargets) {
             var parentIds = cmd.idsOf(dt.parentTableName());
             if (parentIds.isEmpty()) continue;
@@ -66,11 +64,18 @@ public class GenericEraseService {
                 String sha256 = AesGcmCrypto.sha256Hex(json);
 
                 mirrorRepo.upsert(dt.table(), id, cmd.getAcaCardNo(), enc.payloadBase64, enc.ivBase64, sha256, dt.schema());
-                auditRepo.insertErase(dt.schema(), dt.table(), id, cmd.getAcaCardNo(),
-                        cmd.getDocNum(), cmd.getEraseReason(), cmd.getOperatorUserId(), cmd.getOperatorIp());
             }
             dt.nullifyAndMarkErasedByParent(parentIds);
         }
+
+        // 3) ★ 整個流程成功後，才寫「一筆」Audit
+        auditRepo.insertEraseAction(
+                cmd.getAcaCardNo(),
+                cmd.getDocNum(),
+                cmd.getEraseReason(),
+                cmd.getOperatorUserId(),
+                cmd.getOperatorIp()
+        );
     }
 
     // ========== 共用：還原（用 ACACardNo 撈 Mirror） ==========
@@ -88,43 +93,37 @@ public class GenericEraseService {
 
         var handledTables = new java.util.HashSet<String>();
 
-        // 1) 只處理「非 Dependent」的 EraseTarget
         for (var t : eraseTargets) {
-            if (t instanceof DependentEraseTarget) continue;           // ★ 避免重複
+            if (t instanceof DependentEraseTarget) continue;
             var list = byTable.get(t.table());
             if (list == null || list.isEmpty()) continue;
 
             var rowsToRestore = new java.util.ArrayList<java.util.Map<String, Object>>();
-            for (var m : list) {
-                var map = decryptMirrorToRowMapOrThrow(m);
-                rowsToRestore.add(map);
-                auditRepo.insertRestore(t.schema(), t.table(), m.getTargetId(),
-                        cmd.getAcaCardNo(), cmd.getRestoreReason(),
-                        cmd.getOperatorUserId(), cmd.getOperatorIp());
-            }
+            for (var m : list) rowsToRestore.add(decryptMirrorToRowMapOrThrow(m));
             t.restoreFromRows(rowsToRestore, cmd.getOperatorUserId());
             handledTables.add(t.table());
         }
 
-        // 2) 再處理 DependentEraseTarget（避開已處理的表）
         for (var dt : dependentEraseTargets) {
-            if (handledTables.contains(dt.table())) continue;          // ★ 避免重複
+            if (handledTables.contains(dt.table())) continue;
             var list = byTable.get(dt.table());
             if (list == null || list.isEmpty()) continue;
 
             var rowsToRestore = new java.util.ArrayList<java.util.Map<String, Object>>();
-            for (var m : list) {
-                var map = decryptMirrorToRowMapOrThrow(m);
-                rowsToRestore.add(map);
-                auditRepo.insertRestore(dt.schema(), dt.table(), m.getTargetId(),
-                        cmd.getAcaCardNo(), cmd.getRestoreReason(),
-                        cmd.getOperatorUserId(), cmd.getOperatorIp());
-            }
+            for (var m : list) rowsToRestore.add(decryptMirrorToRowMapOrThrow(m));
             dt.restoreFromRows(rowsToRestore, cmd.getOperatorUserId());
             handledTables.add(dt.table());
         }
 
-        // 3) ★ 全部還原完後，把 ACA_EraseAudit 該個案的紀錄刪掉
+        // ★ 流程成功 → 寫一筆還原 Audit
+        auditRepo.insertRestoreAction(
+                cmd.getAcaCardNo(),
+                cmd.getRestoreReason(),
+                cmd.getOperatorUserId(),
+                cmd.getOperatorIp()
+        );
+
+        // 保留原本 Mirror 清除
         auditRepo.deleteByAcaCardNo(cmd.getAcaCardNo());
     }
 
