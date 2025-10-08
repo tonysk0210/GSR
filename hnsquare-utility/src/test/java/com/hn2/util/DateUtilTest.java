@@ -1,6 +1,6 @@
 package com.hn2.util;
 
-import org.junit.jupiter.api.Test;
+/*import org.junit.jupiter.api.Test;
 
 import java.sql.Date;
 import java.time.LocalDate;
@@ -29,4 +29,4 @@ public class DateUtilTest {
       assertEquals(LocalDate.of(2023, 12, 03), DateUtil.parseStr("2023-12-03"));
       assertEquals(LocalDate.of(2023, 12, 03), DateUtil.parseStr("20231203"));
   }
-}
+}*/

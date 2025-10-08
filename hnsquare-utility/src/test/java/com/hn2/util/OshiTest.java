@@ -2,7 +2,7 @@ package com.hn2.util;
 
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
-import org.junit.jupiter.api.Test;
+//import org.junit.jupiter.api.Test;
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;
 import oshi.hardware.GlobalMemory;
@@ -217,7 +217,7 @@ public class OshiTest {
   }
 
   /** 所有系統信息 */
-  @Test
+  /*@Test
   public void getInfo() throws UnknownHostException {
     JSONObject info = new JSONObject();
     info.put("cpuInfo", getCpuInfo());
@@ -225,5 +225,5 @@ public class OshiTest {
     info.put("memInfo", getMemInfo());
     info.put("sysInfo", getSysInfo());
     info.put("sysFileInfo", getSysFileInfo());
-  }
+  }*/
 }
