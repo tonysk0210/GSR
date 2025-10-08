@@ -56,6 +56,7 @@ public class Aca4001EraseQueryDto {
         private String proNoticeDate;      // ProRec.ProNoticeDate -> 民國
         private String proDate;            // ProRec.ProDate -> 民國
         // 認輔狀況
+        @JsonProperty("isAdopt")
         private Boolean adopt;             // ProRec.isAdopt（用 Boolean 以容許 null）
         // 家支狀況（有符合條件即回 "家支"，否則 ""）
         private String homeSupportTag;
@@ -67,7 +68,7 @@ public class Aca4001EraseQueryDto {
         private String staffDisplayName;   // join CaseManagementDnn.dbo.Users by CreatedByUserID
         // 輔導員（機構區域文字 + 機構名稱 + (實習)）
         private String counselorInstDisplay; // ex: "北區 臺北OO(實習)"
-        private String counselorWorkerId;     // （除錯用，可視需求保留/拿掉）
+        //private String counselorWorkerId;     // （除錯用，可視需求保留/拿掉）
         private String archiveName;         // 歸檔名稱（ProRec.ProFile)
     }
 

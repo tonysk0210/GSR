@@ -42,9 +42,9 @@ public class GenericEraseService {
 
             for (var r : rows) {
                 String id = RowUtils.extractIdOrThrow(r, t.idColumn(), t.table());
-                String json = buildRowPayloadJson(t.schema(), t.table(), t.idColumn(), id, r);
+                String json = buildRowPayloadJson(t.schema(), t.table(), t.idColumn(), id, r); // 把原始欄位打包成 JSON
                 var enc = crypto.encryptJson(json);
-                String sha256 = AesGcmCrypto.sha256Hex(json);
+                String sha256 = AesGcmCrypto.sha256Hex(json); // 接著計算雜湊
 
                 mirrorRepo.upsert(t.table(), id, cmd.getAcaCardNo(), enc.payloadBase64, enc.ivBase64, sha256, t.schema());
             }
@@ -143,9 +143,9 @@ public class GenericEraseService {
     }
 
     private Map<String, Object> decryptMirrorToRowMapOrThrow(EraseMirrorRepo.MirrorRow m) {
-        String json = crypto.decryptToJson(m.getPayloadBase64(), m.getIvBase64());
-        String sha = AesGcmCrypto.sha256Hex(json);
-        if (!sha.equalsIgnoreCase(m.getSha256())) {
+        String json = crypto.decryptToJson(m.getPayloadBase64(), m.getIvBase64()); //先解密
+        String sha = AesGcmCrypto.sha256Hex(json); //再重算雜湊
+        if (!sha.equalsIgnoreCase(m.getSha256())) { //與資料庫帶出的 m.getSha256()（也就是 PayloadSha256Hex）比對
             throw new IllegalStateException("Mirror payload 校驗失敗: " + m.getTargetId());
         }
         try {

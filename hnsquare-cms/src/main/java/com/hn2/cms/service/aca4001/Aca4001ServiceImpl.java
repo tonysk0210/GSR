@@ -85,23 +85,9 @@ public class Aca4001ServiceImpl implements Aca4001Service {
         List<String> crmIds = repo.findCrmRecIdsBefore18(acaCardNo, eighteenthStart, startTs, endInclusive);
         List<String> proIds = repo.findProRecIdsBefore18(acaCardNo, eighteenthStart, startTs, endInclusive);
 
-        //把 List<Integer> crmIds（純 ID 清單）轉成 List<CrmRec>（物件清單）後塞進 DTO
-        /*dto.setCrmRecListBefore18(crmIds.stream().map(id -> {
-            CrmRec c = new CrmRec();
-            c.setId(id);
-            return c;
-        }).collect(toList()));*/
-
         // CrmRec：用 ID 清單把欄位補齊
         List<Aca4001EraseQueryDto.CrmRec> crmRecs = repo.findCrmRecsByIds(crmIds);
         dto.setCrmRecListBefore18(crmRecs);
-
-        //把 List<Integer> proIds（純 ID 清單）轉成 List<ProRec>（物件清單）後塞進 DTO
-        /*dto.setProRecListBefore18(proIds.stream().map(id -> {
-            ProRec p = new ProRec();
-            p.setId(id);
-            return p;
-        }).collect(toList()));*/
 
         // 新版：一次補齊 ProRec 欄位
         List<Aca4001EraseQueryDto.ProRec> proRecs = repo.findProRecsByIds(proIds);

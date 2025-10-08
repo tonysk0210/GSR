@@ -335,7 +335,7 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
 
             p.setStaffDisplayName(rs.getString("StaffDisplayName"));
             p.setCounselorInstDisplay(rs.getString("CounselorInstDisplay"));
-            p.setCounselorWorkerId(rs.getString("CounselorWorkerId"));
+            //p.setCounselorWorkerId(rs.getString("CounselorWorkerId"));
             p.setArchiveName(rs.getString("ArchiveName"));
             return p;
         });
