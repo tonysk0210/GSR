@@ -6,5 +6,5 @@ import lombok.Data;
 @Data
 public class Aca4001RestoreQueryDto {
     @JsonProperty("isErased")
-    private boolean erased;  // 對應 ACABrd.IsERASE（null 視為 false）
+    private boolean erased;  // 對應 ACABrd.IsERASE
 }

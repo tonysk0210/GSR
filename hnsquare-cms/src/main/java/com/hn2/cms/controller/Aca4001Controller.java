@@ -29,9 +29,6 @@ public class Aca4001Controller {
 
     private final Aca4001Service service;
 
-    /**
-     * 依條件查滿18歲前可清除之 ProRec/CrmRec 清單
-     */
     @PostMapping("/eraseQuery")
     public ResponseEntity<DataDto<Aca4001EraseQueryDto>> eraseQuery(@Valid @RequestBody GeneralPayload<Aca4001EraseQueryPayload> payload) {
         DataDto<Aca4001EraseQueryDto> result = service.eraseQuery(payload);

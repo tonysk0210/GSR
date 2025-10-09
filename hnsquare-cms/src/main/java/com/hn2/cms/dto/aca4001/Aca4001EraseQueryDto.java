@@ -14,7 +14,7 @@ public class Aca4001EraseQueryDto {
     private boolean isLatestProRecClosed;      // 是否結案(最新的保護紀錄是否已結案)
     @JsonProperty("isErased")
     private boolean isErased;      // 個案是否已塗銷
-    private List<CrmRec> crmRecListBefore18; // 客服紀錄ID清單
+    private List<CrmRec> crmRecListBefore18; // 犯罪紀錄ID清單
     private List<ProRec> proRecListBefore18; // 保護紀錄ID清單
 
     @Data
@@ -48,7 +48,6 @@ public class Aca4001EraseQueryDto {
         private String sourceText;         // Lists.Text(ListName='ACA_SOURCE', Value=ProRec.ProSource)
         // 體能狀況（A001~A006 -> 中文）
         private String proHealthText;      // 依 ProRec.ProHealth 對應中文
-        // 重點保護項目（ProDtl 依 level 匯總；可能多筆，用頓號"、"串）
         private String protectLevel1;      // ProDtl.ProItem -> Lists.Text('ACA_PROTECT')
         private String protectLevel2;      // ProDtl.Interview -> Lists.Text('ACA_PROTECT')（可為 null）
         private String protectLevel3;      // ProDtl.ProPlace -> Lists.Text('ACA_PROTECT')（可為 null）
@@ -68,17 +67,18 @@ public class Aca4001EraseQueryDto {
         private String staffDisplayName;   // join CaseManagementDnn.dbo.Users by CreatedByUserID
         // 輔導員（機構區域文字 + 機構名稱 + (實習)）
         private String counselorInstDisplay; // ex: "北區 臺北OO(實習)"
-        //private String counselorWorkerId;     // （除錯用，可視需求保留/拿掉）
-        private String archiveName;         // 歸檔名稱（ProRec.ProFile)
+        //private String counselorWorkerId;  // （除錯用，可視需求保留/拿掉）
+        private String archiveName;          // 歸檔名稱（ProRec.ProFile)
     }
 
-
     /**
-     * 只在 Service 內使用的小型資料結構
+     * Service 層內部使用的簡單資料結構，承載個案的生日與「滿 18 歲當日」的日期。
+     * - birthDate：生日，只保存日期，不含時間。
+     * - eighteenthStart：滿 18 歲的那一天（同樣只保存日期）。
      */
     @Data
     public static class PersonBirth {
-        private LocalDate birthDate;       // 只保留日期(避免時間干擾)
+        private LocalDate birthDate;       // 只保留日期
         private LocalDate eighteenthStart; // 18歲當天00:00
     }
 }

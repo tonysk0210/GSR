@@ -3,6 +3,7 @@ package com.hn2.cms.repository.aca4001;
 import com.hn2.cms.dto.aca4001.Aca4001AuditQueryDto;
 import com.hn2.cms.dto.aca4001.Aca4001EraseQueryDto;
 import com.hn2.cms.dto.aca4001.Aca4001EraseQueryDto.CrmRec;
+import com.hn2.cms.dto.aca4001.Aca4001EraseQueryDto.ProRec;
 import com.hn2.cms.dto.aca4001.Aca4001EraseQueryDto.PersonBirth;
 import com.hn2.util.DateUtil;
 import lombok.RequiredArgsConstructor;
@@ -28,16 +29,25 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
     private final NamedParameterJdbcTemplate npJdbc;
     private final org.sql2o.Sql2o sql2o;
 
+    /*eraseQuery API*/
+
+    /**
+     * 依 ACACardNo 查詢個案生日與滿 18 歲起算日（當天 00:00，以 LocalDate 表示）。
+     * - 查無資料：回傳 null
+     * - 查到資料：回傳 PersonBirth；其中 birthDate / eighteenthStart 可能為 null（若 ACABirth 為 null）
+     *
+     * @param acaCardNo 個案卡號（呼叫端應先做 null/blank 驗證）
+     * @return PersonBirth 或 null（查無資料）
+     */
     @Override
     public PersonBirth findPersonBirth(String acaCardNo) {
         String sql = "SELECT TOP 1 " +
-                "  CAST(ACABirth AS date) AS BirthDate, " + // -- 生日(只留日期)
+                "  CAST(ACABirth AS date) AS BirthDate, " + // 生日（只留日期）
                 "  CASE WHEN ACABirth IS NOT NULL " +
-                "       THEN DATEADD(YEAR, 18, CAST(ACABirth AS date)) " + // -- 18歲當天 00:00
+                "       THEN DATEADD(YEAR, 18, CAST(ACABirth AS date)) " + // 18 歲當日（日期型別）
                 "       ELSE NULL END AS EighteenthStart " +
                 "FROM dbo.ACABrd " +
                 "WHERE ACACardNo = ? AND IsDeleted = 0";
-        // 用 query(...) + extractor：無資料時回傳 null
         return jdbc.query(sql, ps -> ps.setString(1, acaCardNo), (ResultSet rs) -> {
             if (!rs.next()) return null;
             var birthSql = rs.getDate("BirthDate");
@@ -50,56 +60,92 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
         });
     }
 
+    /**
+     * 依個案卡號查詢「滿 18 歲當日 00:00 以前」的 ProRec.ID 清單，
+     * 並可選用 [startTs, endExclusive] 的時間區間過濾 ProNoticeDate。
+     * 條件：
+     * - IsDeleted = 0
+     * - ProNoticeDate < eighteenthStart          (嚴格小於 18 歲當日，排除滿 18 當天)
+     * 回傳：
+     * - 依 ProNoticeDate 由早到晚排序的 ID 清單
+     *
+     * @param acaCardNo       個案卡號
+     * @param eighteenthStart 滿 18 歲當日 00:00（上界排除；僅取此之前）
+     * @param startTs         選用：起始時間（含）
+     * @param endInclusive    選用：結束時間（含）
+     * @return 符合條件的 ProRec.ID 清單
+     */
     @Override
-    public List<String> findProRecIdsBefore18(String acaCardNo, LocalDateTime eighteenthStart, LocalDateTime startTs, LocalDateTime endExclusive) {
+    public List<String> findProRecIdsBefore18(String acaCardNo, LocalDateTime eighteenthStart, LocalDateTime startTs, LocalDateTime endInclusive) {
         String sql = "SELECT PR.ID " +
                 "FROM dbo.ProRec PR " +
-                "WHERE PR.IsDeleted = 0 " +
-                "AND PR.ACACardNo = ? " +
-                "AND PR.ProNoticeDate  < ? " +
-                "AND (? IS NULL OR PR.ProNoticeDate  >= ?) " +
-                "AND (? IS NULL OR PR.ProNoticeDate  <= ?) " +
-                "ORDER BY PR.ProNoticeDate ";
+                "WHERE PR.IsDeleted = 0 " +  // 僅未刪除資料
+                "AND PR.ACACardNo = ? " +    // 指定個案卡號
+                "AND PR.ProNoticeDate  < ? " +  // 嚴格小於 18 歲日（排除當天）
+                "AND (? IS NULL OR PR.ProNoticeDate  >= ?) " + // 若有起始：ProNoticeDate >= startTs
+                "AND (? IS NULL OR PR.ProNoticeDate  <= ?) " + // 若有結束：ProNoticeDate <= endExclusive（※ 實作為「含」）
+                "ORDER BY PR.ProNoticeDate "; // 由早到晚排序
         return jdbc.query(sql, ps -> {
             ps.setString(1, acaCardNo);
             ps.setObject(2, eighteenthStart);
             ps.setObject(3, startTs);
             ps.setObject(4, startTs);
-            ps.setObject(5, endExclusive);
-            ps.setObject(6, endExclusive);
+            ps.setObject(5, endInclusive);
+            ps.setObject(6, endInclusive);
         }, (rs, i) -> rs.getString("ID"));
     }
 
+    /**
+     * 依個案卡號查詢「滿 18 歲當日 00:00 以前」的 CrmRec.ID 清單，
+     * 並可選用 [startTs, endExclusive] 的時間區間過濾 CreatedOnDate。
+     * 條件：
+     * - IsDeleted = 0
+     * - CreatedOnDate < eighteenthStart            嚴格小於滿 18 歲當日（排除當天）
+     * 回傳：
+     * - 依 CreatedOnDate 由早到晚排序的 ID 清單
+     *
+     * @param acaCardNo       個案卡號
+     * @param eighteenthStart 滿 18 歲當日 00:00（上界排除；僅取此之前）
+     * @param startTs         選用：起始時間（含）
+     * @param endInclusive    選用：結束時間（含）
+     * @return 符合條件的 CrmRec.ID 清單
+     */
     @Override
-    public List<String> findCrmRecIdsBefore18(String acaCardNo, LocalDateTime eighteenthStart, LocalDateTime startTs, LocalDateTime endExclusive) {
+    public List<String> findCrmRecIdsBefore18(String acaCardNo, LocalDateTime eighteenthStart, LocalDateTime startTs, LocalDateTime endInclusive) {
         String sql = "SELECT CR.ID " +
                 "FROM dbo.CrmRec CR " +
-                "WHERE CR.IsDeleted = 0 " +
-                "AND CR.ACACardNo = ? " +
-                "AND CR.CreatedOnDate < ? " +
-                "AND (? IS NULL OR CR.CreatedOnDate  >= ?) " +
-                "AND (? IS NULL OR CR.CreatedOnDate  <= ?) " +
-                "ORDER BY CR.CreatedOnDate ";
+                "WHERE CR.IsDeleted = 0 " + // 只取未刪除
+                "AND CR.ACACardNo = ? " +   // 指定卡號
+                "AND CR.CreatedOnDate < ? " + // 嚴格小於 18 歲當日（排除當天）
+                "AND (? IS NULL OR CR.CreatedOnDate  >= ?) " + // 若有起始：含下界
+                "AND (? IS NULL OR CR.CreatedOnDate  <= ?) " + // 若有結束：含上界
+                "ORDER BY CR.CreatedOnDate "; // 由早到晚排序
         return jdbc.query(sql, ps -> {
             ps.setString(1, acaCardNo);
             ps.setObject(2, eighteenthStart);
             ps.setObject(3, startTs);
             ps.setObject(4, startTs);
-            ps.setObject(5, endExclusive);
-            ps.setObject(6, endExclusive);
+            ps.setObject(5, endInclusive);
+            ps.setObject(6, endInclusive);
         }, (rs, i) -> rs.getString("ID"));
     }
 
+    /**
+     * 依一組 CrmRec 主鍵 ID 清單查詢所需欄位，取得對應的 CrmRec DTO 清單
+     *
+     * @param ids CrmRec 主鍵 ID 清單（不可包含 null/空字串）
+     * @return 對應的 CrmRec DTO 清單，依 ids 原順序排列
+     */
     @Override
     public List<CrmRec> findCrmRecsByIds(List<String> ids) {
         if (ids == null || ids.isEmpty()) return List.of();
 
-        // 動態組 IN (?, ?, ...)
+        // 依 ids 長度動態組 IN 的佔位符，例如 "?,?,?,?"
         String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
         String sql =
                 "SELECT " +
                         "  CR.ID, " +
-                        "  CAST(CR.CreatedOnDate AS date)   AS RecordDate, " +     // 紀錄日期
+                        "  CAST(CR.CreatedOnDate AS date)   AS RecordDate, " +      // 紀錄日期
                         "  L_BR.Text                        AS BranchName, " +      // 分會別（ParentID=26）
                         "  L_J.Text                         AS JailAgency, " +      // 執行機關
                         "  L_C1.Text                        AS CrimeName1, " +      // 罪名1
@@ -136,18 +182,15 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
                         "  ON L_REM.ListName = 'ACA_REMISSION' AND L_REM.Value = CR.CrmRemission " +
                         "WHERE CR.IsDeleted = 0 " +
                         "  AND CR.ID IN (" + placeholders + ")";
-        // 參數
-        Object[] params = ids.toArray();
+        Object[] params = ids.toArray(); // 將 ID 清單轉為綁定參數陣列
 
+        // 將結果集映射到 CrmRec DTO，並把 date 欄位轉民國字串（DateUtil）
         List<CrmRec> rows = jdbc.query(sql, params, (rs, i) -> {
             var c = new CrmRec();
             c.setId(rs.getString("ID"));
 
             var d1 = rs.getDate("RecordDate");
-            c.setRecordDate(d1 == null ? null :
-                    DateUtil.date2Roc(DateUtil.date2LocalDate(d1), yyyMMdd_slash));
-
-
+            c.setRecordDate(d1 == null ? null : DateUtil.date2Roc(DateUtil.date2LocalDate(d1), yyyMMdd_slash));
             c.setBranchName(rs.getString("BranchName"));
             c.setJailAgency(rs.getString("JailAgency"));
             c.setCrimeName1(rs.getString("CrimeName1"));
@@ -156,24 +199,18 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
             c.setNoJailReason(rs.getString("NoJailReason"));
 
             var d2 = rs.getDate("VerdictDate");
-            c.setVerdictDate(d2 == null ? null :
-                    DateUtil.date2Roc(DateUtil.date2LocalDate(d2), yyyMMdd_slash));
-
+            c.setVerdictDate(d2 == null ? null : DateUtil.date2Roc(DateUtil.date2LocalDate(d2), yyyMMdd_slash));
             c.setSentenceType(rs.getString("SentenceType"));
             c.setTermText(rs.getString("TermText"));
 
             var d3 = rs.getDate("PrisonInDate");
-            c.setPrisonInDate(d3 == null ? null :
-                    DateUtil.date2Roc(DateUtil.date2LocalDate(d3), yyyMMdd_slash));
+            c.setPrisonInDate(d3 == null ? null : DateUtil.date2Roc(DateUtil.date2LocalDate(d3), yyyMMdd_slash));
 
             var d4 = rs.getDate("ReleasePlanDate");
-            c.setReleasePlanDate(d4 == null ? null :
-                    DateUtil.date2Roc(DateUtil.date2LocalDate(d4), yyyMMdd_slash));
+            c.setReleasePlanDate(d4 == null ? null : DateUtil.date2Roc(DateUtil.date2LocalDate(d4), yyyMMdd_slash));
 
             var d5 = rs.getDate("PrisonOutDate");
-            c.setPrisonOutDate(d5 == null ? null :
-                    DateUtil.date2Roc(DateUtil.date2LocalDate(d5), yyyMMdd_slash));
-
+            c.setPrisonOutDate(d5 == null ? null : DateUtil.date2Roc(DateUtil.date2LocalDate(d5), yyyMMdd_slash));
             c.setPrisonOutReason(rs.getString("PrisonOutReason"));
             c.setRemission(rs.getString("Remission"));
             c.setTrainType(rs.getString("TrainType"));
@@ -181,7 +218,7 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
             return c;
         });
 
-        // 依照原本 ID 清單排序（避免 IN(...) 打亂順序）
+        // 依呼叫端給的 ids 原順序重排（IN(...) 不保證順序）
         Map<String, Integer> order = new HashMap<>();
         for (int i = 0; i < ids.size(); i++) order.put(ids.get(i), i);
         rows.sort(Comparator.comparingInt(r -> order.getOrDefault(r.getId(), Integer.MAX_VALUE)));
@@ -189,16 +226,23 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
         return rows;
     }
 
+    /**
+     * 依一組 ProRec 主鍵 ID 清單查詢所需欄位，取得對應的 ProRec DTO 清單
+     *
+     * @param ids ProRec 主鍵 ID 清單
+     * @return 對應的 ProRec DTO 清單，依 ids 原順序排列
+     */
     @Override
-    public List<Aca4001EraseQueryDto.ProRec> findProRecsByIds(List<String> ids) {
+    public List<ProRec> findProRecsByIds(List<String> ids) {
         if (ids == null || ids.isEmpty()) return List.of();
 
-        // 用命名參數 IN (:ids)；SQL 第一字元加分號，避免 driver/代理在上一個語句沒分號時影響這一個
+        // 使用 named parameter 的 IN (:ids)；SQL 前置分號避免與前一語句相黏
         String sql =
                 ";SELECT " +
                         "    PR.ID, " +
-                        "    L_BR.[Text]                           AS BranchName, " +
-                        "    L_SRC.[Text]                          AS SourceText, " +
+                        "    L_BR.[Text]                           AS BranchName, " + // 分會（Lists.ParentID=26）
+                        "    L_SRC.[Text]                          AS SourceText, " + // 來源（Lists.ACA_SOURCE）
+                        // 健康狀況：以 CASE 轉對應中文，亦可改成 Lists 對照
                         "    CASE PR.ProHealth " +
                         "         WHEN 'A001' THEN N'良好' " +
                         "         WHEN 'A002' THEN N'普通' " +
@@ -208,41 +252,46 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
                         "         WHEN 'A006' THEN N'新制身心障礙(8類)' " +
                         "         ELSE NULL END                    AS ProHealthText, " +
 
-                        // 各 level 取該 ProRec 最新一筆
+                        // 三層保護等級：各自取 ProDtl 最新一筆（依 PD.ID DESC）
                         "    OA1.L1Text                            AS ProtectLevel1, " +
                         "    OA2.L2Text                            AS ProtectLevel2, " +
                         "    OA3.L3Text                            AS ProtectLevel3, " +
 
+                        // 重要日期（僅保留日期部分）
                         "    CAST(PR.ProNoticeDate AS date)        AS ProNoticeDate, " +
                         "    CAST(PR.ProDate       AS date)        AS ProDate, " +
-                        "    PR.IsAdopt                              AS Adopt, " +
-                        "    CASE WHEN EXISTS ( " +
+
+                        // 其他屬性
+                        "    PR.IsAdopt                              AS Adopt, " + // bit -> Boolean
+                        "    CASE WHEN EXISTS ( " +                                // 家支標籤（是否有特定 ProjectRec）
                         "        SELECT 1 FROM dbo.ProjectRec P " +
                         "        WHERE P.LinkTableID = PR.ID AND P.LinkTableType = 'P' " +
                         "          AND P.ProjectID = 'A20130400094' AND P.IsDeleted = 0 " +
                         "    ) THEN N'家支' ELSE N'' END           AS HomeSupportTag, " +
-                        "    L_DRUG.[Text]                         AS DrugProjectText, " +
-                        "    CASE WHEN PR.ProCloseDate IS NULL THEN 0 ELSE 1 END AS Closed, " +
-                        "    U.DisplayName                         AS StaffDisplayName, " +  //-- 建檔者顯示名稱（DNN Users）
-                        // -- CounselorInstDisplay：區域 +（必要時空白）+ 機構名稱 +（實習/正式尾註）
+                        "    L_DRUG.[Text]                         AS DrugProjectText, " +      // 毒品方案
+                        "    CASE WHEN PR.ProCloseDate IS NULL THEN 0 ELSE 1 END AS Closed, " + // 是否結案
+                        "    U.DisplayName                         AS StaffDisplayName, " +     // 建檔者顯示名（跨庫 Users）
+
+                        // CounselorInstDisplay = 區域 + 空白 + 機構名稱 + (實習/正式)
                         "    COALESCE( " +
                         "      NULLIF( " +
                         "        CONCAT( " +
-                        "          ISNULL(LA.[Text], N''), " + //-- 區域文字（Lists: ACA_INSTAREA）
-                        "          CASE WHEN NULLIF(LA.[Text], N'') IS NOT NULL AND NULLIF(IB.InstName, N'') IS NOT NULL THEN N' ' ELSE N'' END, " + //-- 區域與機構名皆非空時才加空白
-                        "          ISNULL(IB.InstName, N''), " + //-- 機構名稱（InstBrd.InstName）
+                        "          ISNULL(LA.[Text], N''), " +   // 區域（Lists: ACA_INSTAREA）
+                        "          CASE WHEN NULLIF(LA.[Text], N'') IS NOT NULL AND NULLIF(IB.InstName, N'') IS NOT NULL THEN N' ' ELSE N'' END, " + // 區域與機構名皆非空時才加空白
+                        "          ISNULL(IB.InstName, N''), " + // 機構名稱（InstBrd.InstName）
                         "          CASE " +
                         "            WHEN OM.WorkerID IS NULL " +
-                        "                 OR (NULLIF(LA.[Text], N'') IS NULL AND NULLIF(IB.InstName, N'') IS NULL) THEN N'' " + //-- 沒有輔導員或兩者皆空：不加尾註（避免只顯示「(正式)」）
+                        "                 OR (NULLIF(LA.[Text], N'') IS NULL AND NULLIF(IB.InstName, N'') IS NULL) THEN N'' " + // 沒有輔導員或兩者皆空：不加尾註（避免只顯示「(正式)」）
                         "            WHEN COALESCE(IB.IsUnofficial, 0) = 1 THEN N'(實習)' " +
                         "            ELSE N'(正式)' " +
                         "          END " +
-                        "        ), N'' " + // -- CONCAT 結果是空字串時 => 轉為 NULL
-                        "      ), N'' " + // -- 最終把 NULL 轉回空字串
+                        "        ), N'' " + // CONCAT 結果若為空字串，轉 NULL
+                        "      ), N'' " +   // 再把 NULL 轉回空字串
                         "    ) AS CounselorInstDisplay, " +
-                        "    OM.WorkerID AS CounselorWorkerId, " + //-- 由 OUTER APPLY 取得的輔導員卡號
-                        "    PR.ProFile AS ArchiveName " +                          // ← ★ 新增：歸檔名稱
+                        "    OM.WorkerID AS CounselorWorkerId, " + // 由 OUTER APPLY 取得的輔導員卡號
+                        "    PR.ProFile AS ArchiveName " +         // 歸檔名稱
                         "FROM dbo.ProRec PR " +
+                        // 來源、毒品方案等 Lists 對照
                         "LEFT JOIN dbo.Lists L_BR  " +
                         "       ON L_BR.ParentID = 26 " +
                         "      AND L_BR.Value = CAST(PR.CreatedByBranchID AS NVARCHAR(50)) " +
@@ -252,6 +301,7 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
                         "LEFT JOIN dbo.Lists L_DRUG " +
                         "       ON L_DRUG.ListName = 'PROJ_DRUG' " +
                         "      AND L_DRUG.Value    = PR.DrugForm " +
+                        // 建檔者顯示名稱（跨 DB）
                         "LEFT JOIN [CaseManagementDnnDB].dbo.Users U " +
                         "       ON U.UserID = PR.CreatedByUserID " +
 
@@ -282,8 +332,7 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
                         "    ORDER BY PD.ID DESC " +       //最新一筆
                         ") OA3 " +
 
-                        // 輔導員 OneMember：對每筆 PR 逐列找「第一位」非 EP 的成員
-                        // -- OUTER APPLY ≈ LEFT JOIN LATERAL：就算找不到也保留左表列（欄位為 NULL）
+                        // 取第一位非 EP 成員（當作輔導員）
                         "OUTER APPLY ( " +
                         "    SELECT TOP (1) PRM.WorkerID " +
                         "    FROM dbo.ProRecMember PRM " +
@@ -292,6 +341,7 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
                         "      AND PRM.IsDeleted = 0 " +
                         "    ORDER BY PRM.ID " +
                         ") OM " +
+                        // 輔導員 WorkerID -> 機構資料/區域
                         "LEFT JOIN dbo.InstBrd IB " +
                         "       ON IB.InstCardNo = OM.WorkerID " +
                         "      AND IB.IsDeleted = 0 " +
@@ -301,46 +351,45 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
                         "WHERE PR.IsDeleted = 0 " +
                         "  AND PR.ID IN (:ids)";
 
-        MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("ids", ids); // 直接丟 List<String> / List<Integer> 都可
+        // 綁定 named 參數 :ids
+        MapSqlParameterSource params = new MapSqlParameterSource().addValue("ids", ids);
 
+        // 查詢並映射到 DTO
         List<Aca4001EraseQueryDto.ProRec> rows = npJdbc.query(sql, params, (rs, i) -> {
             var p = new Aca4001EraseQueryDto.ProRec();
             p.setId(rs.getString("ID"));
             p.setBranchName(rs.getString("BranchName"));
             p.setSourceText(rs.getString("SourceText"));
             p.setProHealthText(rs.getString("ProHealthText"));
-
             p.setProtectLevel1(rs.getString("ProtectLevel1"));
             p.setProtectLevel2(rs.getString("ProtectLevel2"));
             p.setProtectLevel3(rs.getString("ProtectLevel3"));
 
             var d1 = rs.getDate("ProNoticeDate");
-            p.setProNoticeDate(d1 == null ? null
-                    : DateUtil.date2Roc(DateUtil.date2LocalDate(d1), yyyMMdd_slash));
+            p.setProNoticeDate(d1 == null ? null : DateUtil.date2Roc(DateUtil.date2LocalDate(d1), yyyMMdd_slash));
 
             var d2 = rs.getDate("ProDate");
-            p.setProDate(d2 == null ? null
-                    : DateUtil.date2Roc(DateUtil.date2LocalDate(d2), yyyMMdd_slash));
+            p.setProDate(d2 == null ? null : DateUtil.date2Roc(DateUtil.date2LocalDate(d2), yyyMMdd_slash));
 
-            // 包 Boolean 允許 null
+            // IsAdopt: bit -> Boolean（允許 null）
             Object adoptObj = rs.getObject("Adopt");
             p.setAdopt(adoptObj == null ? null : (Boolean) adoptObj);
 
             p.setHomeSupportTag(rs.getString("HomeSupportTag"));
             p.setDrugProjectText(rs.getString("DrugProjectText"));
 
+            // Closed: 0/1 -> Boolean（允許 null）
             Object closedObj = rs.getObject("Closed");
             p.setClosed(closedObj == null ? null : ((Integer) closedObj) == 1);
 
             p.setStaffDisplayName(rs.getString("StaffDisplayName"));
             p.setCounselorInstDisplay(rs.getString("CounselorInstDisplay"));
-            //p.setCounselorWorkerId(rs.getString("CounselorWorkerId"));
+            //p.setCounselorWorkerId(rs.getString("CounselorWorkerId")); // 如需回傳可打開
             p.setArchiveName(rs.getString("ArchiveName"));
             return p;
         });
 
-        // 照呼叫方給的 ID 還原順序（避免 IN 造成亂序）
+        // 依輸入 ids 還原順序（IN 不保證順序）
         Map<String, Integer> order = new HashMap<>();
         for (int i = 0; i < ids.size(); i++) order.put(ids.get(i), i);
         rows.sort(Comparator.comparingInt(r -> order.getOrDefault(r.getId(), Integer.MAX_VALUE)));
@@ -348,21 +397,48 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
         return rows;
     }
 
-
+    /**
+     * 查詢某個 ACACardNo 在 ProRec 中「最新一筆（依 ProDate 由新到舊）」是否已結案。
+     * 定義：
+     * - 是否結案：ProCloseDate 非 NULL 視為結案，NULL 視為未結案。
+     * 回傳：
+     * - true  ：最新一筆為結案
+     * - false ：最新一筆未結案
+     * - null  ：查無任何符合（IsDeleted=0 且指定卡號）的紀錄
+     *
+     * @param acaCardNo 個案卡號
+     * @return Boolean：true/false 或查無時回 null
+     */
     @Override
     public Boolean findLatestProRecClosed(String acaCardNo) {
         String sql = "SELECT TOP 1 " +
                 "CASE WHEN ProCloseDate IS NULL THEN 0 ELSE 1 END AS Closed " +
                 "FROM dbo.ProRec " +
                 "WHERE IsDeleted = 0 AND ACACardNo = ? " +
-                "ORDER BY ProDate DESC"; // 依照 ProDate 取最新的
+                "ORDER BY ProDate DESC"; // 以 ProDate 由新到舊取最新
 
         return jdbc.query(sql, ps -> ps.setString(1, acaCardNo), rs -> {
-            if (!rs.next()) return null; // 查無紀錄
-            return rs.getInt("Closed") == 1;
+            if (!rs.next()) return null; // 查無任何列 → 回傳 null
+            return rs.getInt("Closed") == 1; // 有資料：0/1 轉成 boolean
         });
     }
 
+    /*eraseQuery API & restoreQuery API*/
+
+    /**
+     * 檢查某個 ACACardNo 在 ACABrd 主檔是否已被標記為「塗銷」。
+     * 定義：
+     * - 以 ACACardNo + IsDeleted=0 查詢 ACABrd。
+     * - 若有資料：IsErase=1 視為已塗銷，IsErase=0 視為未塗銷。
+     * - 若查無任何資料：回傳 null（表示找不到該個案）。
+     * 回傳：
+     * - true  ：已塗銷（IsErase=1）
+     * - false ：未塗銷（IsErase=0）
+     * - null  ：查無該個案（或無未刪除資料）
+     *
+     * @param acaCardNo 個案卡號
+     * @return Boolean：true/false；查無回 null
+     */
     @Override
     public Boolean findPersonErased(String acaCardNo) {
         String sql = "SELECT TOP 1 " +
@@ -371,12 +447,19 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
                 "WHERE ACACardNo = ? AND IsDeleted = 0";
 
         return jdbc.query(sql, ps -> ps.setString(1, acaCardNo), rs -> {
-            if (!rs.next()) return null; // 查無資料
-            return rs.getInt("Erased") == 1;
+            if (!rs.next()) return null;                    // 查無資料 → 回傳 null
+            return rs.getInt("Erased") == 1;     // 有資料 → 0/1 轉 boolean
         });
     }
 
-    //for less than 18
+    /*erase API*/
+
+    /**
+     * 依個案卡號取得該個案所有 CrmRec 的主鍵 ID 清單。
+     *
+     * @param acaCardNo 個案卡號（非空）
+     * @return 該卡號底下所有 CrmRec 的 ID 清單（可能為空）
+     */
     @Override
     public List<String> findAllCrmRecIdsByAcaCardNo(String acaCardNo) {
         String sql = "SELECT ID FROM dbo.CrmRec WHERE ACACardNo = :aca";
@@ -385,6 +468,12 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
         }
     }
 
+    /**
+     * 依個案卡號取得該個案所有 ProRec 的主鍵 ID 清單。
+     *
+     * @param acaCardNo 個案卡號（非空）
+     * @return 該卡號下所有 ProRec 的 ID 清單（可能為空）
+     */
     @Override
     public List<String> findAllProRecIdsByAcaCardNo(String acaCardNo) {
         String sql = "SELECT ID FROM dbo.ProRec WHERE ACACardNo = :aca";
@@ -393,21 +482,31 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
         }
     }
 
-    //audit
+    /*auditQuery API*/
+
+    /**
+     * 讀取 ACA_EraseAudit 塗銷異動表（不彙總，每列即一次動作），並連到 DNN 使用者表取顯示名稱。
+     * - 依建立時間新到舊排序。
+     * 回傳：
+     * - 對應 Aca4001AuditQueryDto.Row 的清單；查無資料時回空清單。
+     */
     @Override
     public List<Aca4001AuditQueryDto.Row> findAuditRows() {
-        // 一筆就是一次動作，不再彙總
         String sql =
                 "SELECT " +
                         "  A.AuditID                                  AS auditId, " +
+                        // 將時間標準化為 DATETIME2(0)，方便 Java 端映射與顯示
                         "  CAST(A.CreatedOnDate AS DATETIME2(0))      AS createdOn, " +
                         "  A.ACACardNo                                AS acaCardNo, " +
                         "  A.ActionType                               AS action, " +
+                        // docNum 轉成 INT（若欄位是可空或非數字，CAST 失敗會丟錯；可視情況改 TRY_CONVERT）
                         "  CAST(A.DocNum AS INT)                      AS docNum, " +
                         "  A.EraseReason                              AS eraseReason, " +
                         "  A.RestoreReason                            AS restoreReason, " +
+                        // 將可能為 INT 或 NVARCHAR 的欄位統一以字串型別回傳，利於 DTO 映射
                         "  CAST(A.CreatedByUserID AS NVARCHAR(50))    AS userId, " +
                         "  CAST(A.UserIP AS NVARCHAR(64))             AS userIp, " +
+                        // 連到 DNN Users 取顯示名稱；若 CreatedByUserID 不是純數字，TRY_CONVERT 會回 NULL，LEFT
                         "  U.DisplayName                              AS userName " +
                         "FROM dbo.ACA_EraseAudit A " +
                         "LEFT JOIN CaseManagementDnnDB.dbo.Users U " +

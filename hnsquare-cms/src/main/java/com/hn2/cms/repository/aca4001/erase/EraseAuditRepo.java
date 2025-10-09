@@ -13,10 +13,7 @@ public class EraseAuditRepo {
     /**
      * 單筆：還原動作（整個 API 呼叫只寫一次）
      */
-    public void insertRestoreAction(String acaCardNo,
-                                    String restoreReason,
-                                    String createdByUserId,
-                                    String userIp) {
+    public void insertRestoreAction(String acaCardNo, String restoreReason, String createdByUserId, String userIp) {
         final String sql =
                 "INSERT INTO dbo.ACA_EraseAudit (" +
                         "  ACACardNo, ActionType, DocNum, EraseReason, RestoreReason," +
@@ -35,15 +32,10 @@ public class EraseAuditRepo {
         }
     }
 
-
     /**
      * 單筆：塗銷動作（整個 API 呼叫只寫一次）
      */
-    public void insertEraseAction(String acaCardNo,
-                                  Integer docNum,
-                                  String eraseReason,
-                                  Integer createdByUserId,
-                                  String userIp) {
+    public void insertEraseAction(String acaCardNo, Integer docNum, String eraseReason, Integer createdByUserId, String userIp) {
         final String sql =
                 "INSERT INTO dbo.ACA_EraseAudit (" +
                         "  ACACardNo, ActionType, DocNum, EraseReason, RestoreReason," +

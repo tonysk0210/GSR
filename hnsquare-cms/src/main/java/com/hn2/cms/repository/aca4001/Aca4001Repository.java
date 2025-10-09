@@ -9,40 +9,27 @@ import java.util.List;
 
 public interface Aca4001Repository {
 
-    /**
-     * 依 ACACardNo 取生日與 18 歲門檻日（若找不到回傳 null）
-     */
+    /*eraseQuery API*/
     PersonBirth findPersonBirth(String acaCardNo);
 
-    /**
-     * 取 18 歲前的 ProRec.ID（可選日期區間半開 [startTs, endExclusive)）
-     */
-    List<String> findProRecIdsBefore18(String acaCardNo,
-                                       LocalDateTime eighteenthStart,
-                                       LocalDateTime startTs,
-                                       LocalDateTime endExclusive);
+    List<String> findProRecIdsBefore18(String acaCardNo, LocalDateTime eighteenthStart, LocalDateTime startTs, LocalDateTime endInclusive);
+
+    List<String> findCrmRecIdsBefore18(String acaCardNo, LocalDateTime eighteenthStart, LocalDateTime startTs, LocalDateTime endInclusive);
 
     List<Aca4001EraseQueryDto.CrmRec> findCrmRecsByIds(List<String> ids);
 
+    List<Aca4001EraseQueryDto.ProRec> findProRecsByIds(List<String> ids);
 
-    /**
-     * 取 18 歲前的 CrmRec.ID（可選日期區間半開 [startTs, endExclusive)）
-     */
-    List<String> findCrmRecIdsBefore18(String acaCardNo,
-                                       LocalDateTime eighteenthStart,
-                                       LocalDateTime startTs,
-                                       LocalDateTime endExclusive);
+    Boolean findLatestProRecClosed(String acaCardNo);
 
-    public List<Aca4001EraseQueryDto.ProRec> findProRecsByIds(List<String> ids);
+    /*eraseQuery API & restoreQuery API*/
+    Boolean findPersonErased(String acaCardNo);
 
-    public Boolean findLatestProRecClosed(String acaCardNo);
-
-    public Boolean findPersonErased(String acaCardNo);
-
+    /*erase API*/
     List<String> findAllCrmRecIdsByAcaCardNo(String acaCardNo);
 
     List<String> findAllProRecIdsByAcaCardNo(String acaCardNo);
 
-    //audit
+    /*auditQuery API*/
     List<Aca4001AuditQueryDto.Row> findAuditRows();
 }
