@@ -65,20 +65,64 @@ public final class RowUtils {
      * - 轉字串並 trim，若為 null/空白/字面 "null" → 拋 IllegalStateException
      */
     public static String extractIdOrThrow(Map<String, Object> row, String idColumn, String table) {
-        Object v = row.get("__PK__"); // 1) 優先用通用別名
-        if (v == null && idColumn != null) {
-            v = row.get(idColumn); // 2) 原樣
+        if (row == null || row.isEmpty()) {
+            throw new IllegalStateException("無法取得有效主鍵: row 為空, table=" + table + ", idColumn=" + idColumn);
+        }
+
+        Object v = null;
+
+        // 1) 通用別名：支援大小寫變體
+        if (row.containsKey("__PK__")) v = row.get("__PK__");
+        if (v == null && row.containsKey("__pk__")) v = row.get("__pk__");
+
+        // 2) 指定的 idColumn：先原樣，再大小寫變體
+        if (v == null && idColumn != null && !idColumn.isEmpty()) {
+            v = row.get(idColumn);
+            if (v == null) v = row.get(idColumn.toUpperCase());
+            if (v == null) v = row.get(idColumn.toLowerCase());
+
+            // 2.1) 仍找不到 → 做一次不分大小寫線性掃描（保守但穩）
             if (v == null) {
-                v = row.get(idColumn.toUpperCase());
-                if (v == null) v = row.get(idColumn.toLowerCase());
+                String foundKey = null;
+                for (String k : row.keySet()) {
+                    if (k != null && k.equalsIgnoreCase(idColumn)) {
+                        foundKey = k;
+                        break;
+                    }
+                }
+                if (foundKey != null) v = row.get(foundKey);
             }
         }
-        String id = (v == null) ? null : v.toString().trim();
+
+        // 3) 再次 fallback：若某些查詢只回了 __Pk__ 這種奇怪大小寫
+        if (v == null) {
+            String foundKey = null;
+            for (String k : row.keySet()) {
+                if ("__PK__".equalsIgnoreCase(k)) {
+                    foundKey = k;
+                    break;
+                }
+            }
+            if (foundKey != null) v = row.get(foundKey);
+        }
+
+        // 4) 轉成字串
+        String id = null;
+        if (v instanceof CharSequence) {
+            id = v.toString().trim();
+        } else if (v instanceof Number) {
+            // 注意：如果你的 ID 是字串型（可能含前導零），DB 端請用文字型別，避免走 Number 失去前導零。
+            id = String.valueOf(v);
+        } else if (v != null) {
+            id = v.toString().trim();
+        }
+
+        // 5) 驗證
         if (id == null || id.isEmpty() || "null".equalsIgnoreCase(id)) {
-            // 無有效主鍵：拋出描述性錯誤，提供 table / idColumn / rowKeys 方便除錯
             throw new IllegalStateException("無法取得有效主鍵: table=" + table
                     + ", idColumn=" + idColumn + ", rowKeys=" + row.keySet());
         }
         return id;
     }
+
 }
