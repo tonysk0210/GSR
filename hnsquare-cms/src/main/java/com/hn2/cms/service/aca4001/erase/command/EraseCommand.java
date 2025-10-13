@@ -29,9 +29,7 @@ public final class EraseCommand {
             String eraseReason
     ) {
         this.acaCardNo = acaCardNo;
-        this.tableToIds = (tableToIds == null)
-                ? Collections.emptyMap()
-                : Collections.unmodifiableMap(tableToIds);
+        this.tableToIds = (tableToIds == null) ? Collections.emptyMap() : Collections.unmodifiableMap(tableToIds);
         this.operatorUserId = operatorUserId;
         this.operatorIp = operatorIp;
         this.docNum = docNum;

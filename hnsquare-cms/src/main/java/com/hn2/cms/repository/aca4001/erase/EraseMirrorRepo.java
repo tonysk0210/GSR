@@ -22,18 +22,28 @@ public class EraseMirrorRepo {
     @NoArgsConstructor
     public static class MirrorRow {
         private String targetSchema; // 來源 Schema（通常是 dbo）
-        private String targetTable; // 來源資料表名稱（如 CrmRec）
-        private String targetId; // 被塗銷紀錄的主鍵 ID
+        private String targetTable;  // 來源資料表名稱（如 CrmRec）
+        private String targetId;  // 被塗銷紀錄的主鍵 ID
         private String acaCardNo; // 個案卡號
         private String payloadBase64; // 加密後的 JSON 資料（Base64）
         private String ivBase64; // AES-GCM 的 IV（Base64）
-        private String sha256; // 明文 JSON 的 SHA-256 值（用來驗證完整性）
+        private String sha256;   // 明文 JSON 的 SHA-256 值（用來驗證完整性）
     }
 
     /**
-     * 依 ACACardNo + schema + table 清單，查詢 ACA_EraseMirror 的所有紀錄
-     * - 這樣可以一次撈出某個個案底下，特定表（如 CrmRec）的所有鏡像資料
-     * - schema 預設會補成 "dbo"
+     * 依個案卡號（ACACardNo）查出 ACA_EraseMirror 中屬於「指定 schema、指定表清單」的所有鏡像列。
+     * 查詢條件：
+     * - ACACardNo = :aca
+     * - ISNULL(TargetSchema,'dbo') = ISNULL(:schema,'dbo')  // Mirror 中若為 NULL 視同 'dbo'，呼叫方 schema 為空也視同 'dbo'
+     * - TargetTable IN (:tbls)
+     * 回傳：
+     * - 將每列映射為 MirrorRow（包含 targetSchema/table/id、acaCardNo、payloadBase64、ivBase64、sha256）
+     * - 若無資料回傳空清單
+     *
+     * @param acaCardNo 指定個案卡號
+     * @param tables    僅限於這些目標表名（白名單）
+     * @param schema    目標 schema；可為 null/空白，將被視為 "dbo"
+     * @return 鏡像資料列的清單（List<MirrorRow>）
      */
     public List<MirrorRow> findAllByAcaCardNo(String acaCardNo, List<String> tables, String schema) {
         String sql = "SELECT " +
@@ -46,8 +56,8 @@ public class EraseMirrorRepo {
                 " PayloadSha256Hex AS sha256 " +
                 "FROM dbo.ACA_EraseMirror " +
                 "WHERE ACACardNo = :aca " +
-                // schema 允許 null，若 Mirror 表紀錄是 null，就當成 "dbo"
-                "  AND ISNULL(TargetSchema,'dbo') = ISNULL(:schema,'dbo') " +  // ← 這行很關鍵
+                // schema 允許 null，Mirror 表紀錄為 NULL 的也視為 "dbo"
+                "  AND ISNULL(TargetSchema,'dbo') = ISNULL(:schema,'dbo') " +   // ← 核心：雙方都把 NULL 視為 'dbo'
                 "  AND TargetTable IN (:tbls)";
         try (var con = sql2o.open()) {
             // 如果 schema 是空字串或 null，則補上 "dbo"
@@ -61,27 +71,42 @@ public class EraseMirrorRepo {
     }
 
     /**
-     * 通用 upsert 方法：將資料寫入 ACA_EraseMirror
-     * - 如果 (TargetSchema, TargetTable, TargetID) 已存在 → 更新 EncodedPayload / AesIvBase64 / PayloadSha256Hex
-     * - 如果不存在 → 插入新的一筆
+     * 對 ACA_EraseMirror 進行「UPSERT（有則更新、無則新增）」：
+     * 以 (TargetSchema, TargetTable, TargetID) 作為唯一定義鍵，
+     * 將加密後的鏡像內容（EncodedPayload + AesIvBase64）與明文校驗雜湊（PayloadSha256Hex）寫入。
+     * 規則：
+     * - 若已存在相同 (schema, table, id) → UPDATE EncodedPayload / AesIvBase64 / PayloadSha256Hex / ACACardNo
+     * - 若不存在 → INSERT 一筆並填入 CreatedOnDate = SYSDATETIME()
+     * - 允許傳入 schema 為 null/空白，會自動視為 "dbo"
+     * - id 不可為 null/空白/字串 "null"（大小寫不敏感），並在綁定前會 trim()
+     * 安全性 / 完整性：
+     * - SHA-256 為明文 JSON 的雜湊，用於「還原前」校驗解密結果未遭竄改
+     * - AES-GCM 密文與 IV 一併保存
      *
-     * @param table      來源資料表名稱（例如 CrmRec）
-     * @param id         被塗銷紀錄的主鍵 ID
+     * @param table      來源表名（如 "CrmRec" / "ProRec"）
+     * @param id         主鍵值（字串化）
      * @param acaCardNo  個案卡號
-     * @param payloadB64 加密後 JSON 資料（Base64）
-     * @param ivB64      AES-GCM IV（Base64）
-     * @param sha256Hex  明文 JSON 的 SHA-256
-     * @param schema     Schema 名稱（允許 null）
+     * @param payloadB64 Base64( AES-GCM(明文JSON) )
+     * @param ivB64      Base64( AES-GCM IV )
+     * @param sha256Hex  明文 JSON 的 SHA-256（十六進位字串）
+     * @param schema     來源 schema；null/空白 → 視為 "dbo"
+     * @throws IllegalArgumentException 當 id 無效（null/空白/"null"）
      */
-    public void upsert(String table, String id, String acaCardNo,
-                       String payloadB64, String ivB64, String sha256Hex, String schema) {
+    public void upsert(String table, String id, String acaCardNo, String payloadB64, String ivB64, String sha256Hex, String schema) {
 
+        // 基本防呆：TargetID 不可為空、也不可是字面 "null"
         if (id == null || id.isBlank() || "null".equalsIgnoreCase(id)) {
             throw new IllegalArgumentException("EraseMirror.upsert: TargetID 不可為空/不可為 'null' 字串, table=" + table + ", aca=" + acaCardNo);
         }
-        // 可加：log 參數
+        // 記錄關鍵參數（便於除錯追蹤）
         log.info("[MirrorUpsert] sch={}, tbl={}, id={}, aca={}, sha256={}",
                 schema, table, id, acaCardNo, sha256Hex);
+
+        // 使用 SQL Server MERGE 做 UPSERT：
+        //   - USING 一筆臨時資料列 s(...)
+        //   - ON 條件：以 (TargetSchema,TargetTable,TargetID) 對應到目標表 t
+        //   - MATCHED → UPDATE（更新密文/IV/SHA 與 ACACardNo）
+        //   - NOT MATCHED → INSERT 新列並寫入 CreatedOnDate=SYSDATETIME()
 
         String sql = "MERGE INTO dbo.ACA_EraseMirror AS t "
                 + "USING (VALUES(:sch,:tbl,:tid,:aca,:pl,:iv,:sha)) AS s("
@@ -95,6 +120,7 @@ public class EraseMirrorRepo {
                 + "  VALUES (s.TargetSchema,s.TargetTable,s.TargetID,s.ACACardNo,s.EncodedPayload,s.AesIvBase64,s.PayloadSha256Hex,SYSDATETIME());";
         try (var con = sql2o.open()) {
             con.createQuery(sql)
+                    // schema 若為 null/空白 → 視為 "dbo"
                     .addParameter("sch", (schema == null || schema.isBlank()) ? "dbo" : schema)
                     .addParameter("tbl", table)
                     .addParameter("tid", id.trim())        // ★ 保險：trim

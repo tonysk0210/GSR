@@ -2,15 +2,31 @@ package com.hn2.cms.service.aca4001.erase.support;
 
 import java.util.Map;
 
+/**
+ * 以 Map<String,Object> 表示一列資料時的輔助工具。
+ * 功能：
+ * - 大小寫不敏感的取值（getCI / toStringCI）
+ * - 將欄位名轉成安全的 SQL 參數名稱（paramName）
+ * - 將欄位名正規化為比對用鍵（normKey）
+ * - 從 row 取出主鍵值（優先 "__PK__"，否則依 idColumn）且做有效性檢查（extractIdOrThrow）
+ * 設計：
+ * - final + 私有建構子：純工具類，禁止實例化/繼承。
+ */
 public final class RowUtils {
     private RowUtils() {
     }
 
+    /**
+     * 以大小寫不敏感方式從 map 取 key 的值並轉成字串（取不到回 null）。
+     */
     public static String toStringCI(Map<String, Object> m, String key) {
         Object v = getCI(m, key);
         return v == null ? null : String.valueOf(v);
     }
 
+    /**
+     * 大小寫不敏感地從 map 取值：原樣→全大寫→全小寫→逐一 equalsIgnoreCase。
+     */
     public static Object getCI(Map<String, Object> m, String key) {
         if (m.containsKey(key)) return m.get(key);
         String up = key.toUpperCase(java.util.Locale.ROOT);
@@ -21,10 +37,20 @@ public final class RowUtils {
         return null;
     }
 
+    /**
+     * 將欄位名轉成安全的 SQL 參數名稱：非 [A-Za-z0-9_] 皆替換為底線。
+     */
     public static String paramName(String col) {
         return col.replaceAll("[^A-Za-z0-9_]", "_");
     }
 
+    /**
+     * 將欄位名正規化為比對鍵：
+     * - 去除非英數底線
+     * - 移除底線
+     * - 轉成大寫
+     * 用途：忽略命名風格差異做欄位名比對（白名單/集合比對）。
+     */
     public static String normKey(String col) {
         if (col == null) return "";
         String s = col.replaceAll("[^A-Za-z0-9_]", "");
@@ -32,10 +58,16 @@ public final class RowUtils {
         return s.toUpperCase(java.util.Locale.ROOT);
     }
 
+    /**
+     * 取出 row 的主鍵值（字串）：
+     * - 優先取 "__PK__"（建議在 SELECT 時使用 "ID AS __PK__"）
+     * - 否則依 idColumn（原樣/大寫/小寫）嘗試
+     * - 轉字串並 trim，若為 null/空白/字面 "null" → 拋 IllegalStateException
+     */
     public static String extractIdOrThrow(Map<String, Object> row, String idColumn, String table) {
-        Object v = row.get("__PK__");
+        Object v = row.get("__PK__"); // 1) 優先用通用別名
         if (v == null && idColumn != null) {
-            v = row.get(idColumn);
+            v = row.get(idColumn); // 2) 原樣
             if (v == null) {
                 v = row.get(idColumn.toUpperCase());
                 if (v == null) v = row.get(idColumn.toLowerCase());
@@ -43,6 +75,7 @@ public final class RowUtils {
         }
         String id = (v == null) ? null : v.toString().trim();
         if (id == null || id.isEmpty() || "null".equalsIgnoreCase(id)) {
+            // 無有效主鍵：拋出描述性錯誤，提供 table / idColumn / rowKeys 方便除錯
             throw new IllegalStateException("無法取得有效主鍵: table=" + table
                     + ", idColumn=" + idColumn + ", rowKeys=" + row.keySet());
         }

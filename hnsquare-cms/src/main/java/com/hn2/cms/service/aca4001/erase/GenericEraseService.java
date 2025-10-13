@@ -167,36 +167,99 @@ public class GenericEraseService {
     }
 
     // ====== Helpers ======
+
+    /**
+     * 將單筆資料列（含表識別與欄位值）打包成「鏡像用的明文 JSON」字串。
+     * 結構範例：
+     * {
+     * "schema": "dbo",
+     * "table": "CrmRec",
+     * "idColumn": "ID",
+     * "id": "12345",
+     * "fields": { ...白名單欄位/其他需備份欄位... }
+     * }
+     * 用途：
+     * - 在塗銷前，把原始資料（fields）連同必要的定位資訊（schema/table/idColumn/id）序列化成 JSON。
+     * - 後續會對此 JSON 做 AES-GCM 加密並計算 SHA-256，用於還原與完整性校驗。
+     * 例外：
+     * - 序列化失敗時，轉拋為 IllegalStateException（受檢例外轉為非受檢，便於 @Transactional 回滾）。
+     *
+     * @param schema 資料表 schema 名稱（如 "dbo"）
+     * @param table  資料表名稱（如 "CrmRec"）
+     * @param idCol  主鍵欄位名稱（如 "ID"）
+     * @param id     主鍵值（字串化後）
+     * @param fields 欲鏡像的欄位和值（通常是白名單欄位 + 審計欄位）
+     * @return 以上述結構序列化後的 JSON 字串
+     * @throws IllegalStateException 當 JSON 轉字串失敗
+     */
     private String buildRowPayloadJson(String schema, String table, String idCol, String id, Map<String, Object> fields) {
+        // 建立一個空的 ObjectNode 作為 JSON 物件根節點
         var node = om.createObjectNode();
+
+        // 寫入定位用的中繼資訊：schema / table / 主鍵欄位名 / 主鍵值
         node.put("schema", schema);
         node.put("table", table);
         node.put("idColumn", idCol);
         node.put("id", id);
-        node.set("fields", om.valueToTree(fields)); // 包含白名單欄位 + CreatedBy/ModifiedByUserID 等
+
+        // 將 fields（Map<String,Object>）轉成 Jackson 的樹狀節點後掛上去
+        // 這裡會把 map 內的每個欄位和值保留，用於之後的還原
+        node.set("fields", om.valueToTree(fields));
         try {
+            // 將整個 ObjectNode 序列化為 JSON 字串
             return om.writeValueAsString(node);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException(e);
         }
     }
 
+    /**
+     * 從鏡像資料（MirrorRow）解密並還原成「可回寫原表」的欄位 Map。
+     * 步驟：
+     * 1) 以 AES-GCM 將 EncodedPayload（payloadBase64）搭配 IV（ivBase64）解密成明文 JSON。
+     * 2) 對明文 JSON 重算 SHA-256，與資料庫保存的 PayloadSha256Hex 做大小寫不敏感比對；
+     * 不一致即代表鏡像內容遭竄改 → 拋出 IllegalStateException。
+     * 3) 解析 JSON，回傳一個 LinkedHashMap，內容包含：
+     * - "schema"、"table"、"idColumn"、"id"
+     * - fields 物件中的所有「欄位名 → 欄位值」
+     * （自動做 null/number/boolean/string 的基本型別還原）
+     * 失敗處理：
+     * - 解密或哈希校驗失敗、JSON 解析失敗 → 一律拋 IllegalStateException 讓上層事務回滾。
+     * 回傳的 Map 典型用法：
+     * - 交給對應的 EraseTarget.restoreFromRows(...) 逐筆寫回原表（只應使用白名單欄位）。
+     *
+     * @param m 一筆 ACA_EraseMirror 的資料列封裝（包含密文、IV、sha256、目標表資訊）
+     * @return 還原出的欄位 Map（含 schema/table/idColumn/id 與所有 fields 內容）
+     * @throws IllegalStateException 當解密/雜湊驗證/解析任一步失敗
+     */
     private Map<String, Object> decryptMirrorToRowMapOrThrow(EraseMirrorRepo.MirrorRow m) {
-        String json = crypto.decryptToJson(m.getPayloadBase64(), m.getIvBase64()); //先解密
-        String sha = AesGcmCrypto.sha256Hex(json); //再重算雜湊
-        if (!sha.equalsIgnoreCase(m.getSha256())) { //與資料庫帶出的 m.getSha256()（也就是 PayloadSha256Hex）比對
+        // 1) 先解密：以 AES-GCM 用 payloadBase64 + ivBase64 解出明文 JSON 字串
+        String json = crypto.decryptToJson(m.getPayloadBase64(), m.getIvBase64());
+        // 2) 再重算雜湊：對明文 JSON 算 SHA-256（十六進位字串）
+        String sha = AesGcmCrypto.sha256Hex(json);
+        // 3) 與資料庫存的 SHA（PayloadSha256Hex）比對；不符就當作鏡像被動過手，直接擲出例外
+        if (!sha.equalsIgnoreCase(m.getSha256())) {
             throw new IllegalStateException("Mirror payload 校驗失敗: " + m.getTargetId());
         }
         try {
+            // 4) JSON → Jackson 樹狀節點
             var node = (ObjectNode) om.readTree(json);
-            // 直接還原 fields map
+            // 5) 取出 fields 物件（各欄位名與其值）
             var fieldsNode = (ObjectNode) node.get("fields");
+            // 用 LinkedHashMap 保持插入順序（可讀性較佳）
             var map = new java.util.LinkedHashMap<String, Object>();
+            // 6) 基本識別資訊（還原時也會用到）
             map.put("schema", node.path("schema").asText());
             map.put("table", node.path("table").asText());
             map.put("idColumn", node.path("idColumn").asText());
             map.put("id", node.path("id").asText());
+            // 7) 將 fields 逐一放入 Map，並做基本型別還原：
+            //    - null → null
+            //    - number → numberValue()（可能成為 Integer/Long/BigDecimal 依驅動）
+            //    - boolean → booleanValue()
+            //    - 其他 → asText()
             fieldsNode.fields().forEachRemaining(e -> map.put(e.getKey(), e.getValue().isNull() ? null : e.getValue().isNumber() ? e.getValue().numberValue() : e.getValue().isBoolean() ? e.getValue().booleanValue() : e.getValue().asText()));
+            // 8) 回傳可直接交由 restoreFromRows(...) 使用的欄位 Map
             return map;
         } catch (Exception e) {
             throw new IllegalStateException(e);
