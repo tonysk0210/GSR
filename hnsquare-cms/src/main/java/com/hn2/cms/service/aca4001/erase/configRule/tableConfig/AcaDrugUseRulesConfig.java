@@ -1,6 +1,6 @@
-package com.hn2.cms.service.aca4001.erase.rule.tableConfig;
+package com.hn2.cms.service.aca4001.erase.configRule.tableConfig;
 
-import com.hn2.cms.service.aca4001.erase.rule.EraseRule;
+import com.hn2.cms.service.aca4001.erase.configRule.EraseRule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -9,13 +9,13 @@ import java.util.List;
 import java.util.Set;
 
 @Configuration
-public class ProjectJailGuidanceSummaryRulesConfig {
+public class AcaDrugUseRulesConfig {
 
     @Bean
-    public EraseRule projectJailGuidanceSummaryRule() {
+    public EraseRule acaDrugUseRule() {
         EraseRule r = new EraseRule();
         r.setSchema("dbo");
-        r.setTable("ProjectJailGuidanceSummary");
+        r.setTable("AcaDrugUse");
         r.setIdColumn("ID");
 
         // 子表設定：歸屬 ProRec
@@ -24,6 +24,11 @@ public class ProjectJailGuidanceSummaryRulesConfig {
 
         // 對應 whitelistColumns()
         r.setWhitelist(List.of(
+                "Addr",
+                "OprAddr",
+                "DrgUserText",
+                "OprFamilyText",
+                "OprFamilyCareText",
                 "CreatedByBranchID",
                 "CreatedByUserID",
                 "ModifiedByUserID"
@@ -32,7 +37,7 @@ public class ProjectJailGuidanceSummaryRulesConfig {
         // 對應 intColsNorm()
         r.setIntCols(Set.of("CreatedByUserID", "ModifiedByUserID"));
 
-        // 清空策略（白名單其餘欄位預設為 NULL；以下覆寫與原 Target 一致）
+        // 清空策略（其餘白名單欄位預設為 NULL；以下覆寫）
         var eraseSet = new LinkedHashMap<String, Object>();
         eraseSet.put("CreatedByBranchID", "");
         eraseSet.put("CreatedByUserID", -2);
@@ -45,7 +50,7 @@ public class ProjectJailGuidanceSummaryRulesConfig {
         var restoreExtra = new LinkedHashMap<String, Object>();
         restoreExtra.put("isERASE", 0);
         restoreExtra.put("ModifiedOnDate", "${NOW}");
-        restoreExtra.put("ModifiedByUserID", ":uid"); // 程式注入操作者
+        restoreExtra.put("ModifiedByUserID", ":uid"); // 由程式注入操作者
         r.setRestoreExtraSet(restoreExtra);
 
         return r;

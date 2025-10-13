@@ -1,4 +1,4 @@
-package com.hn2.cms.service.aca4001.erase.rule;
+package com.hn2.cms.service.aca4001.erase.configRule;
 
 import com.hn2.cms.service.aca4001.erase.support.RowUtils;
 import com.hn2.cms.service.aca4001.erase.support.SqlNorm;

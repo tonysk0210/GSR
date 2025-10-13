@@ -1,6 +1,6 @@
-package com.hn2.cms.service.aca4001.erase.rule.tableConfig;
+package com.hn2.cms.service.aca4001.erase.configRule.tableConfig;
 
-import com.hn2.cms.service.aca4001.erase.rule.EraseRule;
+import com.hn2.cms.service.aca4001.erase.configRule.EraseRule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -9,48 +9,44 @@ import java.util.List;
 import java.util.Set;
 
 @Configuration
-public class AcaDrugUseRulesConfig {
+public class ProjectDrugCloseRulesConfig {
 
     @Bean
-    public EraseRule acaDrugUseRule() {
+    public EraseRule projectDrugCloseRule() {
         EraseRule r = new EraseRule();
         r.setSchema("dbo");
-        r.setTable("AcaDrugUse");
+        r.setTable("ProjectDrugClose");
         r.setIdColumn("ID");
 
-        // 子表設定：歸屬 ProRec
+        // 子表：掛在 ProRec，FK 欄位 ProRecID
         r.setParentTable("ProRec");
         r.setParentFkColumn("ProRecID");
 
-        // 對應 whitelistColumns()
+        // 對應 Target 的白名單欄位
         r.setWhitelist(List.of(
-                "Addr",
-                "OprAddr",
-                "DrgUserText",
-                "OprFamilyText",
-                "OprFamilyCareText",
-                "CreatedByBranchID",
+                "OpenMemo",
+                "CloseMemo",
                 "CreatedByUserID",
                 "ModifiedByUserID"
         ));
 
-        // 對應 intColsNorm()
+        // 無日期欄位需要正規化
+        r.setDateCols(Set.of());
         r.setIntCols(Set.of("CreatedByUserID", "ModifiedByUserID"));
 
-        // 清空策略（其餘白名單欄位預設為 NULL；以下覆寫）
+        // Erase：白名單未覆寫者預設 NULL；以下為固定覆寫
         var eraseSet = new LinkedHashMap<String, Object>();
-        eraseSet.put("CreatedByBranchID", "");
         eraseSet.put("CreatedByUserID", -2);
         eraseSet.put("ModifiedByUserID", -2);
         eraseSet.put("isERASE", 1);
         eraseSet.put("ModifiedOnDate", "${NOW}");
         r.setEraseSet(eraseSet);
 
-        // 還原時追加欄位
+        // Restore：追加欄位
         var restoreExtra = new LinkedHashMap<String, Object>();
         restoreExtra.put("isERASE", 0);
         restoreExtra.put("ModifiedOnDate", "${NOW}");
-        restoreExtra.put("ModifiedByUserID", ":uid"); // 由程式注入操作者
+        restoreExtra.put("ModifiedByUserID", ":uid"); // 程式在執行時綁定操作者
         r.setRestoreExtraSet(restoreExtra);
 
         return r;

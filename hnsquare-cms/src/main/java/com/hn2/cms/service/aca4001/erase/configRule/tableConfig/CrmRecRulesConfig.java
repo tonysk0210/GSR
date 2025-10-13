@@ -1,6 +1,6 @@
-package com.hn2.cms.service.aca4001.erase.rule.tableConfig;
+package com.hn2.cms.service.aca4001.erase.configRule.tableConfig;
 
-import com.hn2.cms.service.aca4001.erase.rule.EraseRule;
+import com.hn2.cms.service.aca4001.erase.configRule.EraseRule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
