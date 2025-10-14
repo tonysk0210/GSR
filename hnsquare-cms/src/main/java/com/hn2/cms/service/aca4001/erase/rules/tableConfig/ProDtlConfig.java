@@ -26,7 +26,6 @@ public class ProDtlConfig {
                 "ProCost",
                 "ProDtlDate",
                 "ProDtlEndMemo",
-                "ProDtlTrackOther",
                 "ProPlace",
                 "ProMaterial_G",
                 "IsTrainingCompleted",

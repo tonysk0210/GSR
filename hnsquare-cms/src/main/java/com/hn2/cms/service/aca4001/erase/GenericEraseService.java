@@ -54,6 +54,7 @@ public class GenericEraseService {
     }
 
     private void runRuleErase(EraseCommand cmd) {
+        log.info("Loaded rules: {}", tableConfig.stream().map(EraseTableConfigPojo::getTable).collect(Collectors.toList()));
         for (var rule : tableConfig) {
             // 依規則決定用哪個 key 清單：子表用 parentTable 的 keys，主表用自己的 keys
             List<String> keys = rule.isChild() ? cmd.idsOf(rule.getParentTable()) : cmd.idsOf(rule.getTable());
