@@ -1,49 +1,47 @@
-package com.hn2.cms.service.aca4001.erase.configRule.tableConfig;
+package com.hn2.cms.service.aca4001.erase.rules.tableConfig;
 
-import com.hn2.cms.service.aca4001.erase.configRule.EraseRule;
+import com.hn2.cms.service.aca4001.erase.rules.EraseTableConfigPojo;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 
 @Configuration
-public class MemoRulesConfig {
+public class AcaDrugUseConfig {
 
     @Bean
-    @Order(3) // after ACAFamilies & Career, before ACABrd
-    public EraseRule memoRule() {
-        EraseRule r = new EraseRule();
+    public EraseTableConfigPojo acaDrugUseRule() {
+        EraseTableConfigPojo r = new EraseTableConfigPojo();
         r.setSchema("dbo");
-        r.setTable("Memo");
+        r.setTable("AcaDrugUse");
         r.setIdColumn("ID");
 
-        // parent is ACABrd; filter Memo by ACACardNo
-        r.setParentTable("ACABrd");
-        r.setParentFkColumn("ACACardNo");
-        // no lookup mapping needed; Memo already has ACACardNo
+        r.setParentTable("ProRec");
+        r.setParentFkColumn("ProRecID");
 
         r.setWhitelist(List.of(
-                "MemoDate",
-                "MemoNote",
-                "MemoWorkers",
+                "Addr",
+                "OprAddr",
+                "DrgUserText",
+                "OprFamilyText",
+                "OprFamilyCareText",
+                "CreatedByBranchID",
                 "CreatedByUserID",
                 "ModifiedByUserID"
         ));
-        r.setDateCols(Set.of("MemoDate"));
+
         r.setIntCols(Set.of("CreatedByUserID", "ModifiedByUserID"));
 
-        // erase: default NULL for whitelist, override these:
         var eraseSet = new LinkedHashMap<String, Object>();
+        eraseSet.put("CreatedByBranchID", "");
         eraseSet.put("CreatedByUserID", -2);
         eraseSet.put("ModifiedByUserID", -2);
         eraseSet.put("isERASE", 1);
         eraseSet.put("ModifiedOnDate", "${NOW}");
-        r.setEraseSet(eraseSet);
+        r.setEraseExtraSet(eraseSet);
 
-        // restore: extra fields
         var restoreExtra = new LinkedHashMap<String, Object>();
         restoreExtra.put("isERASE", 0);
         restoreExtra.put("ModifiedOnDate", "${NOW}");

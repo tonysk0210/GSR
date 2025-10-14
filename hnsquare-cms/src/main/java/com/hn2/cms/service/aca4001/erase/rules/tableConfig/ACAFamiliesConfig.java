@@ -1,6 +1,6 @@
-package com.hn2.cms.service.aca4001.erase.configRule.tableConfig;
+package com.hn2.cms.service.aca4001.erase.rules.tableConfig;
 
-import com.hn2.cms.service.aca4001.erase.configRule.EraseRule;
+import com.hn2.cms.service.aca4001.erase.rules.EraseTableConfigPojo;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -10,26 +10,38 @@ import java.util.List;
 import java.util.Set;
 
 @Configuration
-public class ACAFamiliesRulesConfig {
+public class ACAFamiliesConfig {
 
     @Bean
     @Order(1)
-    public EraseRule acaFamiliesRule() {
-        EraseRule r = new EraseRule();
+    public EraseTableConfigPojo acaFamiliesRule() {
+        EraseTableConfigPojo r = new EraseTableConfigPojo();
         r.setSchema("dbo");
         r.setTable("ACAFamilies");
         r.setIdColumn("ID");
 
-        // 父表仍是 ACABrd（cmd.idsOf("ACABrd") 會給 ACACardNo）
+        /* =========================
+         * 🔗 父子關聯設定
+         * =========================
+         * 此表屬於 ACABrd 的子表。
+         * 當 ACABrd 以 ACACardNo 為依據執行塗銷時，
+         * ACAFamilies 必須根據對應的 FamCardNo 找出相關紀錄。
+         */
         r.setParentTable("ACABrd");
-
-        // 子表以 FamCardNo 過濾
         r.setParentFkColumn("FamCardNo");
 
-        // ★ 新增：先把 ACACardNo 映射成 FamCardNo
-        r.setParentIdLookupTable("ACABrd");
-        r.setParentIdLookupSrcColumn("ACACardNo"); // 入口：ACACardNo
-        r.setParentIdLookupDstColumn("FamCardNo"); // 轉成：FamCardNo
+        /* =========================
+         * 🔄 父鍵映射設定（Lookup Mapping）
+         * =========================
+         * 因為父表 ACABrd 提供的 key 是 ACACardNo，
+         * 但本表以 FamCardNo 為過濾依據，因此需要先查出對應關係：
+         *    ACABrd.ACACardNo → ACABrd.FamCardNo
+         *
+         * 執行時會先從 ACABrd 找出 FamCardNo 清單，再用來處理本表。
+         */
+        r.setParentIdLookupTable("ACABrd");          // 查詢來源表
+        r.setParentIdLookupSrcColumn("ACACardNo");   // 來源欄位（輸入 key）
+        r.setParentIdLookupDstColumn("FamCardNo");   // 轉換結果欄位（輸出 key）
 
         r.setWhitelist(List.of(
                 "FaiIDNo",
@@ -62,7 +74,7 @@ public class ACAFamiliesRulesConfig {
         eraseSet.put("ModifiedByUserID", -2);
         eraseSet.put("isERASE", 1);
         eraseSet.put("ModifiedOnDate", "${NOW}");
-        r.setEraseSet(eraseSet);
+        r.setEraseExtraSet(eraseSet);
 
         var restoreExtra = new LinkedHashMap<String, Object>();
         restoreExtra.put("isERASE", 0);

@@ -1,6 +1,6 @@
-package com.hn2.cms.service.aca4001.erase.configRule.tableConfig;
+package com.hn2.cms.service.aca4001.erase.rules.tableConfig;
 
-import com.hn2.cms.service.aca4001.erase.configRule.EraseRule;
+import com.hn2.cms.service.aca4001.erase.rules.EraseTableConfigPojo;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -9,11 +9,11 @@ import java.util.List;
 import java.util.Set;
 
 @Configuration
-public class ProjectDrugOpenRulesConfig {
+public class ProjectDrugOpenConfig {
 
     @Bean
-    public EraseRule projectDrugOpenRule() {
-        EraseRule r = new EraseRule();
+    public EraseTableConfigPojo projectDrugOpenRule() {
+        EraseTableConfigPojo r = new EraseTableConfigPojo();
         r.setSchema("dbo");
         r.setTable("ProjectDrugOpen");
         r.setIdColumn("ID");
@@ -88,7 +88,7 @@ public class ProjectDrugOpenRulesConfig {
         eraseSet.put("ModifiedByUserID", -2);
         eraseSet.put("isERASE", 1);
         eraseSet.put("ModifiedOnDate", "${NOW}");
-        r.setEraseSet(eraseSet);
+        r.setEraseExtraSet(eraseSet);
 
         // 還原時的追加欄位
         var restoreExtra = new LinkedHashMap<String, Object>();

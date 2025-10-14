@@ -1,6 +1,6 @@
-package com.hn2.cms.service.aca4001.erase.configRule.tableConfig;
+package com.hn2.cms.service.aca4001.erase.rules.tableConfig;
 
-import com.hn2.cms.service.aca4001.erase.configRule.EraseRule;
+import com.hn2.cms.service.aca4001.erase.rules.EraseTableConfigPojo;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -10,17 +10,16 @@ import java.util.List;
 import java.util.Set;
 
 @Configuration
-public class CareerRulesConfig {
+public class CareerConfig {
 
     @Bean
-    @Order(2) // after ACAFamilies, before ACABrd
-    public EraseRule careerRule() {
-        EraseRule r = new EraseRule();
+    @Order(2) // after ACAFamilies, before Memo & ACABrd
+    public EraseTableConfigPojo careerRule() {
+        EraseTableConfigPojo r = new EraseTableConfigPojo();
         r.setSchema("dbo");
         r.setTable("Career");
         r.setIdColumn("ID");
 
-        // Parent = ACABrd, filter by ACACardNo
         r.setParentTable("ACABrd");
         r.setParentFkColumn("ACACardNo");
 
@@ -64,15 +63,13 @@ public class CareerRulesConfig {
         r.setDateCols(Set.of("CarSDate"));
         r.setIntCols(Set.of("CreatedByUserID", "ModifiedByUserID"));
 
-        // Erase: default NULL for whitelist; override these
         var eraseSet = new LinkedHashMap<String, Object>();
         eraseSet.put("CreatedByUserID", -2);
         eraseSet.put("ModifiedByUserID", -2);
         eraseSet.put("isERASE", 1);
         eraseSet.put("ModifiedOnDate", "${NOW}");
-        r.setEraseSet(eraseSet);
+        r.setEraseExtraSet(eraseSet);
 
-        // Restore: add standard fields; :uid will be bound by service
         var restoreExtra = new LinkedHashMap<String, Object>();
         restoreExtra.put("isERASE", 0);
         restoreExtra.put("ModifiedOnDate", "${NOW}");

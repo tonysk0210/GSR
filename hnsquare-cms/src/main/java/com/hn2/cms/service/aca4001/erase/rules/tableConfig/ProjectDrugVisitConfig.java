@@ -1,6 +1,6 @@
-package com.hn2.cms.service.aca4001.erase.configRule.tableConfig;
+package com.hn2.cms.service.aca4001.erase.rules.tableConfig;
 
-import com.hn2.cms.service.aca4001.erase.configRule.EraseRule;
+import com.hn2.cms.service.aca4001.erase.rules.EraseTableConfigPojo;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -9,20 +9,18 @@ import java.util.List;
 import java.util.Set;
 
 @Configuration
-public class ProjectDrugVisitRulesConfig {
+public class ProjectDrugVisitConfig {
 
     @Bean
-    public EraseRule projectDrugVisitRule() {
-        EraseRule r = new EraseRule();
+    public EraseTableConfigPojo projectDrugVisitRule() {
+        EraseTableConfigPojo r = new EraseTableConfigPojo();
         r.setSchema("dbo");
         r.setTable("ProjectDrugVisit");
         r.setIdColumn("ID");
 
-        // 子表設定：隸屬 ProRec，以 ProRecID 關聯
         r.setParentTable("ProRec");
         r.setParentFkColumn("ProRecID");
 
-        // 對應原 Target 白名單欄位
         r.setWhitelist(List.of(
                 "SocietyMemo",
                 "MarrigeStatus",
@@ -46,23 +44,20 @@ public class ProjectDrugVisitRulesConfig {
                 "ModifiedByUserID"
         ));
 
-        // 無日期欄位需要正規化；整數欄位如下（視你的 schema 調整）
         r.setDateCols(Set.of());
         r.setIntCols(Set.of("CreatedByUserID", "ModifiedByUserID"));
 
-        // 清空策略：白名單未覆寫者預設設為 NULL；以下為固定覆寫
         var eraseSet = new LinkedHashMap<String, Object>();
         eraseSet.put("CreatedByUserID", -2);
         eraseSet.put("ModifiedByUserID", -2);
         eraseSet.put("isERASE", 1);
         eraseSet.put("ModifiedOnDate", "${NOW}");
-        r.setEraseSet(eraseSet);
+        r.setEraseExtraSet(eraseSet);
 
-        // 還原時的追加欄位
         var restoreExtra = new LinkedHashMap<String, Object>();
         restoreExtra.put("isERASE", 0);
         restoreExtra.put("ModifiedOnDate", "${NOW}");
-        restoreExtra.put("ModifiedByUserID", ":uid"); // 由程式綁定操作者
+        restoreExtra.put("ModifiedByUserID", ":uid");
         r.setRestoreExtraSet(restoreExtra);
 
         return r;

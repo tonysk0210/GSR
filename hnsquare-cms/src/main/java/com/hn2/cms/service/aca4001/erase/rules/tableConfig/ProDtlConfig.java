@@ -1,6 +1,6 @@
-package com.hn2.cms.service.aca4001.erase.configRule.tableConfig;
+package com.hn2.cms.service.aca4001.erase.rules.tableConfig;
 
-import com.hn2.cms.service.aca4001.erase.configRule.EraseRule;
+import com.hn2.cms.service.aca4001.erase.rules.EraseTableConfigPojo;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -9,16 +9,19 @@ import java.util.List;
 import java.util.Set;
 
 @Configuration
-public class ProDtlRulesConfig {
+public class ProDtlConfig {
 
     @Bean
-    public EraseRule proDtlRule() {
-        EraseRule r = new EraseRule();
+    public EraseTableConfigPojo proDtlRule() {
+        EraseTableConfigPojo r = new EraseTableConfigPojo();
         r.setSchema("dbo");
         r.setTable("ProDtl");
         r.setIdColumn("ID");
-        r.setParentTable("ProRec");        // 子表歸屬
-        r.setParentFkColumn("ProRecID");   // 父鍵欄位
+
+        // 設定這張表的父表資訊 → 說明它是「ProRec」的子表
+        r.setParentTable("ProRec");        // 所屬父表名稱
+        r.setParentFkColumn("ProRecID");   // 在本表中對應父表的外鍵欄位
+
         r.setWhitelist(List.of(
                 "ProCost",
                 "ProDtlDate",
@@ -33,18 +36,20 @@ public class ProDtlRulesConfig {
                 "CreatedByUserID",
                 "ModifiedByUserID"
         ));
+        // 指定日期欄位（用於格式正規化，避免字串轉日期錯誤）
         r.setDateCols(Set.of("ProDtlDate"));
+        // 指定整數欄位（確保字串轉整數正確）
         r.setIntCols(Set.of("CreatedByUserID", "ModifiedByUserID"));
 
-        // 清空策略（若 DB NOT NULL，IsTrainingCompleted/HasLicenses 可視需求改 0）
+        // eraseExtraSet 用來覆蓋特定欄位的值。
         var eraseSet = new LinkedHashMap<String, Object>();
         eraseSet.put("CreatedByUserID", -2);
         eraseSet.put("ModifiedByUserID", -2);
         eraseSet.put("isERASE", 1);
         eraseSet.put("ModifiedOnDate", "${NOW}");
-        r.setEraseSet(eraseSet);
+        r.setEraseExtraSet(eraseSet);
 
-        // 還原時的追加欄位
+        // restoreExtraSet 用來在還原時設定額外欄位值。
         var restoreExtra = new LinkedHashMap<String, Object>();
         restoreExtra.put("isERASE", 0);
         restoreExtra.put("ModifiedOnDate", "${NOW}");

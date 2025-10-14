@@ -1,6 +1,6 @@
-package com.hn2.cms.service.aca4001.erase.configRule.tableConfig;
+package com.hn2.cms.service.aca4001.erase.rules.tableConfig;
 
-import com.hn2.cms.service.aca4001.erase.configRule.EraseRule;
+import com.hn2.cms.service.aca4001.erase.rules.EraseTableConfigPojo;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -9,43 +9,38 @@ import java.util.List;
 import java.util.Set;
 
 @Configuration
-public class ProjectJailGuidanceSummaryRulesConfig {
+public class ProjectDrugCloseConfig {
 
     @Bean
-    public EraseRule projectJailGuidanceSummaryRule() {
-        EraseRule r = new EraseRule();
+    public EraseTableConfigPojo projectDrugCloseRule() {
+        EraseTableConfigPojo r = new EraseTableConfigPojo();
         r.setSchema("dbo");
-        r.setTable("ProjectJailGuidanceSummary");
+        r.setTable("ProjectDrugClose");
         r.setIdColumn("ID");
 
-        // 子表設定：歸屬 ProRec
         r.setParentTable("ProRec");
         r.setParentFkColumn("ProRecID");
 
-        // 對應 whitelistColumns()
         r.setWhitelist(List.of(
-                "CreatedByBranchID",
+                "OpenMemo",
+                "CloseMemo",
                 "CreatedByUserID",
                 "ModifiedByUserID"
         ));
 
-        // 對應 intColsNorm()
         r.setIntCols(Set.of("CreatedByUserID", "ModifiedByUserID"));
 
-        // 清空策略（白名單其餘欄位預設為 NULL；以下覆寫與原 Target 一致）
         var eraseSet = new LinkedHashMap<String, Object>();
-        eraseSet.put("CreatedByBranchID", "");
         eraseSet.put("CreatedByUserID", -2);
         eraseSet.put("ModifiedByUserID", -2);
         eraseSet.put("isERASE", 1);
         eraseSet.put("ModifiedOnDate", "${NOW}");
-        r.setEraseSet(eraseSet);
+        r.setEraseExtraSet(eraseSet);
 
-        // 還原時追加欄位
         var restoreExtra = new LinkedHashMap<String, Object>();
         restoreExtra.put("isERASE", 0);
         restoreExtra.put("ModifiedOnDate", "${NOW}");
-        restoreExtra.put("ModifiedByUserID", ":uid"); // 程式注入操作者
+        restoreExtra.put("ModifiedByUserID", ":uid");
         r.setRestoreExtraSet(restoreExtra);
 
         return r;

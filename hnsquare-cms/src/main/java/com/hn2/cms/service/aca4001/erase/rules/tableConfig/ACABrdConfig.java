@@ -1,6 +1,6 @@
-package com.hn2.cms.service.aca4001.erase.configRule.tableConfig;
+package com.hn2.cms.service.aca4001.erase.rules.tableConfig;
 
-import com.hn2.cms.service.aca4001.erase.configRule.EraseRule;
+import com.hn2.cms.service.aca4001.erase.rules.EraseTableConfigPojo;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -10,24 +10,20 @@ import java.util.List;
 import java.util.Set;
 
 @Configuration
-public class ACABrdRulesConfig {
+public class ACABrdConfig {
 
-    /**
-     * ACABrd 使用 ACACardNo 作為「父鍵」批次處理依據。
-     * 在規則上將 parentTable 設為自身（ACABrd），parentFkColumn=ACACardNo，
-     * 這樣 runRule*() 會從 cmd.idsOf("ACABrd") 取得 ACACardNo 清單，並用於 WHERE ACACardNo IN (...)
-     */
     @Bean
-    @Order(4)
-    public EraseRule acaBrdRule() {
-        EraseRule r = new EraseRule();
+    @Order(4) // 讓此表在多個規則中的執行順序較後（子表先處理）
+    public EraseTableConfigPojo acaBrdRule() {
+        EraseTableConfigPojo r = new EraseTableConfigPojo();
         r.setSchema("dbo");
         r.setTable("ACABrd");
         r.setIdColumn("ID");
 
-        // 自身為「父」，以 ACACardNo 作為批次鍵
-        r.setParentTable("ACABrd");       // cmd.idsOf("ACABrd") 裝的是 ACACardNo 清單
-        r.setParentFkColumn("ACACardNo"); // 子查詢/更新用的 FK 欄位
+        // ACABrd 的需求是「用 ACACardNo 來批次處理 ACABrd 自己」，而非用 ACABrd.ID。因此必須把 ACABrd 這個規則「包裝成子規則」：
+        // EraseRestoreExecutor 才會走到 eraseByParent(...) 與 loadRowsByParentIds(...) 這條路。
+        r.setParentTable("ACABrd");
+        r.setParentFkColumn("ACACardNo");
 
         r.setWhitelist(List.of(
                 "FamCardNo",
@@ -70,15 +66,13 @@ public class ACABrdRulesConfig {
         r.setDateCols(Set.of("ACABirth"));
         r.setIntCols(Set.of("CreatedByUserID", "ModifiedByUserID"));
 
-        // Erase：白名單未覆寫者預設設為 NULL；以下為固定覆寫
         var eraseSet = new LinkedHashMap<String, Object>();
         eraseSet.put("CreatedByUserID", -2);
         eraseSet.put("ModifiedByUserID", -2);
         eraseSet.put("isERASE", 1);
         eraseSet.put("ModifiedOnDate", "${NOW}");
-        r.setEraseSet(eraseSet);
+        r.setEraseExtraSet(eraseSet);
 
-        // Restore：追加欄位（由程式在執行時綁定 :uid）
         var restoreExtra = new LinkedHashMap<String, Object>();
         restoreExtra.put("isERASE", 0);
         restoreExtra.put("ModifiedOnDate", "${NOW}");

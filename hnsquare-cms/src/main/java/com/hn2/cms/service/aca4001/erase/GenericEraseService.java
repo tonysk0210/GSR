@@ -6,8 +6,8 @@ import com.hn2.cms.repository.aca4001.erase.EraseAuditRepo;
 import com.hn2.cms.repository.aca4001.erase.EraseMirrorRepo;
 import com.hn2.cms.service.aca4001.erase.command.EraseCommand;
 import com.hn2.cms.service.aca4001.erase.command.RestoreCommand;
-import com.hn2.cms.service.aca4001.erase.configRule.EraseRule;
-import com.hn2.cms.service.aca4001.erase.configRule.RuleBasedTarget;
+import com.hn2.cms.service.aca4001.erase.rules.EraseTableConfigPojo;
+import com.hn2.cms.service.aca4001.erase.rules.EraseRestoreExecutor;
 import com.hn2.cms.service.aca4001.erase.support.RowUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,10 +26,9 @@ public class GenericEraseService {
     private final EraseMirrorRepo mirrorRepo;                       // 鏡像表存取（ACA_EraseMirror）
     private final EraseAuditRepo auditRepo;                         // 塗銷異動表存取（ACA_EraseAudit）
     private final AesGcmCrypto crypto;                              // AES-GCM 加解密與 sha256 計算
-    private final ObjectMapper om;                                  // JSON 序列化
-    // Rule-based
-    private final List<EraseRule> ruleBasedTables; // 由各 *RulesConfig 提供
-    private final RuleBasedTarget ruleBasedTarget; // 通用執行器
+    private final ObjectMapper om;                                  // JSON 序列化/反序列化
+    private final List<EraseTableConfigPojo> tableConfig;           // 各表的規則宣告
+    private final EraseRestoreExecutor executor;                    // 通用執行器
 
     // 新增在類別裡（任一欄位區塊都可）
     private static final String C_RULE = "\u001B[96m";  // 亮青：Rule
@@ -42,8 +41,9 @@ public class GenericEraseService {
      */
     @Transactional
     public void eraseRows(EraseCommand cmd) {
-        runRuleErase(cmd);
+        runRuleErase(cmd); // 依規則：鏡像→清空
 
+        // 成功後寫一筆 ERASE 稽核（整體流程成功才寫）
         auditRepo.insertEraseAction(
                 cmd.getAcaCardNo(),
                 cmd.getDocNum(),
@@ -54,20 +54,16 @@ public class GenericEraseService {
     }
 
     private void runRuleErase(EraseCommand cmd) {
-        for (var rule : ruleBasedTables) {
-            // 取 key（主鍵或父鍵）
-            List<String> keys = rule.isChild()
-                    ? cmd.idsOf(rule.getParentTable())
-                    : cmd.idsOf(rule.getTable());
+        for (var rule : tableConfig) {
+            // 依規則決定用哪個 key 清單：子表用 parentTable 的 keys，主表用自己的 keys
+            List<String> keys = rule.isChild() ? cmd.idsOf(rule.getParentTable()) : cmd.idsOf(rule.getTable());
             if (keys == null || keys.isEmpty()) continue;
 
-            // 撈資料
-            var rows = rule.isChild()
-                    ? ruleBasedTarget.loadRowsByParentIds(rule, keys)
-                    : ruleBasedTarget.loadRowsByIds(rule, keys);
+            // 撈資料（白名單欄位＋__PK__），子表走父鍵；主表走主鍵
+            var rows = rule.isChild() ? executor.loadRowsByParentIds(rule, keys) : executor.loadRowsByIds(rule, keys);
             if (rows.isEmpty()) continue;
 
-            // 鏡像（序列化→加密→sha→upsert），同時 log JSON
+            // —— 鏡像：為每一列把「欄位 Map」打包成 JSON → AES-GCM 加密 → SHA → upsert 鏡像表
             for (var row : rows) {
                 String id = RowUtils.extractIdOrThrow(row, rule.getIdColumn(), rule.getTable());
                 String json = buildRowPayloadJson(rule.getSchema(), rule.getTable(), rule.getIdColumn(), id, row);
@@ -79,9 +75,9 @@ public class GenericEraseService {
                 mirrorRepo.upsert(rule.getTable(), id, cmd.getAcaCardNo(), enc.payloadBase64, enc.ivBase64, sha, rule.getSchema());
             }
 
-            // 清空
-            if (rule.isChild()) ruleBasedTarget.eraseByParent(rule, keys);
-            else ruleBasedTarget.eraseByIds(rule, keys);
+            // —— 清空（Erase）：子表用父鍵，主表用主鍵
+            if (rule.isChild()) executor.eraseByParent(rule, keys);
+            else executor.eraseByIds(rule, keys);
         }
     }
 
@@ -90,8 +86,9 @@ public class GenericEraseService {
      */
     @Transactional
     public void restoreAllByAcaCardNo(RestoreCommand cmd) {
-        runRuleRestore(cmd);
+        runRuleRestore(cmd); // 依規則：從鏡像解密→校驗→回寫
 
+        // 成功後寫一筆 RESTORE 稽核，並刪除該卡號的鏡像紀錄
         auditRepo.insertRestoreAction(
                 cmd.getAcaCardNo(),
                 cmd.getRestoreReason(),
@@ -102,31 +99,34 @@ public class GenericEraseService {
     }
 
     private void runRuleRestore(RestoreCommand cmd) {
-        // 只取 Rule 定義過的目標表
-        var allowedTables = ruleBasedTables.stream()
-                .map(EraseRule::getTable)
+        // 只處理 rule 有定義過的表（避免鏡像表裡有舊資料或非本規則表）
+        var allowedTables = tableConfig.stream()
+                .map(EraseTableConfigPojo::getTable)
                 .distinct()
                 .collect(Collectors.toList());
 
+        // 撈出該卡號、且目標表在 allowedTables 的所有鏡像資料
         var mirrors = mirrorRepo.findAllByAcaCardNo(cmd.getAcaCardNo(), allowedTables, "dbo");
         if (mirrors.isEmpty()) return;
 
+        // 依目標表分組 → 依規則順序逐表回寫
         var byTable = mirrors.stream()
                 .collect(Collectors.groupingBy(EraseMirrorRepo.MirrorRow::getTargetTable));
 
-        for (var rule : ruleBasedTables) {
+        for (var rule : tableConfig) {
             var list = byTable.get(rule.getTable());
             if (list == null || list.isEmpty()) continue;
 
             var rows = new ArrayList<Map<String, Object>>();
             for (var m : list) {
+                // 解密 +（可選）SHA 驗證
                 String json = decryptPayloadJson(m, true); // 解密＋SHA 校驗
                 logJson(false, true, m.getAcaCardNo(), m.getTargetTable(), m.getTargetId(), json); // [RULE][RESTORE]
-                rows.add(parsePayloadToMap(json));
+                rows.add(parsePayloadToMap(json)); // 還原用的 Map（含 __PK__）
             }
 
-            // 寫回原表（只覆蓋白名單欄位＋restoreExtraSet）
-            ruleBasedTarget.restoreRows(rule, rows, cmd.getOperatorUserId());
+            // 只覆蓋白名單欄位，並套用 restoreExtraSet（如 isERASE=0, ModifiedByUserID=:uid）
+            executor.restoreRows(rule, rows, cmd.getOperatorUserId());
         }
     }
 
@@ -215,6 +215,7 @@ public class GenericEraseService {
                 aca, table, id, preview);
     }
 
+    // JSON 容錯工具：readJson / getTextCI / getObjCI
     // ---- JSON 容錯讀取與大小寫容忍 ----
     private com.fasterxml.jackson.databind.JsonNode readJson(String json) {
         try {

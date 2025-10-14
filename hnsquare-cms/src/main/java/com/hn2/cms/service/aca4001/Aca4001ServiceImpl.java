@@ -303,6 +303,7 @@ public class Aca4001ServiceImpl implements Aca4001Service {
         return new DataDto<>(dto, new ResponseInfo(1, "查詢成功"));
     }
 
+    //Helper method for eraseQuery
     /*Helper method for eraseQuery*/
     private static LocalDate parseDateOrNull(String s) {
         if (s == null || s.isBlank()) return null;
