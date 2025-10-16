@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -20,85 +21,116 @@ import java.util.stream.Collectors;
 public class EraseRestoreExecutor {
 
     private final org.sql2o.Sql2o sql2o;
+    private static final int DEFAULT_CHUNK_SIZE = 1000;
 
     /* ========== 讀取資料（以主鍵 ID 清單） ========== */
+    /** 依主鍵批次撈取原始資料，避免 IN 清單過長導致查詢失敗。 */
     public List<Map<String, Object>> loadRowsByIds(EraseTableConfigPojo r, List<String> ids) {
-        if (ids == null || ids.isEmpty()) return List.of();
-        // 主鍵 + 白名單欄位
-        String cols = buildSelectCols(r);
-        String sql = "SELECT " + cols + " FROM " + r.getSchema() + "." + r.getTable() + " WHERE " + r.getIdColumn() + " IN (:ids)";
-        var out = new ArrayList<Map<String, Object>>();
-        // 分批執行，避免 IN(...) 過長造成效能或語法限制
-        for (int i = 0; i < ids.size(); i += 1000) {
-            var sub = ids.subList(i, Math.min(i + 1000, ids.size()));
-            try (var con = sql2o.open()) {
-                var t = con.createQuery(sql).addParameter("ids", sub).executeAndFetchTable();
-                out.addAll(t.rows().stream().map(org.sql2o.data.Row::asMap).collect(Collectors.toList()));
-            }
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
         }
-        return out;
+        String cols = buildSelectCols(r);
+        String sql = "SELECT " + cols + " FROM " + r.getSchema() + "." + r.getTable()
+                + " WHERE " + r.getIdColumn() + " IN (:ids)";
+        var rows = new ArrayList<Map<String, Object>>();
+        chunked(ids, chunk -> rows.addAll(executeSelect(sql, "ids", chunk)));
+        return rows;
     }
 
-    /* ========== 讀取資料（以父鍵清單；子表用） ========== */
+    /* ========== 讀取資料（依 parentId 映射） ========== */
+    /** 依 parent 主鍵查詢子表資料，必要時會先透過 lookup 轉換 key。 */
     public List<Map<String, Object>> loadRowsByParentIds(EraseTableConfigPojo r, List<String> parentIds) {
-        if (!r.isChild() || parentIds == null || parentIds.isEmpty()) return List.of();
+        if (!r.isChild() || parentIds == null || parentIds.isEmpty()) {
+            return List.of();
+        }
 
-        // 先把 ACACardNo 轉成 FamCardNo（或其他對應）
         List<String> keys = resolveParentKeys(r, parentIds);
-        if (keys.isEmpty()) return List.of();
+        if (keys.isEmpty()) {
+            return List.of();
+        }
 
         String cols = buildSelectCols(r);
         String sql = "SELECT " + cols + " FROM " + r.getSchema() + "." + r.getTable()
                 + " WHERE " + r.getParentFkColumn() + " IN (:pids)";
 
-        var out = new ArrayList<Map<String, Object>>();
-        for (int i = 0; i < keys.size(); i += 1000) {                      // ★ 用 keys 計數
-            var sub = keys.subList(i, Math.min(i + 1000, keys.size()));     // ★ 切 keys
-            try (var con = sql2o.open()) {
-                var t = con.createQuery(sql)
-                        .addParameter("pids", sub)                        // ★ 綁 keys 的 sub
-                        .executeAndFetchTable();
-                out.addAll(t.rows().stream().map(org.sql2o.data.Row::asMap).collect(Collectors.toList()));
-            }
-        }
-        return out;
+        var rows = new ArrayList<Map<String, Object>>();
+        chunked(keys, chunk -> rows.addAll(executeSelect(sql, "pids", chunk)));
+        return rows;
     }
 
-    /* ========== 父鍵映射（例如 ACACardNo -> FamCardNo） ========== */
+    /* ========== 解析 parentId 對應關係（例如 ACACardNo -> FamCardNo） ========== */
+    /** 將 parentId 透過設定檔指定的 lookup 表轉換為實際 FK，並維持順序。 */
     private List<String> resolveParentKeys(EraseTableConfigPojo r, List<String> parentIds) {
-        // 若規則沒設定 lookup（table/src/dst 任一為 null），直接回傳原父鍵
-        if (r.getParentIdLookupTable() == null || r.getParentIdLookupSrcColumn() == null || r.getParentIdLookupDstColumn() == null) {
+        if (r.getParentIdLookupTable() == null
+                || r.getParentIdLookupSrcColumn() == null
+                || r.getParentIdLookupDstColumn() == null) {
             return parentIds;
         }
-        if (parentIds == null || parentIds.isEmpty()) return List.of();
+        if (parentIds == null || parentIds.isEmpty()) {
+            return List.of();
+        }
 
-        // SELECT DISTINCT [dst] AS v FROM schema.lookupTable WHERE [src] IN (:pids)
-        String sql = "SELECT DISTINCT [" + r.getParentIdLookupDstColumn() + "] AS v " +
-                "FROM " + r.getSchema() + "." + r.getParentIdLookupTable() +
-                " WHERE [" + r.getParentIdLookupSrcColumn() + "] IN (:pids)";
+        String sql = "SELECT DISTINCT [" + r.getParentIdLookupDstColumn() + "] AS v "
+                + "FROM " + r.getSchema() + "." + r.getParentIdLookupTable()
+                + " WHERE [" + r.getParentIdLookupSrcColumn() + "] IN (:pids)";
 
-        var out = new ArrayList<String>();
+        var collected = new LinkedHashSet<String>();
+        chunked(parentIds, chunk -> collected.addAll(fetchLookupValues(sql, "pids", chunk)));
+        return collected.isEmpty() ? List.of() : new ArrayList<>(collected);
+    }
 
-        // 分批查出對應鍵值
-        for (int i = 0; i < parentIds.size(); i += 1000) {
-            var sub = parentIds.subList(i, Math.min(i + 1000, parentIds.size()));
-            try (var con = sql2o.open()) {
-                var t = con.createQuery(sql).addParameter("pids", sub).executeAndFetchTable();
-                // 讀出別名 v 的值，去空白、過濾空字串
-                for (var row : t.rows()) {
-                    var v = row.getObject("v");
-                    if (v != null) {
-                        String s = v.toString().trim();
-                        if (!s.isEmpty()) out.add(s);
+    /** 將清單切割成固定批次，避免單次 SQL 帶入過多參數。 */
+    private void chunked(List<String> source, Consumer<List<String>> action) {
+        if (source == null || source.isEmpty()) {
+            return;
+        }
+        for (int i = 0; i < source.size(); i += DEFAULT_CHUNK_SIZE) {
+            action.accept(source.subList(i, Math.min(i + DEFAULT_CHUNK_SIZE, source.size())));
+        }
+    }
+
+    /** 使用 Sql2o 查詢並以 Map 形式回傳結果。 */
+    private List<Map<String, Object>> executeSelect(String sql, String paramName, List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return List.of();
+        }
+        try (var con = sql2o.open()) {
+            var table = con.createQuery(sql)
+                    .addParameter(paramName, values)
+                    .executeAndFetchTable();
+            return table.rows().stream()
+                    .map(org.sql2o.data.Row::asMap)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to execute query for " + paramName + " in SQL: " + sql, e);
+        }
+    }
+
+    /** 讀取 lookup 結果轉為字串清單，忽略空白值。 */
+    private List<String> fetchLookupValues(String sql, String paramName, List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return List.of();
+        }
+        try (var con = sql2o.open()) {
+            var table = con.createQuery(sql)
+                    .addParameter(paramName, values)
+                    .executeAndFetchTable();
+            List<String> out = new ArrayList<>();
+            for (var row : table.rows()) {
+                var value = row.getObject("v");
+                if (value != null) {
+                    String text = value.toString().trim();
+                    if (!text.isEmpty()) {
+                        out.add(text);
                     }
                 }
             }
+            return out;
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to execute lookup for " + paramName + " in SQL: " + sql, e);
         }
-        // 去重後回傳
-        return out.stream().distinct().collect(Collectors.toList());
     }
 
-    /* ========== 組 SELECT 欄位字串（主鍵必帶為 __PK__） ========== */
     private String buildSelectCols(EraseTableConfigPojo r) {
         return (r.getWhitelist() == null || r.getWhitelist().isEmpty())
                 ? r.getIdColumn() + " AS __PK__"
@@ -133,6 +165,51 @@ public class EraseRestoreExecutor {
         }
     }
 
+    /** 擷取白名單欄位並進行型別正規化，避免寫回時出現格式錯誤。 */
+    private Map<String, Object> extractWhitelistValues(EraseTableConfigPojo r, Map<String, Object> row,
+                                                       Set<String> normalizedDateCols, Set<String> normalizedIntCols) {
+        var cleaned = new LinkedHashMap<String, Object>();
+        for (String column : r.getWhitelist()) {
+            if ("ModifiedByUserID".equalsIgnoreCase(column)) {
+                continue;
+            }
+            Object raw = RowUtils.getCI(row, column);
+            Object normalized = SqlNorm.normalizeForColumn(column, raw, normalizedDateCols, normalizedIntCols);
+            cleaned.put(column, normalized);
+        }
+        return cleaned;
+    }
+
+    /** 組裝 UPDATE SET 子句，優先使用鏡像資料，再補上 restoreExtraSet 的固定值。 */
+    private String buildRestoreSetClause(EraseTableConfigPojo r, Map<String, Object> cleaned) {
+        var assignments = new ArrayList<String>();
+        cleaned.forEach((column, value) -> assignments.add("[" + column + "] = :" + RowUtils.paramName(column)));
+        r.getRestoreExtraSet().forEach((column, value) -> assignments.add("[" + column + "] = " + renderSqlValue(value)));
+        return String.join(", ", assignments);
+    }
+
+    /** 將鏡像欄位值綁定回 Sql2o 查詢參數。 */
+    private void bindWhitelistParameters(org.sql2o.Query query, Map<String, Object> cleaned) {
+        cleaned.forEach((column, value) -> query.addParameter(RowUtils.paramName(column), value));
+    }
+
+    /** 若設定要求寫入 :uid，會在此決定使用 int 或字串綁定。 */
+    private void bindRestoreExtras(org.sql2o.Query query, EraseTableConfigPojo r, String operatorUserId) {
+        if (!requiresUidParameter(r)) {
+            return;
+        }
+        Integer uidInt = SqlNorm.tryParseInt(operatorUserId);
+        query.addParameter("uid", uidInt != null ? uidInt : operatorUserId);
+    }
+
+    /** 判斷 restoreExtraSet 是否使用 :uid 參數。 */
+    private boolean requiresUidParameter(EraseTableConfigPojo r) {
+        return r.getRestoreExtraSet().values().stream()
+                .filter(Objects::nonNull)
+                .map(Object::toString)
+                .anyMatch(val -> val.startsWith(":uid"));
+    }
+
     /* ========== 產生 Erase 用的 SET 子句 ========== */
     private String buildEraseSetSql(EraseTableConfigPojo r) {
 
@@ -162,59 +239,34 @@ public class EraseRestoreExecutor {
     }
 
     /* ========== 還原（Restore） ========== */
+    /** 根據鏡像快照回寫來源表，僅還原已標記塗銷的資料列。 */
     public int restoreRows(EraseTableConfigPojo r, List<Map<String, Object>> rows, String operatorUserId) {
-        if (rows == null || rows.isEmpty()) return 0;
+        if (rows == null || rows.isEmpty()) {
+            return 0;
+        }
         int total = 0;
+        var dateCols = normSet(r.getDateCols());
+        var intCols = normSet(r.getIntCols());
 
-        // 逐列更新（通常 rows 來自鏡像／備份資料）
         for (var row : rows) {
-            // 每列必須帶 __PK__（主鍵）
             String id = RowUtils.toStringCI(row, "__PK__");
             if (id == null || id.isBlank()) {
-                throw new IllegalStateException("Restore: __PK__ 不可為空, table=" + r.getTable());
+                throw new IllegalStateException("Restore: __PK__ 不能為空, table=" + r.getTable());
             }
 
-            // 1) 依規則的 dateCols/intCols 對白名單欄位做型態正規化
-            var cleaned = new LinkedHashMap<String, Object>();
-            for (String c : r.getWhitelist()) {
-                // ModifiedByUserID 交給 restoreExtraSet 控制，避免衝突
-                if ("ModifiedByUserID".equalsIgnoreCase(c)) continue; // 讓 restoreExtraSet 控制
-                Object raw = RowUtils.getCI(row, c);
-                Object norm = SqlNorm.normalizeForColumn(c, raw, normSet(r.getDateCols()), normSet(r.getIntCols()));
-                cleaned.put(c, norm);
+            var cleaned = extractWhitelistValues(r, row, dateCols, intCols);
+            String setClause = buildRestoreSetClause(r, cleaned);
+            if (setClause.isEmpty()) {
+                continue;
             }
 
-            // 2) 白名單欄位組成動態 SET（使用命名參數）
-            StringBuilder set = new StringBuilder();
-            int i = 0;
-            for (var e : cleaned.entrySet()) {
-                if (i++ > 0) set.append(", ");
-                set.append("[").append(e.getKey()).append("] = :").append(RowUtils.paramName(e.getKey()));
-            }
-            // 3) 追加 restoreExtraSet（支援 :uid / ${NOW}）
-            for (var e : r.getRestoreExtraSet().entrySet()) {
-                if (set.length() > 0) set.append(", ");
-                String val = renderSqlValue(e.getValue());
-                set.append("[").append(e.getKey()).append("] = ").append(val);
-            }
-
-            if (set.length() == 0) continue; // 沒東西可寫回就略過
-
-            // 安全柵欄：只還原目前 isERASE=1 的列，避免覆蓋正常資料
             String sql = "UPDATE " + r.getSchema() + "." + r.getTable()
-                    + " SET " + set + " WHERE " + r.getIdColumn() + "=:id AND ISNULL(isERASE,0)=1";
+                    + " SET " + setClause + " WHERE " + r.getIdColumn() + "=:id AND ISNULL(isERASE,0)=1";
             try (var con = sql2o.open()) {
-                var q = con.createQuery(sql).addParameter("id", id);
-                // 綁定白名單欄位的命名參數
-                for (var e : cleaned.entrySet()) {
-                    q.addParameter(RowUtils.paramName(e.getKey()), e.getValue());
-                }
-                // 若 restoreExtraSet 用到 :uid，嘗試以 int 綁定，否則以字串
-                if (r.getRestoreExtraSet().values().stream().anyMatch(v -> (v != null && v.toString().startsWith(":uid")))) {
-                    Integer uidInt = SqlNorm.tryParseInt(operatorUserId);
-                    q.addParameter("uid", uidInt != null ? uidInt : operatorUserId);
-                }
-                total += q.executeUpdate().getResult();
+                var query = con.createQuery(sql).addParameter("id", id);
+                bindWhitelistParameters(query, cleaned);
+                bindRestoreExtras(query, r, operatorUserId);
+                total += query.executeUpdate().getResult();
             }
         }
         return total;

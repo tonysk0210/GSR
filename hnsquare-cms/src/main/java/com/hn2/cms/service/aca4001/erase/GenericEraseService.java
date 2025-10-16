@@ -15,8 +15,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -53,82 +55,176 @@ public class GenericEraseService {
         );
     }
 
+    /**
+     * 依規則執行鏡像與實體塗銷，確保流程集中管理。
+     */
     private void runRuleErase(EraseCommand cmd) {
-        log.info("Loaded rules: {}", tableConfig.stream().map(EraseTableConfigPojo::getTable).collect(Collectors.toList()));
+        logLoadedTables();
+        if (cmd == null || cmd.isEmpty()) {
+            return;
+        }
+
         for (var rule : tableConfig) {
-            // 依規則決定用哪個 key 清單：子表用 parentTable 的 keys，主表用自己的 keys
-            List<String> keys = rule.isChild() ? cmd.idsOf(rule.getParentTable()) : cmd.idsOf(rule.getTable());
-            if (keys == null || keys.isEmpty()) continue;
-
-            // 撈資料（白名單欄位＋__PK__），子表走父鍵；主表走主鍵
-            var rows = rule.isChild() ? executor.loadRowsByParentIds(rule, keys) : executor.loadRowsByIds(rule, keys);
-            if (rows.isEmpty()) continue;
-
-            // —— 鏡像：為每一列把「欄位 Map」打包成 JSON → AES-GCM 加密 → SHA → upsert 鏡像表
-            for (var row : rows) {
-                String id = RowUtils.extractIdOrThrow(row, rule.getIdColumn(), rule.getTable());
-                String json = buildRowPayloadJson(rule.getSchema(), rule.getTable(), rule.getIdColumn(), id, row);
-
-                logJson(false, false, cmd.getAcaCardNo(), rule.getTable(), id, json); // [RULE][ERASE]
-
-                var enc = crypto.encryptJson(json);
-                String sha = AesGcmCrypto.sha256Hex(json);
-                mirrorRepo.upsert(rule.getTable(), id, cmd.getAcaCardNo(), enc.payloadBase64, enc.ivBase64, sha, rule.getSchema());
+            List<String> targetKeys = collectKeysForRule(cmd, rule);
+            if (targetKeys.isEmpty()) {
+                continue;
             }
 
-            // —— 清空（Erase）：子表用父鍵，主表用主鍵
-            if (rule.isChild()) executor.eraseByParent(rule, keys);
-            else executor.eraseByIds(rule, keys);
+            List<Map<String, Object>> rows = loadRowsForRule(rule, targetKeys);
+            if (rows.isEmpty()) {
+                continue;
+            }
+
+            persistMirrorRows(cmd, rule, rows);
+            eraseSourceRows(rule, targetKeys);
         }
     }
 
     /**
-     * 以規則引擎執行：從鏡像解密→校驗→回寫→寫 RESTORE 稽核→刪鏡像。
+     * 依照塗銷規則自鏡像資料復原原始紀錄，並記錄還原稽核。
      */
     @Transactional
     public void restoreAllByAcaCardNo(RestoreCommand cmd) {
-        runRuleRestore(cmd); // 依規則：從鏡像解密→校驗→回寫
+        runRuleRestore(cmd);
 
-        // 成功後寫一筆 RESTORE 稽核，並刪除該卡號的鏡像紀錄
         auditRepo.insertRestoreAction(
                 cmd.getAcaCardNo(),
                 cmd.getRestoreReason(),
                 cmd.getOperatorUserId(),
-                cmd.getOperatorIp()
-        );
+                cmd.getOperatorIp());
         auditRepo.deleteByAcaCardNo(cmd.getAcaCardNo());
     }
 
+    /**
+     * 依規則與鏡像資料逐表復原，同時保留原有稽核流程。
+     */
     private void runRuleRestore(RestoreCommand cmd) {
-        // 只處理 rule 有定義過的表（避免鏡像表裡有舊資料或非本規則表）
+        var mirrorsByTable = groupMirrorsByTable(cmd);
+        if (mirrorsByTable.isEmpty()) {
+            return;
+        }
+
+        for (var rule : tableConfig) {
+            var mirrorRows = mirrorsByTable.get(rule.getTable());
+            if (mirrorRows == null || mirrorRows.isEmpty()) {
+                continue;
+            }
+
+            List<Map<String, Object>> rows = mirrorRows.stream()
+                    .map(this::toRestorableRow)
+                    .collect(Collectors.toList());
+
+            executor.restoreRows(rule, rows, cmd.getOperatorUserId());
+        }
+    }
+
+    /**
+     * 將目前載入的規則表名寫入 log，方便追蹤此次塗銷涵蓋範圍。
+     */
+    private void logLoadedTables() {
+        if (!log.isInfoEnabled()) {
+            return;
+        }
+        log.info("Loaded rules: {}", tableConfig.stream()
+                .map(EraseTableConfigPojo::getTable)
+                .collect(Collectors.toList()));
+    }
+
+    /**
+     * 根據規則取得對應的主鍵（或 parent 主鍵），同時濾除空白值。
+     */
+    private List<String> collectKeysForRule(EraseCommand cmd, EraseTableConfigPojo rule) {
+        String table = rule.isChild() ? rule.getParentTable() : rule.getTable();
+        if (table == null) {
+            return Collections.emptyList();
+        }
+        return sanitizeIds(cmd.idsOf(table));
+    }
+
+    /**
+     * 依規則屬性決定採用 ID 或 parent ID 執行查詢。
+     */
+    private List<Map<String, Object>> loadRowsForRule(EraseTableConfigPojo rule, List<String> keys) {
+        return rule.isChild()
+                ? executor.loadRowsByParentIds(rule, keys)
+                : executor.loadRowsByIds(rule, keys);
+    }
+
+    /**
+     * 將查到的資料逐筆寫入鏡像表，保留加密後 payload 與校驗碼。
+     */
+    private void persistMirrorRows(EraseCommand cmd, EraseTableConfigPojo rule, List<Map<String, Object>> rows) {
+        for (var row : rows) {
+            persistMirrorRow(cmd, rule, row);
+        }
+    }
+
+    /**
+     * 建立鏡像紀錄並記錄 JSON 內容，提供後續還原使用。
+     */
+    private void persistMirrorRow(EraseCommand cmd, EraseTableConfigPojo rule, Map<String, Object> row) {
+        String id = RowUtils.extractIdOrThrow(row, rule.getIdColumn(), rule.getTable());
+        String json = buildRowPayloadJson(rule.getSchema(), rule.getTable(), rule.getIdColumn(), id, row);
+
+        logJson(false, false, cmd.getAcaCardNo(), rule.getTable(), id, json);
+
+        var enc = crypto.encryptJson(json);
+        String sha = AesGcmCrypto.sha256Hex(json);
+        mirrorRepo.upsert(rule.getTable(), id, cmd.getAcaCardNo(), enc.payloadBase64, enc.ivBase64, sha, rule.getSchema());
+    }
+
+    /**
+     * 驅動實際刪除：child 規則以 parent key 為準、一般規則直接用主鍵。
+     */
+    private void eraseSourceRows(EraseTableConfigPojo rule, List<String> keys) {
+        if (rule.isChild()) {
+            executor.eraseByParent(rule, keys);
+        } else {
+            executor.eraseByIds(rule, keys);
+        }
+    }
+
+    /**
+     * 以 acaCardNo 取出鏡像資料並依 table 分組，僅保留規則涵蓋的表。
+     */
+    private Map<String, List<EraseMirrorRepo.MirrorRow>> groupMirrorsByTable(RestoreCommand cmd) {
         var allowedTables = tableConfig.stream()
                 .map(EraseTableConfigPojo::getTable)
                 .distinct()
                 .collect(Collectors.toList());
-
-        // 撈出該卡號、且目標表在 allowedTables 的所有鏡像資料
-        var mirrors = mirrorRepo.findAllByAcaCardNo(cmd.getAcaCardNo(), allowedTables, "dbo");
-        if (mirrors.isEmpty()) return;
-
-        // 依目標表分組 → 依規則順序逐表回寫
-        var byTable = mirrors.stream()
-                .collect(Collectors.groupingBy(EraseMirrorRepo.MirrorRow::getTargetTable));
-
-        for (var rule : tableConfig) {
-            var list = byTable.get(rule.getTable());
-            if (list == null || list.isEmpty()) continue;
-
-            var rows = new ArrayList<Map<String, Object>>();
-            for (var m : list) {
-                // 解密 +（可選）SHA 驗證
-                String json = decryptPayloadJson(m, true); // 解密＋SHA 校驗
-                logJson(false, true, m.getAcaCardNo(), m.getTargetTable(), m.getTargetId(), json); // [RULE][RESTORE]
-                rows.add(parsePayloadToMap(json)); // 還原用的 Map（含 __PK__）
-            }
-
-            // 只覆蓋白名單欄位，並套用 restoreExtraSet（如 isERASE=0, ModifiedByUserID=:uid）
-            executor.restoreRows(rule, rows, cmd.getOperatorUserId());
+        if (allowedTables.isEmpty()) {
+            return Collections.emptyMap();
         }
+
+        var mirrors = mirrorRepo.findAllByAcaCardNo(cmd.getAcaCardNo(), allowedTables, "dbo");
+        if (mirrors.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return mirrors.stream().collect(Collectors.groupingBy(EraseMirrorRepo.MirrorRow::getTargetTable));
+    }
+
+    /**
+     * 將鏡像紀錄解密為 Map，同步寫 log 方便稽核。
+     */
+    private Map<String, Object> toRestorableRow(EraseMirrorRepo.MirrorRow mirror) {
+        String json = decryptPayloadJson(mirror, true);
+        logJson(false, true, mirror.getAcaCardNo(), mirror.getTargetTable(), mirror.getTargetId(), json);
+        return parsePayloadToMap(json);
+    }
+
+    /**
+     * 去除空白與重複項，避免誤觸空鍵或重複刪除。
+     */
+    private List<String> sanitizeIds(List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return ids.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .distinct()
+                .collect(Collectors.toList());
     }
 
     // ====== Helpers ======
