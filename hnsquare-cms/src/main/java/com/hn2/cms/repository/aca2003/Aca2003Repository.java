@@ -72,7 +72,6 @@ public interface Aca2003Repository extends JpaRepository<AcaDrugUseEntity, Integ
     )
     int matchProRecWithCard(@Param("proRecId") String proRecId, @Param("cardNo") String acaCardNo);
 
-
     // ---------------------------------------------------------------------
     // query API（投影查詢）
     // ---------------------------------------------------------------------
