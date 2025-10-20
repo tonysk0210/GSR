@@ -19,7 +19,10 @@ public interface Aca2003DetailView {
 
     Timestamp getCreatedOnDate();
 
-    String getCreatedByBranchId();
+    /**
+     * 分會顯示名稱（由 Lists 對應 CreatedByBranchID 後取得）
+     */
+    String getCreatedByBranchName();
 
     String getDrgUserText();
 

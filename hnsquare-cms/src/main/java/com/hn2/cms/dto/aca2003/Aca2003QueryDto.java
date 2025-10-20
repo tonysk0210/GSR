@@ -12,7 +12,8 @@ import java.sql.Timestamp;
 public class Aca2003QueryDto {
     private Integer id;
     private Timestamp createdOnDate;
-    private String createdByBranchId;
+    /** 分會顯示名稱（由 Lists 對應 CreatedByBranchID） */
+    private String createdByBranchName;
 
     private String drgUserText;
     private String oprFamilyText;
