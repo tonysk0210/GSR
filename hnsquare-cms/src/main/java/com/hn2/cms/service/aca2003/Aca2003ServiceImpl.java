@@ -40,9 +40,9 @@ public class Aca2003ServiceImpl implements Aca2003Service {
     // ====== 常數訊息（避免日後多處修改） ======
     private static final String MSG_PAYLOAD_EMPTY = "payload 不可為空";
     private static final String MSG_ID_EMPTY = "id 不可為空";
-    private static final String MSG_USER_ID_EMPTY = "userId 不可為空";
-    private static final String MSG_CARD_EMPTY = "acaCardNo 不可為空";
-    private static final String MSG_PROREC_EMPTY = "proRecId 不可為空";
+    private static final String MSG_USER_ID_EMPTY = "userId「修檔人員ID」不可為空";
+    private static final String MSG_CARD_EMPTY = "acaCardNo「個案編號」不可為空";
+    private static final String MSG_PROREC_EMPTY = "proRecId「保護紀錄ID」不可為空";
     private static final String MSG_DATA_NOT_FOUND = "指定資料不存在";
     private static final String MSG_DATA_DELETED = "指定資料已刪除";
     private static final String MSG_DUP_ACTIVE = "相同「個案編號」+「保護紀錄編號」的有效資料已存在";
@@ -115,7 +115,7 @@ public class Aca2003ServiceImpl implements Aca2003Service {
     private DataDto<Aca2003SaveResponse> create(Aca2003SavePayload p, String card) {
         // 是否已存在同 (ACACardNo, ProRecId) 且未刪除的資料
         if (repo.countActive(card, p.getProRecId().trim()) > 0) {
-            return fail(MSG_DUP_ACTIVE);
+            return fail(MSG_DUP_ACTIVE); // 資料庫中已有同一組 (ACACardNo, ProRecId) 且 IsDeleted=0 的資料時，在寫入前就回傳 MSG_DUP_ACTIVE
         }
         var e = new AcaDrugUseEntity();
         copyFieldsForCreate(p, e); // 鍵值 + 業務欄位
