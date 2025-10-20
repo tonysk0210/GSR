@@ -83,42 +83,12 @@ public interface Aca2003Repository extends JpaRepository<AcaDrugUseEntity, Integ
      * - LEFT JOIN ACABrd：若 ACABrd 對不到或已刪除（IsDeleted=1），仍保留 AcaDrugUse 資料。
      * - ACABrd.IsDeleted=0 條件放在 ON 子句，避免誤變 INNER JOIN。
      * - AcaDrugUse 的有效資料條件：d.IsDeleted=0 或 NULL。
+     * - LEFT JOIN CaseManagementT.dbo.Lists：將 CreatedByBranchID 對應成分會顯示名稱（ParentID=26）。
      */
     @Query(value =
             "SELECT d.ID                 AS id, " +
                     "       d.CreatedOnDate      AS createdOnDate, " +
-                    "       d.CreatedByBranchID  AS createdByBranchId, " +
-                    "       d.DrgUserText        AS drgUserText, " +
-                    "       d.OprFamilyText      AS oprFamilyText, " +
-                    "       d.OprFamilyCareText  AS oprFamilyCareText, " +
-                    "       d.OprSupportText     AS oprSupportText, " +
-                    "       d.OprContactText     AS oprContactText, " +
-                    "       d.OprReferText       AS oprReferText, " +
-                    "       d.Addr               AS addr, " +
-                    "       d.OprAddr            AS oprAddr, " +
-                    "       d.ACACardNo          AS acaCardNo, " +
-                    "       b.ACAName            AS acaName, " +
-                    "       b.ACAIDNo            AS acaIdNo " +
-                    "FROM dbo.AcaDrugUse d " +
-                    "LEFT JOIN dbo.ACABrd b ON b.ACACardNo = d.ACACardNo " + "  AND b.IsDeleted = 0" +
-                    "WHERE d.ID = :id " +
-                    "  AND (d.IsDeleted = 0 OR d.IsDeleted IS NULL) "
-            , nativeQuery = true)
-    Optional<Aca2003DetailView> findDetailById(@Param("id") Integer id);
-
-    /**
-     * 依 ACACardNo 取得「最新一筆」AcaDrugUse（以 ID 最大視為最新）
-     * <p>
-     * 說明：
-     * - 常見需求：同一 ACACardNo 會有多筆紀錄，只需最新一筆給前端顯示。
-     * - 以 ID 倒序搭配 TOP(1) 取得最新。
-     * - 同樣過濾軟刪除（IsDeleted=0 或 NULL）。
-     */
-    @Query(value =
-            "SELECT TOP 1 " +
-                    "       d.ID                 AS id, " +
-                    "       d.CreatedOnDate      AS createdOnDate, " +
-                    "       d.CreatedByBranchID  AS createdByBranchId, " +
+                    "       l.Text               AS createdByBranchName, " +
                     "       d.DrgUserText        AS drgUserText, " +
                     "       d.OprFamilyText      AS oprFamilyText, " +
                     "       d.OprFamilyCareText  AS oprFamilyCareText, " +
@@ -132,6 +102,40 @@ public interface Aca2003Repository extends JpaRepository<AcaDrugUseEntity, Integ
                     "       b.ACAIDNo            AS acaIdNo " +
                     "FROM dbo.AcaDrugUse d " +
                     "LEFT JOIN dbo.ACABrd b ON b.ACACardNo = d.ACACardNo AND b.IsDeleted = 0 " +
+                    "LEFT JOIN CaseManagementT.dbo.Lists l ON l.Value = d.CreatedByBranchID AND l.ParentID = 26 " + // 透過 Lists 取得分會顯示名稱
+                    "WHERE d.ID = :id " +
+                    "  AND (d.IsDeleted = 0 OR d.IsDeleted IS NULL) "
+            , nativeQuery = true)
+    Optional<Aca2003DetailView> findDetailById(@Param("id") Integer id);
+
+    /**
+     * 依 ACACardNo 取得「最新一筆」AcaDrugUse（以 ID 最大視為最新）
+     * <p>
+     * 說明：
+     * - 常見需求：同一 ACACardNo 會有多筆紀錄，只需最新一筆給前端顯示。
+     * - 以 ID 倒序搭配 TOP(1) 取得最新。
+     * - 同樣過濾軟刪除（IsDeleted=0 或 NULL）。
+     * - 與 findDetailById 相同，額外 JOIN Lists 將分會代碼轉換為顯示名稱。
+     */
+    @Query(value =
+            "SELECT TOP 1 " +
+                    "       d.ID                 AS id, " +
+                    "       d.CreatedOnDate      AS createdOnDate, " +
+                    "       l.Text               AS createdByBranchName, " +
+                    "       d.DrgUserText        AS drgUserText, " +
+                    "       d.OprFamilyText      AS oprFamilyText, " +
+                    "       d.OprFamilyCareText  AS oprFamilyCareText, " +
+                    "       d.OprSupportText     AS oprSupportText, " +
+                    "       d.OprContactText     AS oprContactText, " +
+                    "       d.OprReferText       AS oprReferText, " +
+                    "       d.Addr               AS addr, " +
+                    "       d.OprAddr            AS oprAddr, " +
+                    "       d.ACACardNo          AS acaCardNo, " +
+                    "       b.ACAName            AS acaName, " +
+                    "       b.ACAIDNo            AS acaIdNo " +
+                    "FROM dbo.AcaDrugUse d " +
+                    "LEFT JOIN dbo.ACABrd b ON b.ACACardNo = d.ACACardNo AND b.IsDeleted = 0 " +
+                    "LEFT JOIN CaseManagementT.dbo.Lists l ON l.Value = d.CreatedByBranchID AND l.ParentID = 26 " +
                     "WHERE d.ACACardNo = :cardNo " +
                     "  AND (d.IsDeleted = 0 OR d.IsDeleted IS NULL) " +
                     "ORDER BY d.ID DESC",

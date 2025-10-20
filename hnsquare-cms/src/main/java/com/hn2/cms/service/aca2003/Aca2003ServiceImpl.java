@@ -240,10 +240,11 @@ public class Aca2003ServiceImpl implements Aca2003Service {
      * 將 Projection 轉為 DTO（Controller 統一輸出此 DTO）
      */
     private Aca2003QueryDto toDto(Aca2003DetailView v) {
+        // 將 Repository 投影轉換為 DTO，分會欄位已改為呈現 Lists.Text
         return new Aca2003QueryDto(
                 v.getId(),
                 v.getCreatedOnDate(),
-                v.getCreatedByBranchId(),
+                v.getCreatedByBranchName(),
                 v.getDrgUserText(),
                 v.getOprFamilyText(),
                 v.getOprFamilyCareText(),
