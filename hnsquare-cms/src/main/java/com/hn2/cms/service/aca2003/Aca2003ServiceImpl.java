@@ -37,7 +37,7 @@ import java.util.Optional;
 @Service
 public class Aca2003ServiceImpl implements Aca2003Service {
 
-    // ====== 常數訊息（避免日後多處修改） ======
+    // ====== 常數訊息 ======
     private static final String MSG_PAYLOAD_EMPTY = "payload 不可為空";
     private static final String MSG_ID_EMPTY = "id 不可為空";
     private static final String MSG_USER_ID_EMPTY = "userId「修檔人員ID」不可為空";
