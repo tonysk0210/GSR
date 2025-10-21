@@ -7,7 +7,9 @@ import com.hn2.cms.model.aca2003.AcaDrugUseEntity;
 import com.hn2.cms.payload.aca2003.Aca2003DeletePayload;
 import com.hn2.cms.payload.aca2003.Aca2003QueryByCardPayload;
 import com.hn2.cms.payload.aca2003.Aca2003QueryByIdPayload;
+import com.hn2.cms.payload.aca2003.Aca2003QueryByPersonalIdPayload;
 import com.hn2.cms.payload.aca2003.Aca2003SavePayload;
+import com.hn2.cms.repository.AcaBrdRepository;
 import com.hn2.cms.repository.aca2003.Aca2003Repository;
 import com.hn2.core.dto.DataDto;
 import com.hn2.core.dto.ResponseInfo;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -48,12 +51,18 @@ public class Aca2003ServiceImpl implements Aca2003Service {
     private static final String MSG_DUP_ACTIVE = "相同「個案編號」+「保護紀錄編號」的有效資料已存在";
     private static final String MSG_ACABRD_NOT_FOUND = "指定的「個案編號」(ACACardNo) 不存在於有效的 「個案基本資料」ACABrd";
     private static final String MSG_REC_MISMATCH = "指定 「保護紀錄」(ProRecId) 與 「個案編號」(ACACardNo) 不一致";
+    private static final String MSG_PERSONAL_ID_EMPTY = "personalId「個人身分證號」不可為空";
+    private static final String MSG_CARD_BY_PERSONAL_ID_NOT_FOUND = "personalId 「個人身分證號」查無對應 ACACardNo 「個案編號」";
+    private static final String MSG_MULTIPLE_CARDS_FOUND = "查到多筆有效個案編號，請聯絡系統管理員";
+
 
     private final Aca2003Repository repo;
+    private final AcaBrdRepository acaBrdRepository;
 
     @Autowired
-    public Aca2003ServiceImpl(Aca2003Repository repo) {
+    public Aca2003ServiceImpl(Aca2003Repository repo, AcaBrdRepository acaBrdRepository) {
         this.repo = repo;
+        this.acaBrdRepository = acaBrdRepository;
     }
 
     // ============================================================
@@ -224,6 +233,7 @@ public class Aca2003ServiceImpl implements Aca2003Service {
     /**
      * 依 ACACardNo 取最新一筆（ID 最大）
      */
+    @Override
     public DataDto<Aca2003QueryDto> queryLatestByCardNo(GeneralPayload<Aca2003QueryByCardPayload> payload) {
         if (payload == null || payload.getData() == null || isBlank(payload.getData().getAcaCardNo())) {
             return new DataDto<>(null, new ResponseInfo(0, MSG_CARD_EMPTY));
@@ -234,6 +244,44 @@ public class Aca2003ServiceImpl implements Aca2003Service {
                 .map(this::toDto)
                 .map(dto -> new DataDto<>(dto, new ResponseInfo(1, "查詢成功")))
                 .orElseGet(() -> new DataDto<>(null, new ResponseInfo(0, "查無資料")));
+    }
+
+    /**
+     * 透過個人身分證號轉查 ACACardNo 並取得最新毒品濫用紀錄。
+     * 步驟：
+     * 1) 入口檢核 personalId 不可為空。
+     * 2) 查詢 ACABrd 確認是否存在有效卡號。
+     * 3) 若查到多筆卡號，回傳錯誤訊息。
+     * 4) 重用 queryLatestByCardNo 確保資料查詢邏輯一致。
+     */
+    @Override
+    public DataDto<Aca2003QueryDto> queryByPersonalId(GeneralPayload<Aca2003QueryByPersonalIdPayload> payload) {
+        if (payload == null || payload.getData() == null || isBlank(payload.getData().getPersonalId())) {
+            return new DataDto<>(null, new ResponseInfo(0, MSG_PERSONAL_ID_EMPTY));
+        }
+        final String personalId = payload.getData().getPersonalId().trim();
+
+        // 改成查多筆
+        List<String> cardNos = acaBrdRepository.findActiveCardNosByPersonalId(personalId);
+
+        if (cardNos.isEmpty()) {
+            return new DataDto<>(null, new ResponseInfo(0, MSG_CARD_BY_PERSONAL_ID_NOT_FOUND));
+        }
+
+        if (cardNos.size() > 1) {
+            return new DataDto<>(null, new ResponseInfo(0, MSG_MULTIPLE_CARDS_FOUND));
+        }
+
+        // 組裝 GeneralPayload 以沿用既有的卡號查詢方法，減少重複邏輯
+        Aca2003QueryByCardPayload cardPayload = new Aca2003QueryByCardPayload();
+        cardPayload.setAcaCardNo(cardNos.get(0));
+
+        GeneralPayload<Aca2003QueryByCardPayload> cardRequest = new GeneralPayload<>();
+        cardRequest.setData(cardPayload);
+        cardRequest.setPage(payload.getPage()); // 保留呼叫端傳入的分頁資訊（若有）
+
+        // 轉呼叫 queryLatestByCardNo 確保一致性與既有錯誤處理邏輯
+        return queryLatestByCardNo(cardRequest);
     }
 
     /**

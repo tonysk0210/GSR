@@ -5,6 +5,7 @@ import com.hn2.cms.dto.aca2003.Aca2003SaveResponse;
 import com.hn2.cms.payload.aca2003.Aca2003DeletePayload;
 import com.hn2.cms.payload.aca2003.Aca2003QueryByCardPayload;
 import com.hn2.cms.payload.aca2003.Aca2003QueryByIdPayload;
+import com.hn2.cms.payload.aca2003.Aca2003QueryByPersonalIdPayload;
 import com.hn2.cms.payload.aca2003.Aca2003SavePayload;
 import com.hn2.cms.service.aca2003.Aca2003Service;
 import com.hn2.core.dto.DataDto;
@@ -62,6 +63,20 @@ public class Aca2003Controller {
     @PostMapping("/queryByCardNo")
     public ResponseEntity<DataDto<Aca2003QueryDto>> queryByCardNo(@Valid @RequestBody GeneralPayload<Aca2003QueryByCardPayload> payload) {
         return ResponseEntity.ok(service.queryLatestByCardNo(payload));
+    }
+
+    /**
+     * 查詢最新紀錄 (依 personalId 轉卡號)
+     * - 先以身分證號對 ACABrd 取得 ACACardNo
+     * - 再重用卡號查詢服務取得最新紀錄
+     *
+     * @param payload GeneralPayload<Aca2003QueryByPersonalIdPayload>
+     * @return DataDto<Aca2003QueryDto> 最新一筆紀錄 DTO
+     */
+    @PostMapping("/queryByPersonalId")
+    public ResponseEntity<DataDto<Aca2003QueryDto>> queryByPersonalId(@Valid @RequestBody GeneralPayload<Aca2003QueryByPersonalIdPayload> payload) {
+        // 服務層會轉查 ACACardNo 並重用 queryLatestByCardNo 邏輯
+        return ResponseEntity.ok(service.queryByPersonalId(payload));
     }
 
     /**
