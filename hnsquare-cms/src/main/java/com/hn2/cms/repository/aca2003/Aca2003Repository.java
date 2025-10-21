@@ -36,15 +36,15 @@ public interface Aca2003Repository extends JpaRepository<AcaDrugUseEntity, Integ
     String findCreatedByBranchIdByAcaCardNo(@Param("cardNo") String acaCardNo);
 
     /**
-     * 回傳有效筆數：同 (ACACardNo, ProRecId) 且未刪除（isDeleted=0 或 NULL）
+     * 回傳有效筆數：同 ACACardNo 且未刪除（isDeleted=0 或 NULL）
      * 用途：新增前檢查是否已有「有效重複」。
      * <p>
      * 注意：IsDeleted 為 Boolean wrapper（可為 NULL），故條件需寫成 (false or null)。
      */
     @Query("select count(a) from AcaDrugUseEntity a " +
-            "where a.acaCardNo = :cardNo and a.proRecId = :proRecId " +
+            "where a.acaCardNo = :cardNo " +
             "and (a.isDeleted = false or a.isDeleted is null)")
-    long countActive(@Param("cardNo") String cardNo, @Param("proRecId") String proRecId);
+    long countActive(@Param("cardNo") String cardNo);
 
     /**
      * ACABrd 是否存在且有效（IsDeleted=0）
@@ -58,19 +58,6 @@ public interface Aca2003Repository extends JpaRepository<AcaDrugUseEntity, Integ
             nativeQuery = true
     )
     int existsActiveAcaBrd(@Param("cardNo") String acaCardNo);
-
-    /**
-     * ProRec(ID, ACACardNo) 是否相符
-     * 用途：save 時確認前端 proRecId 與 acaCardNo 的關聯是否正確。
-     */
-    @Query(
-            value = "SELECT CASE WHEN EXISTS (" +
-                    "  SELECT 1 FROM dbo.ProRec " +
-                    "  WHERE ID = :proRecId AND ACACardNo = :cardNo" +
-                    ") THEN 1 ELSE 0 END",
-            nativeQuery = true
-    )
-    int matchProRecWithCard(@Param("proRecId") String proRecId, @Param("cardNo") String acaCardNo);
 
     // ---------------------------------------------------------------------
     // query API（投影查詢）

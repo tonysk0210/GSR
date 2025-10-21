@@ -45,14 +45,12 @@ public class Aca2003ServiceImpl implements Aca2003Service {
     private static final String MSG_ID_EMPTY = "id 不可為空";
     private static final String MSG_USER_ID_EMPTY = "userId「修檔人員ID」不可為空";
     private static final String MSG_CARD_EMPTY = "acaCardNo「個案編號」不可為空";
-    private static final String MSG_PROREC_EMPTY = "proRecId「保護紀錄ID」不可為空";
     private static final String MSG_DATA_NOT_FOUND = "指定資料不存在";
     private static final String MSG_DATA_DELETED = "指定資料已刪除";
-    private static final String MSG_DUP_ACTIVE = "相同「個案編號」+「保護紀錄編號」的有效資料已存在";
+    private static final String MSG_DUP_ACTIVE = "相同「個案編號」的有效資料已存在";
     private static final String MSG_ACABRD_NOT_FOUND = "指定的「個案編號」(ACACardNo) 不存在於有效的 「個案基本資料」ACABrd";
-    private static final String MSG_REC_MISMATCH = "指定 「保護紀錄」(ProRecId) 與 「個案編號」(ACACardNo) 不一致";
     private static final String MSG_PERSONAL_ID_EMPTY = "personalId「個人身分證號」不可為空";
-    private static final String MSG_CARD_BY_PERSONAL_ID_NOT_FOUND = "personalId 「個人身分證號」查無對應 ACACardNo 「個案編號」";
+    private static final String MSG_CARD_BY_PERSONAL_ID_NOT_FOUND = "personalId 查無對應 ACACardNo";
     private static final String MSG_MULTIPLE_CARDS_FOUND = "查到多筆有效個案編號，請聯絡系統管理員";
 
 
@@ -71,7 +69,7 @@ public class Aca2003ServiceImpl implements Aca2003Service {
 
     /**
      * 新增或更新 AcaDrugUse 資料。
-     * - 新增：id = null，需檢查 ACABrd 存在、ProRec 與 ACACardNo 一致、且不可有有效重覆
+     * - 新增：id = null，需檢查 ACABrd 存在、且不可有相同個案編號的有效資料
      * - 更新：id != null，主鍵欄位不可變更，只能更新業務欄位
      */
     @Override
@@ -84,12 +82,9 @@ public class Aca2003ServiceImpl implements Aca2003Service {
         var p = payload.getData();
         if (p.getUserId() == null) return fail(MSG_USER_ID_EMPTY);
         if (isBlank(p.getAcaCardNo())) return fail(MSG_CARD_EMPTY);
-        if (isBlank(p.getProRecId())) return fail(MSG_PROREC_EMPTY);
 
         // 正規化基本欄位（trim）
         final String card = p.getAcaCardNo().trim();
-        final String rec = p.getProRecId().trim();
-        final Timestamp now = new Timestamp(System.currentTimeMillis());
 
         try {
             // ---- A) 應用層的一致性檢查 ----
@@ -97,16 +92,12 @@ public class Aca2003ServiceImpl implements Aca2003Service {
             if (repo.existsActiveAcaBrd(card) == 0) {
                 return fail(MSG_ACABRD_NOT_FOUND);
             }
-            // 2) ProRec(ID, ACACardNo) 必須相符
-            if (repo.matchProRecWithCard(rec, card) == 0) {
-                return fail(MSG_REC_MISMATCH);
-            }
 
             // ---- B) 分支：新增 or 更新 ----
             if (p.getId() == null) {
                 return create(p, card);   // 新增
             } else {
-                return update(p, card, rec); // 更新
+                return update(p, card); // 更新
             }
 
         } catch (DataIntegrityViolationException ex) {
@@ -122,9 +113,9 @@ public class Aca2003ServiceImpl implements Aca2003Service {
      * 新增流程（抽出提升可讀性）
      */
     private DataDto<Aca2003SaveResponse> create(Aca2003SavePayload p, String card) {
-        // 是否已存在同 (ACACardNo, ProRecId) 且未刪除的資料
-        if (repo.countActive(card, p.getProRecId().trim()) > 0) {
-            return fail(MSG_DUP_ACTIVE); // 資料庫中已有同一組 (ACACardNo, ProRecId) 且 IsDeleted=0 的資料時，在寫入前就回傳 MSG_DUP_ACTIVE
+        // 是否已存在同 ACACardNo 且未刪除的資料
+        if (repo.countActive(card) > 0) {
+            return fail(MSG_DUP_ACTIVE); // 資料庫中已有相同 ACACardNo 且 IsDeleted=0 的資料時，在寫入前就回傳 MSG_DUP_ACTIVE
         }
         var e = new AcaDrugUseEntity();
         copyFieldsForCreate(p, e); // 鍵值 + 業務欄位
@@ -142,7 +133,6 @@ public class Aca2003ServiceImpl implements Aca2003Service {
     private static void copyFieldsForCreate(Aca2003SavePayload p, AcaDrugUseEntity e) {
         // 建立時：寫入鍵值 + 其它欄位
         e.setAcaCardNo(trim(p.getAcaCardNo()));
-        e.setProRecId(trim(p.getProRecId()));
         e.setDrgUserText(trimToNull(p.getDrgUserText()));
         e.setOprFamilyText(trimToNull(p.getOprFamilyText()));
         e.setOprFamilyCareText(trimToNull(p.getOprFamilyCareText()));
@@ -156,7 +146,7 @@ public class Aca2003ServiceImpl implements Aca2003Service {
     /**
      * 更新流程（抽出提升可讀性）
      */
-    private DataDto<Aca2003SaveResponse> update(Aca2003SavePayload p, String card, String rec) {
+    private DataDto<Aca2003SaveResponse> update(Aca2003SavePayload p, String card) {
         Optional<AcaDrugUseEntity> opt = repo.findById(p.getId());
         if (opt.isEmpty()) return fail(MSG_DATA_NOT_FOUND);
 
@@ -165,8 +155,8 @@ public class Aca2003ServiceImpl implements Aca2003Service {
             return fail(MSG_DATA_DELETED);
         }
         // 前端帶的鍵值需與資料庫一致（不可修改主鍵/關聯鍵）
-        if (!card.equals(exist.getAcaCardNo()) || !rec.equals(exist.getProRecId())) {
-            return fail("指定資料(id=" + p.getId() + ") 的 (ACACardNo, ProRecId) 與輸入不一致；不可修改關聯鍵。");
+        if (!card.equals(exist.getAcaCardNo())) {
+            return fail("指定資料(id=" + p.getId() + ") 的 ACACardNo 與輸入不一致；不可修改關聯鍵。");
         }
 
         // 僅覆寫非鍵值欄位

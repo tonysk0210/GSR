@@ -6,7 +6,6 @@ import lombok.Data;
 public class Aca2003SavePayload {
     private Integer id;                 // null=新增, 非null=更新
     private String acaCardNo;           // ACACardNo
-    private String proRecId;            // ProRecId
     private String drgUserText;
     private String oprFamilyText;
     private String oprFamilyCareText;

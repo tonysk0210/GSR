@@ -17,9 +17,6 @@ public class AcaDrugUseEntity {
     @Column(name="ACACardNo", nullable=false, length=50)
     private String acaCardNo;
 
-    @Column(name="ProRecId", nullable=false, length=20)
-    private String proRecId;
-
     @Column(name="DrgUserText")       private String drgUserText;
     @Column(name="OprFamilyText")     private String oprFamilyText;
     @Column(name="OprFamilyCareText") private String oprFamilyCareText;
