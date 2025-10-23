@@ -71,6 +71,18 @@ public class Aca4001EraseQueryDto {
         private String archiveName;          // 歸檔名稱（ProRec.ProFile)
     }
 
+    public static class ACADrugUse {
+        private String branchName;           // 分會 Lists.Text(ParentID=26, Value=AcaDrugUse.createdByBranchID)
+        private String drgUserText;          // 施用毒品
+        private String oprFamilyText;        // 未來共居家屬
+        private String oprFamilyCareText;    // 關懷需求
+        private String oprSupportText;       // 家庭支持度
+        private String oprContactText;       // 同意更生保護會及其分會聯繫
+        private String oprReferText;         // 就業轉介需求
+        private String addr;                 // 通訊地址
+        private String oprAddr;              // 出監後擬住地址
+    }
+
     /**
      * Service 層內部使用的簡單資料結構，承載個案的生日與「滿 18 歲當日」的日期。
      * - birthDate：生日，只保存日期，不含時間。

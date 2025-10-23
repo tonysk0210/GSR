@@ -16,9 +16,13 @@ public interface Aca4001Repository {
 
     List<String> findCrmRecIdsBefore18(String acaCardNo, LocalDateTime eighteenthStart, LocalDateTime startTs, LocalDateTime endInclusive);
 
+    List<String> findAllAcaDrugUseIdsByAcaCardNo(String acaCardNo);
+
     List<Aca4001EraseQueryDto.CrmRec> findCrmRecsByIds(List<String> ids);
 
     List<Aca4001EraseQueryDto.ProRec> findProRecsByIds(List<String> ids);
+
+    List<Aca4001EraseQueryDto.ACADrugUse> findAcaDrugUsesByIds(List<String> drgIds);
 
     Boolean findLatestProRecClosed(String acaCardNo);
 
@@ -32,4 +36,6 @@ public interface Aca4001Repository {
 
     /*auditQuery API*/
     List<Aca4001AuditQueryDto.Row> findAuditRows();
+
+
 }

@@ -397,6 +397,11 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
         return rows;
     }
 
+    @Override
+    public List<Aca4001EraseQueryDto.ACADrugUse> findAcaDrugUsesByIds(List<String> drgIds) {
+        return List.of();
+    }
+
     /**
      * 查詢某個 ACACardNo 在 ProRec 中「最新一筆（依 ProDate 由新到舊）」是否已結案。
      * 定義：
@@ -461,6 +466,20 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
     @Override
     public List<String> findAllCrmRecIdsByAcaCardNo(String acaCardNo) {
         String sql = "SELECT ID FROM dbo.CrmRec WHERE ACACardNo = :aca";
+        try (var con = sql2o.open()) {
+            return con.createQuery(sql).addParameter("aca", acaCardNo).executeAndFetch(String.class);
+        }
+    }
+
+    /**
+     * 依個案卡號取得該個案所有 AcaDrugUse 的主鍵 ID 清單。
+     *
+     * @param acaCardNo 個案卡號（非空）
+     * @return 該卡號底下所有 AcaDrugUse 的 ID 清單（可能為空）
+     */
+    @Override
+    public List<String> findAllAcaDrugUseIdsByAcaCardNo(String acaCardNo) {
+        String sql = "SELECT ID FROM dbo.AcaDrugUse WHERE ACACardNo = :aca";
         try (var con = sql2o.open()) {
             return con.createQuery(sql).addParameter("aca", acaCardNo).executeAndFetch(String.class);
         }

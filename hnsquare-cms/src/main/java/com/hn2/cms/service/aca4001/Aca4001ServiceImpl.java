@@ -101,6 +101,8 @@ public class Aca4001ServiceImpl implements Aca4001Service {
         List<String> crmIds = repo.findAllCrmRecIdsByAcaCardNo(acaCardNo);
         // 4) 針對滿18歲個案，撈18歲前的保護紀錄 ID 清單
         List<String> proIds = repo.findProRecIdsBefore18(acaCardNo, eighteenthStart, startTs, endInclusive);
+        // 5) 針對滿18歲個案，撈所有的毒品紀錄 ID 清單
+        List<String> drgIds = repo.findAllAcaDrugUseIdsByAcaCardNo(acaCardNo);
 
         // CrmRec：用犯罪紀錄ID清單補齊CrmRec.dto欄位
         List<Aca4001EraseQueryDto.CrmRec> crmRecs = repo.findCrmRecsByIds(crmIds);
@@ -109,6 +111,9 @@ public class Aca4001ServiceImpl implements Aca4001Service {
         // ProRec：用保護紀錄ID清單補齊ProRec.dto欄位
         List<Aca4001EraseQueryDto.ProRec> proRecs = repo.findProRecsByIds(proIds);
         dto.setProRecListBefore18(proRecs);
+
+        // ProRec：用保護紀錄ID清單補齊ACADrugUse.dto欄位
+        List<Aca4001EraseQueryDto.ACADrugUse> drgRecs = repo.findAcaDrugUsesByIds(drgIds);
 
         // 5) 判斷最新 ProRec 是否結案
         Boolean latestClosed = repo.findLatestProRecClosed(acaCardNo);
