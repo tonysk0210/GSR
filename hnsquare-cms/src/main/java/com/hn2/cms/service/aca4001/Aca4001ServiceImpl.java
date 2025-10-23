@@ -89,6 +89,7 @@ public class Aca4001ServiceImpl implements Aca4001Service {
         if (!over18) {
             dto.setProRecListBefore18(List.of());
             dto.setCrmRecList(List.of());
+            dto.setAcaDrugUseList(List.of());
             return new DataDto<>(dto, new ResponseInfo(1, "查詢成功：個案未滿18"));
         }
 
@@ -167,14 +168,17 @@ public class Aca4001ServiceImpl implements Aca4001Service {
             // (A) 已滿 18 → 只塗銷使用者選取的紀錄（可能為空清單，服務會自行跳過）
             tableToIds.put("CrmRec", java.util.Optional.ofNullable(req.getSelectedCrmRecIds()).orElse(List.of()));
             tableToIds.put("ProRec", java.util.Optional.ofNullable(req.getSelectedProRecIds()).orElse(List.of()));
+            tableToIds.put("AcaDrugUse", java.util.Optional.ofNullable(req.getSelectedAcaDrugUseIds()).orElse(List.of()));
         } else {
             // (B) 未滿 18 → 全案塗銷
             //     依卡號把該個案底下的所有 CrmRec / ProRec 的 ID 全撈出
             List<String> allCrmIds = repo.findAllCrmRecIdsByAcaCardNo(req.getAcaCardNo());
             List<String> allProIds = repo.findAllProRecIdsByAcaCardNo(req.getAcaCardNo());
+            List<String> allDrugIds = repo.findAllAcaDrugUseIdsByAcaCardNo(req.getAcaCardNo());
 
             tableToIds.put("CrmRec", allCrmIds);
             tableToIds.put("ProRec", allProIds);
+            tableToIds.put("AcaDrugUse", allDrugIds);
 
             // 另外放入父表 ACABrd 的 key，讓 DependentEraseTarget（例如 Families / Career / Memo / ACABrd 本身）
             // 能以 parentTableName() == "ACABrd" 及此卡號清單作為刪空依據。

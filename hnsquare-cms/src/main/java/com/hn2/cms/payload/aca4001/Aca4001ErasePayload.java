@@ -11,6 +11,7 @@ public class Aca4001ErasePayload {
     private String eraseReason;
     private List<String> selectedProRecIds;
     private List<String> selectedCrmRecIds;
+    private List<String> selectedAcaDrugUseIds;
     private Boolean isOver18;
     private Integer operatorUserId;
 }

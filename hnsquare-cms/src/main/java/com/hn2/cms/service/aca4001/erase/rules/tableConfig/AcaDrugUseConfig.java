@@ -18,9 +18,6 @@ public class AcaDrugUseConfig {
         r.setTable("AcaDrugUse");
         r.setIdColumn("ID");
 
-        r.setParentTable("ProRec");
-        r.setParentFkColumn("ProRecID");
-
         r.setWhitelist(List.of(
                 "Addr",
                 "OprAddr",
