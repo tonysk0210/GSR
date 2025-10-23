@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.ResultSet;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -397,9 +398,79 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
         return rows;
     }
 
+    /**
+     * 依 AcaDrugUse 主鍵集合查詢塗銷檢視所需欄位。
+     * <p>
+     * 僅回傳 IsDeleted=0 的有效資料，並將 CreatedByBranchID 轉換為 Lists.Text 顯示名稱。
+     * 查詢結果會依輸入的 drgIds 順序回傳，以維持前端顯示一致性。
+     *
+     * @param drgIds AcaDrugUse.ID 清單（允許為 null 或空集合）
+     * @return 依輸入順序排列的 AcaDrugUse DTO 清單；若未提供 ID 則回傳空清單
+     */
     @Override
     public List<Aca4001EraseQueryDto.ACADrugUse> findAcaDrugUsesByIds(List<String> drgIds) {
-        return List.of();
+        // 呼叫端未提供 ID 時直接回空清單以避免不必要的 SQL 查詢
+        if (drgIds == null || drgIds.isEmpty()) return List.of();
+
+        String sql =
+                ";SELECT " +
+                        "       ADU.ID                               AS id, " +               // 主鍵供排序用
+                        "       L_BR.[Text]                          AS branchName, " +        // Lists 轉分會名稱
+                        "       CAST(ADU.CreatedOnDate AS date)      AS RecordDate, " +      // 取建檔日期(僅日期)做為顯示用紀錄日
+                        "       ADU.DrgUserText                      AS drgUserText, " +
+                        "       ADU.OprFamilyText                    AS oprFamilyText, " +
+                        "       ADU.OprFamilyCareText                AS oprFamilyCareText, " +
+                        "       ADU.OprSupportText                   AS oprSupportText, " +
+                        "       ADU.OprContactText                   AS oprContactText, " +
+                        "       ADU.OprReferText                     AS oprReferText, " +
+                        "       ADU.Addr                             AS addr, " +
+                        "       ADU.OprAddr                          AS oprAddr " +
+                        "FROM dbo.AcaDrugUse ADU " +
+                        "LEFT JOIN dbo.Lists L_BR " +
+                        "       ON L_BR.ParentID = 26 " +
+                        "      AND L_BR.Value = CAST(ADU.CreatedByBranchID AS NVARCHAR(50)) " +
+                        "WHERE ADU.IsDeleted = 0 " +                                        // 僅取未刪除資料
+                        "  AND ADU.ID IN (:ids)";
+
+        // 以 named parameter 綁定 ID 清單，避免字串拼接注入風險
+        MapSqlParameterSource params = new MapSqlParameterSource().addValue("ids", drgIds);
+
+        // 查詢後先保留主鍵，稍後依輸入順序重建清單
+        List<java.util.AbstractMap.SimpleEntry<String, Aca4001EraseQueryDto.ACADrugUse>> rows =
+                npJdbc.query(sql, params, (rs, i) -> {
+                    String id = rs.getString("id");
+                    var dto = new Aca4001EraseQueryDto.ACADrugUse();
+                    // recordDate -> 民國 yyy/MM/dd（若為 null 則回 null）
+                    java.sql.Date d1 = rs.getDate("RecordDate");
+                    dto.setRecordDate(d1 == null ? null : DateUtil.date2Roc(DateUtil.date2LocalDate(d1), yyyMMdd_slash));
+                    dto.setBranchName(rs.getString("branchName"));
+                    dto.setDrgUserText(rs.getString("drgUserText"));
+                    dto.setOprFamilyText(rs.getString("oprFamilyText"));
+                    dto.setOprFamilyCareText(rs.getString("oprFamilyCareText"));
+                    dto.setOprSupportText(rs.getString("oprSupportText"));
+                    dto.setOprContactText(rs.getString("oprContactText"));
+                    dto.setOprReferText(rs.getString("oprReferText"));
+                    dto.setAddr(rs.getString("addr"));
+                    dto.setOprAddr(rs.getString("oprAddr"));
+                    return new java.util.AbstractMap.SimpleEntry<>(id, dto);
+                });
+
+        Map<String, Aca4001EraseQueryDto.ACADrugUse> mapped = new HashMap<>();
+        for (var entry : rows) {
+            mapped.put(entry.getKey(), entry.getValue());
+        }
+
+        // 建立 ID -> DTO 的映射後依輸入順序重建結果，確保回傳順序與 drgIds 一致
+        // IN 子句不保證順序，因此依輸入 ID 順序組裝結果
+        List<Aca4001EraseQueryDto.ACADrugUse> ordered = new ArrayList<>(drgIds.size());
+        for (String id : drgIds) {
+            var dto = mapped.get(id);
+            if (dto != null) {
+                ordered.add(dto);
+            }
+        }
+
+        return ordered;
     }
 
     /**
