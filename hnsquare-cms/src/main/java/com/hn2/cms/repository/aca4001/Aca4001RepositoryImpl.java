@@ -452,8 +452,6 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
         });
     }
 
-    /*erase API*/
-
     /**
      * 依個案卡號取得該個案所有 CrmRec 的主鍵 ID 清單。
      *
@@ -467,6 +465,8 @@ public class Aca4001RepositoryImpl implements Aca4001Repository {
             return con.createQuery(sql).addParameter("aca", acaCardNo).executeAndFetch(String.class);
         }
     }
+
+    /*erase API*/
 
     /**
      * 依個案卡號取得該個案所有 ProRec 的主鍵 ID 清單。

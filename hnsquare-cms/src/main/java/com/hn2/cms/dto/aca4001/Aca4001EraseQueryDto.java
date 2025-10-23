@@ -14,7 +14,7 @@ public class Aca4001EraseQueryDto {
     private boolean isLatestProRecClosed;      // 是否結案(最新的保護紀錄是否已結案)
     @JsonProperty("isErased")
     private boolean isErased;      // 個案是否已塗銷
-    private List<CrmRec> crmRecListBefore18; // 犯罪紀錄ID清單
+    private List<CrmRec> crmRecList; // 犯罪紀錄ID清單
     private List<ProRec> proRecListBefore18; // 保護紀錄ID清單
 
     @Data

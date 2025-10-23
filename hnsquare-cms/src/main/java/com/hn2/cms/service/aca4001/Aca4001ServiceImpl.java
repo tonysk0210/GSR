@@ -88,7 +88,7 @@ public class Aca4001ServiceImpl implements Aca4001Service {
         // 未滿 18：直接回空清單與訊息
         if (!over18) {
             dto.setProRecListBefore18(List.of());
-            dto.setCrmRecListBefore18(List.of());
+            dto.setCrmRecList(List.of());
             return new DataDto<>(dto, new ResponseInfo(1, "查詢成功：個案未滿18"));
         }
 
@@ -97,23 +97,24 @@ public class Aca4001ServiceImpl implements Aca4001Service {
         LocalDateTime startTs = (start == null) ? null : start.atStartOfDay();
         LocalDateTime endInclusive = (end == null) ? null : end.atTime(23, 59, 59, 999_000_000);
 
-        // 3) 針對未滿18歲個案，撈18歲前的犯罪紀錄+保護紀錄 ID 清單
-        List<String> crmIds = repo.findCrmRecIdsBefore18(acaCardNo, eighteenthStart, startTs, endInclusive);
+        // 3) 針對滿18歲個案，撈所有的犯罪紀錄 ID 清單
+        List<String> crmIds = repo.findAllCrmRecIdsByAcaCardNo(acaCardNo);
+        // 4) 針對滿18歲個案，撈18歲前的保護紀錄 ID 清單
         List<String> proIds = repo.findProRecIdsBefore18(acaCardNo, eighteenthStart, startTs, endInclusive);
 
         // CrmRec：用犯罪紀錄ID清單補齊CrmRec.dto欄位
         List<Aca4001EraseQueryDto.CrmRec> crmRecs = repo.findCrmRecsByIds(crmIds);
-        dto.setCrmRecListBefore18(crmRecs);
+        dto.setCrmRecList(crmRecs);
 
         // ProRec：用保護紀錄ID清單補齊ProRec.dto欄位
         List<Aca4001EraseQueryDto.ProRec> proRecs = repo.findProRecsByIds(proIds);
         dto.setProRecListBefore18(proRecs);
 
-        // 4) 判斷最新 ProRec 是否結案
+        // 5) 判斷最新 ProRec 是否結案
         Boolean latestClosed = repo.findLatestProRecClosed(acaCardNo);
         dto.setLatestProRecClosed(latestClosed != null && latestClosed);
 
-        // 5) 判斷 ACABrd 是否已塗銷
+        // 6) 判斷 ACABrd 是否已塗銷
         Boolean erased = repo.findPersonErased(acaCardNo);
         dto.setErased(erased != null && erased);
 
