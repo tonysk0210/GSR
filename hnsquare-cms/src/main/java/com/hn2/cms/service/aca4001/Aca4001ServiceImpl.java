@@ -114,6 +114,7 @@ public class Aca4001ServiceImpl implements Aca4001Service {
 
         // ProRec：用保護紀錄ID清單補齊ACADrugUse.dto欄位
         List<Aca4001EraseQueryDto.ACADrugUse> drgRecs = repo.findAcaDrugUsesByIds(drgIds);
+        dto.setAcaDrugUseList(drgRecs);
 
         // 5) 判斷最新 ProRec 是否結案
         Boolean latestClosed = repo.findLatestProRecClosed(acaCardNo);

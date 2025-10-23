@@ -16,6 +16,7 @@ public class Aca4001EraseQueryDto {
     private boolean isErased;      // 個案是否已塗銷
     private List<CrmRec> crmRecList; // 犯罪紀錄ID清單
     private List<ProRec> proRecListBefore18; // 保護紀錄ID清單
+    private List<ACADrugUse> acaDrugUseList; // 保護紀錄ID清單
 
     @Data
     public static class CrmRec {
@@ -71,6 +72,7 @@ public class Aca4001EraseQueryDto {
         private String archiveName;          // 歸檔名稱（ProRec.ProFile)
     }
 
+    @Data
     public static class ACADrugUse {
         private String branchName;           // 分會 Lists.Text(ParentID=26, Value=AcaDrugUse.createdByBranchID)
         private String drgUserText;          // 施用毒品
